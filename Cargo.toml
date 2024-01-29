@@ -1,0 +1,31 @@
+[package]
+name = "bevy_cobweb"
+description = "Bevy-integrated reactive webs"
+authors = ["koe <ukoe@protonmail.com>"]
+version = "0.0.1"
+edition = "2021"
+keywords = ["gamedev", "reactive"]
+license = "MIT OR Apache-2.0"
+readme = "README.md"
+repository = "https://github.com/UkoeHB/bevy_cobweb"
+
+[lib]
+path = "src/lib.rs"
+doctest = false
+test = false
+
+[[test]]
+name = "tests"
+path = "tests/test/mod.rs"
+doctest = false
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[dependencies]
+bevy    = { version = "0.12", default-features = false }
+tracing = { version = "0.1" }
+
+[dev-dependencies]
+tracing-subscriber = { version = "0.3" }
