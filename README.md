@@ -2,17 +2,15 @@
 
 Tool for building Bevy-integrated reactive webs.
 
-- No macros
-- No ambiguous jargon
-- 100% Bevy
-- Nodes are stateful reactive Bevy systems (stored on entities!)
+- Nodes are stateful reactive Bevy systems
 - Robust change detection to avoid needlessly reinitializing and rerunning nodes
-- Nodes react to resource mutations, entity changes, reactive events, and node-targeted events; recursive reactions allowed!
+- Nodes react to resource mutations, entity changes, reactive events, and node events; recursive reactions allowed!
 - Access node outputs throughout the web through node handles that synchronize with rebuilds
 - Customizable error handling policy per root node with sane error propagation
 - Detach and re-attach nodes anywhere in the web
 - Unlimited root nodes
 - Automatic node cleanup with robust lifetime control
+- Web mutations and node reactions have zero frame delay
 
 
 
@@ -23,7 +21,7 @@ Here is a hypothetical example of writing `"Hello, World!"` to the screen. Note 
 ```rust
 use bevy::prelude::*;
 use bevy_cobweb::{CobwebPlugin, NodeHandle, SystemExt, Web};
-use bevy_cobweb_ui::{Location, ScreenArea, TextNode, WindowArea};
+use bevy_cobweb_ui::{Location, ScreenArea, TextNode, TextSize, WindowArea};
 
 fn hello_world(
     mut web : Web<()>,
@@ -35,7 +33,8 @@ fn hello_world(
 
     TextNode::new()
         .default_text("Hello, World!")
-        .location(area, Location::Relative((40., 60.), (40., 60.)))
+        .location(area, Location::TotallyCentered)
+        .size(area, TextSize::RelativeHeight(10.))
         .build(&mut web)?;
 
     Ok(())
