@@ -59,7 +59,7 @@ If the window is resized, then `WindowArea` will rebuild because it is internall
 
 ## Deep-Dive
 
-If you are here for code, [skip ahead](#show-me-the-code).
+If you are here for code, [skip ahead](#examples).
 
 A web is a structure analogous to a forest covered in cobwebs. Each 'tree' is a physical branching structure of nodes, and between all the nodes are reactive relationships (the 'web').
 
@@ -122,6 +122,8 @@ Node systems are re-runnable 'constructors'. Every time a node runs, it needs to
 Node handles represent a reference to a specific node's output that is stored in the web. They also contain a node id that can be used to send node events to the referenced node.
 
 The data in a node handle is not readable while the node is building. This means node handles are only readable within sibling and cousin nodes that are built downstream of the handle origins. The are *not* readable by parents and direct ancestors, which always finish running before their children.
+
+It is best to think of node handles as `&O` Rust references that need to be manually managed. They are backward-facing references, which means they should (in most cases) only be sent forward in a node tree, and should not be passed between node trees or outside of the web. They should also not be stored in places that won't be refreshed if the node handle is no longer valid (unless you can guarantee they won't be erroneuosly accessed).
 
 #### Node Chaining via [NodeLink\<O\>](bevy_cobweb::NodeLink)
 
@@ -237,9 +239,16 @@ A packaged node may also run if it was built before being packaged, although tha
 
 If a `PackagedNode` is dropped, then it will be sent to the `bevy_cobweb` garbage collector, where the pre-configured [`NodeCleanupPolicy`](bevy_cobweb::NodeCleanupPolicy) will decide what to do with it. Using a garbage collector makes it relatively safe to transfer `PackagedNodes` around your application (e.g. sending them between parts of the web through node events), since you will always have a chance to recover from problems (i.e. nodes will never become completely detached).
 
+#### [RootNode](bevy_cobweb::RootNode)
+
+A `RootNode` can be produced from a `Packaged<BasicNode<S, I, ()>>` where `S` and `I` implement `Hash`. We don't allow root nodes to depend on other nodes in order to support safe use of node handles, which should have carefully-controlled 'lifetimes'.
+
 #### Reinitializing Nodes
 
-TODO
+When a parent node is reinitialized (i.e. its node state is overwritten), it is important to keep in mind what will happen to the node's children.
+- Built-in children will reinitialize if new initialization state is given in their node builder, otherwise they will be preserved. Any built-in child names that aren't rebuilt will be destroyed by the parent after it is done building (as normal).
+- [`RootNodes`](bevy_cobweb::RootNode) and [`Packaged`](bevy_cobweb::RootNode) nodes stored in the old node state will be dropped and garbage collected. If you want to retain these nodes, then the parent node should merge its state rather than resetting it.
+- [`BasicNodes`](bevy_cobweb::BasicNode), [`BasicNodes`](bevy_cobweb::BasicNode), and [`BasicNodes`](bevy_cobweb::BasicNode) stored in the old node state will be dropped and then completely destroyed by the parent after it is done rebuilding (after reinitializing). If you want to retain these nodes, then the parent node should merge its state rather than resetting it.
 
 
 ### Node Events
@@ -275,7 +284,11 @@ TODO
 TODO
 
 
-## SHOW ME THE CODE
+
+## Examples
+
+Here are a bunch of examples of using `bevy_cobweb`. In practice, users of this crate would use a mixture of the raw API and ergonomic wrappers such as those showcased in the [Hello World](#hello-world).
+
 
 ### Making a [RootNode](bevy_cobweb::RootNode)
 
