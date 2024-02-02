@@ -59,7 +59,7 @@ If the window is resized, then `WindowArea` will rebuild because it is internall
 
 ## Deep-Dive
 
-If you are here for code, skip ahead to [SHOW ME THE CODE](#show-me-the-code).
+If you are here for code, [skip ahead](#show-me-the-code).
 
 A web is a structure analogous to a forest covered in cobwebs. Each 'tree' is a physical branching structure of nodes, and between all the nodes are reactive relationships (the 'web').
 
@@ -218,6 +218,48 @@ TODO
 
 
 ## SHOW ME THE CODE
+
+### Making a [RootNode](bevy_cobweb::RootNode)
+
+Making a root node is as simple as packaging a [`BasicNode`](bevy_cobweb::BasicNode) and then converting it with [`.as_root()`](bevy_cobweb::BasicNode::as_root). Keep in mind that root nodes need to be stored somewhere otherwise they will be garbage collected.
+
+Here is the implementation for the [`.webroot()`](bevy_cobweb::webroot) system extension:
+
+```rust
+fn webroot<M>(
+    node: impl IntoSystem<(), (), M> + 'static
+) -> impl FnMut<(Local<Option<RootNode<(), ()>>>, Web)> + 'static
+{
+    move |mut cached: Local<Option<RootNode<(), ()>>>, mut web: Web|
+    {
+        let root = NodeBuilder::new(node)
+            .prepare(&mut web).unwrap()
+            .packaged(&mut web).unwrap()
+            .as_root();
+        *cached = Some(root);
+    }
+}
+```
+
+You can also configure the error handling policy for root nodes. Here is the implementation for the [`.webroot_with()`](bevy_cobweb::webroot_with) system extension:
+
+```rust
+fn webroot_with<M>(
+    node   : impl IntoSystem<(), (), M> + 'static,
+    policy : impl Into<NodeErrorPolicy>,
+) -> impl FnMut<(Local<Option<RootNode<(), ()>>>, Web)> + 'static
+{
+    move |mut cached: Local<Option<RootNode<(), ()>>>, mut web: Web|
+    {
+        let root = NodeBuilder::new(node)
+            .prepare(&mut web).unwrap()
+            .packaged(&mut web).unwrap()
+            .as_root_with(policy.into());
+        *cached = Some(root);
+    }
+}
+```
+
 
 ### Node State Examples
 
@@ -582,8 +624,12 @@ fn link_with_node_spawning(mut web: Web) -> NodeResult<NodeId>
                 for new_bug in cache.pending.drain()
                 {
                     let bug = new_bug.attach(&mut web)?;
-                    bug.build(&mut web)?;
                     cache.saved.push(bug);
+                }
+
+                for bug in cache.saved.iter()
+                {
+                    bug.build(&mut web)?;
                 }
 
                 Ok(())
@@ -598,26 +644,111 @@ fn link_with_node_spawning(mut web: Web) -> NodeResult<NodeId>
 
 ### [NodeHash](bevy_cobweb::NodeHash) Examples
 
-TODO
+All node state, inputs, and outputs must implement [`NodeHash`](bevy_cobweb::NodeHash) (except [`NodeLinks`](bevy_cobweb::NodeLink)). Types that implement `Hash` also implement `NodeHash` by default.
+
+A custom derive is provided for types whose members all implement `NodeHash`:
+
+```rust
+#[derive(NodeHash)]
+struct MyNodeOutput
+{
+    a: usize,
+    b: Vec<String>,
+    c: NodeHandle<NodeHandle<f32>>,
+}
+```
+
+You can also implement it manually (very unlikely to need this):
+
+```rust
+struct MySpecialNodeOutput
+{
+    // ???
+}
+
+impl NodeHash for MySpecialNodeOutput
+{
+    fn node_hash(&self, web: &Web, hasher: &mut Hasher)
+    {
+        // ???
+    }
+}
+```
 
 
 ### Node Event Examples
 
-TODO
+Node events are quite simple.
 
-- basic event
+```rust
+fn basic_event(mut web: Web) -> NodeResult<()>
+{
+    let id = NodeBuilder::new(
+            |event: NodeEvent<()>|
+            {
+                if event.take().is_some()
+                {
+                    println!("event encountered!");
+                }
+                Ok(())
+            }
+        )
+        .build(&mut web)?
+        id();
 
-- relocation event
+    web.send_event(id, ())?;
 
+    Ok(())
+}
+```
 
-### ECS Reactivity Examples
+A major use-case is relocating node branches. In this example, nodes are spawned by a node factory whenever a `Weeble` component is inserted on any entity. The spawned nodes are sent to another node that manages them. The manager node could at a later time package its saved nodes and send them off to another node to be attached there.
 
-TODO
+```rust
+fn relocation_event(mut web: Web) -> NodeResult<()>
+{
+    let id = NodeBuilder::new_merged(
+            (),
+            |prev, ()| -> MergeResult<Vec<BasicNode<(), (), ()>>>
+            {
+                Ok(prev.unwrap_or_default())
+            },
+            |mut nodes| move |event: NodeEvent<Packaged<BasicNode<(), (), ()>>>|
+            {
+                if let Some(new_node) = event.take()
+                {
+                    println!("node received!");
+                    let node = new_node.attach(&mut web)?;
+                    nodes.push(node);
+                }
 
+                for node in nodes.iter()
+                {
+                    node.build(&mut web)?;
+                }
 
-### Error Propagation Examples
+                Ok(())
+            }
+        )
+        .build(&mut web)?
+        id();
 
-TODO
+    NodeBuilder::new_with(
+            id,
+            |id| move |mut web: Web|
+            {
+                let packaged = NodeBuilder::new(|| {})
+                    .prepare(&mut web)?
+                    .packaged(&mut web)?;
+                web.send(id, packaged);
+            }
+        )
+        .triggers(insertion::<Weeble>)
+        .reactor(&mut web)?;
+
+    Ok(())
+}
+```
 
 
 
