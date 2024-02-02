@@ -72,7 +72,7 @@ If the window is resized, then `WindowArea` will rebuild because it is internall
 
 ## Deep-Dive
 
-If you are here for code, [skip ahead](#examples).
+If you are here for code, [skip ahead](#api-examples).
 
 A web is a structure analogous to a forest covered in cobwebs. Each 'tree' is a physical branching structure of nodes, and between all the nodes are reactive relationships (the 'web').
 
@@ -390,9 +390,11 @@ The reaction-resolver will fully execute all recursive system commands, system e
 
 
 
-## Examples
+## API Examples
 
-Here are a bunch of examples of using `bevy_cobweb`. In practice, users of this crate would use a mixture of the raw API and ergonomic wrappers such as those showcased in the [Hello World](#hello-world).
+Here are a bunch of examples of using `bevy_cobweb`'s raw API. In practice, users of this crate would use a mixture of the raw API and ergonomic wrappers such as those showcased in the [Hello World](#hello-world).
+
+For more speculative examples of how `bevy_cobweb` might be used in a real UI, [jump ahead](#speculative-examples).
 
 
 ### Making a [RootNode](bevy_cobweb::RootNode)
@@ -934,6 +936,98 @@ fn relocation_event(mut web: Web) -> NodeResult<()>
     Ok(())
 }
 ```
+
+
+
+## Speculative Examples
+
+Here we imagine how `bevy_cobweb` might be used to build real UIs.
+
+
+### Score Counter Example
+
+In this example, a game score display increments by 1 every time a game block is destroyed. We assume when blocks are destroyed a `BlockDestroyed` Bevy event is emitted. The score is stored in a `BlockScore` because that's how I would implement this (separation of concerns), however you could also store the score in the node that writes the score text and increment it directly on `BlockDestroyed` events.
+
+The `TextWriter` is a custom system parameter that writes to entities with `Text` components (internally it has a `Query<&mut Text>`). We obtain the text entity in this case from an empty `TextNode` located in the upper right corner of the screen.
+
+```rust
+use bevy::prelude::*;
+use bevy_cobweb::prelude::*;
+use bevy_cobweb_ui::{Location, TextNode, TextSize, TextWriter, WindowArea};
+
+#[derive(ReactResource, Default, Deref, DerefMut)]
+struct BlockScore(u32);
+
+#[derive(Event)]
+struct BlockDestroyed;
+
+fn score_display(
+    mut web : Web,
+    window  : Query<Entity, With<PrimaryWindow>>
+) -> NodeResult<()>
+{
+    let area = WindowArea::new(window.single()).build(&mut web)?;
+
+    let text = TextNode::new()
+        .location(area, Location::AnchorRelative(1.0, 2.5)
+        .size(area, TextSize::RelativeHeight(7.5))
+        .build(&mut web)?;
+
+    NodeBuilder::new_with(
+            text, |text| move
+            |
+                web        : Web,
+                mut writer : TextWriter,
+                score      : ReactRes<BlockScore>
+            | -> NodeResult<()>
+            {
+                writer.write(
+                        *web.read(text)?,
+                        |t| write!(t, "Score: {}", *score),
+                    )?;
+                Ok(())
+            }
+        )
+        .triggers(resource_mutation::<BlockScore>())
+        .build(&mut web)?;
+
+    Ok(())
+}
+
+fn update_score(
+    mut rcommands : ReactCommands,
+    mut score     : ReactResMut<BlockScore>,
+    mut destroyed : EventReader<BlockDestroyed>
+){
+    if destroyed.is_empty() { return; }
+    let num = destroyed.read().count();
+    *score.get_mut(&mut rcommands) += num as u32;
+}
+
+fn main()
+{
+    App::new()
+        .add_plugins(DefaultPlugins::default())
+        .add_plugins(CobwebPlugin::default())
+        .init_react_resource::<BlockScore>()
+        .add_event::<BlockDestroyed>()
+        //...
+        .add_systems(Startup, score_display.webroot())
+        .add_systems(Update, update_score)
+        //...
+        .run();
+}
+```
+
+
+### Unit Info Window Sync Example
+
+A unit frame whose displayed life value changes to synchronize with the unit's life
+
+
+### Exit Confirmation Popup Example
+
+A UI popup that's spawned and absorbed AppExit with a "do you really want to quit"
 
 
 
