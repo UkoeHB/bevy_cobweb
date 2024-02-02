@@ -15,6 +15,19 @@ Framework for building declarative reactive webs.
 
 
 
+## Motivation
+
+This crate is intended as the foundation for building UI in Bevy, with the following goals in mind.
+
+- No macros required, no third-party dependencies.
+- Build UI declaratively in a Bevy-native style with heavy use of normal-looking Bevy systems.
+- Minimize the separation between UI element construction and updating.
+- Enable asset and editor-driven hot-reloading that preserves the existing UI state as much as possible.
+- Provide a powerful, unopinionated API for building ergonomic UI widgets.
+- Avoid unnecessary rebuilding as much as possible (efficiency is key).
+
+
+
 ## Hello World
 
 Here is a hypothetical example of writing `"Hello, World!"` to the screen. Note that `bevy_cobweb_ui` does not exist yet.
