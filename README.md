@@ -1,17 +1,17 @@
 # Bevy Cobweb (IN DEVELOPMENT)
 
-**There is no code yet, only a draft of the proposed design in this document.**
+**There is no code yet, only the design draft in this document.**
 
 Framework for building declarative reactive webs.
 
 - Nodes are stateful reactive Bevy systems.
-- Change detection prevents reinitializing and rerunning nodes unless needed.
-- Nodes react to resource mutations, entity changes, reactive events, and node events; recursive reactions are allowed!
+- Nodes react to resource mutations, entity changes, reactive events, and node events.
 - Node outputs can be accessed throughout the web via node handles that synchronize with rebuilds.
-- Root node error handling policy is customizable. Errors propagate to root nodes.
+- Change detection prevents reinitializing and rerunning nodes unless needed.
 - Nodes may be detached and re-attached anywhere in the web.
 - Nodes are automatically cleaned up when no longer used.
-- Web mutations and node reactions have zero frame delay.
+- Root node error handling policy is customizable. Errors propagate to root nodes.
+- Web mutations and node reactions are processed immediately and recursion is allowed.
 
 
 
@@ -59,6 +59,8 @@ If the window is resized, then `WindowArea` will rebuild because it is internall
 
 ## Deep-Dive
 
+If you are here for code, skip ahead to [SHOW ME THE CODE](#show-me-the-code).
+
 A web is a structure analogous to a forest covered in cobwebs. Each 'tree' is a physical branching structure of nodes, and between all the nodes are reactive relationships (the 'web').
 
 There are two kinds of reactive relationships. One is ECS reactivity, where nodes will rebuild in response to changes in tracked ECS elements (resource mutations, entity changes, etc.). The other is inter-node dependencies, where nodes can depend on the outputs of upstream nodes. When a referenced node output changes, any nodes dependent on that output will rebuild.
@@ -82,7 +84,7 @@ Building a child node uses change detection to avoid re-running the child node's
 
 As mentioned, child nodes can be assigned reaction triggers, which specify which ECS mutations will cause the node system to re-run automatically. When a node runs after being triggered, it will re-use its existing state and input, and will produce a new output. Node state is mutable and node inputs are immutable. Note that assigning a child node new reaction triggers will not cause the node to re-run, but it *will* cause pending reactions targeting that node to fail.
 
-Child node outputs are *deferred*, which means they cannot be accessed by their parents. However, they *can* be safely accessed by downstream sibling nodes, and child node output handles can be returned by a parent node for use in cousin nodes (but not direct ancestors). In order to perform change detection on data (node state/inputs/outputs) that may contain handles to the deferred outputs of other nodes, the node scheduler carefully orders events so that node outputs will be fully resolved by the time they might be needed for performing change detection in dependents. We compute change hashes using a custom trait that allows inspecting the contents of handles (which are not themselves hashable). This is the 'memoization magic' of `bevy_cobweb`.
+Child node outputs are *deferred*, which means they cannot be accessed by their parents. However, they *can* be safely accessed by downstream sibling nodes, and child node output handles can be returned by a parent node for use in cousin nodes (but not direct ancestors). In order to perform change detection on data (node state/inputs/outputs) that may contain handles to the deferred outputs of other nodes, the node scheduler carefully orders events so that node outputs will be fully resolved by the time they might be needed for performing change detection in dependents. We compute change hashes using a custom [`NodeHash`](bevy_cobweb::NodeHash) trait that allows inspecting the contents of handles (which are not themselves hashable). This is the 'memoization magic' of `bevy_cobweb`.
 
 A triggered node can cause its parent to rebuild in two scenarios. One is if the node's output changes. The other is if the node errors out. We rebuild parents on error because it's possible that an error was caused by a failure to read an invalid node handle, and so we give the parent an opportunity to repair its children. Parents will recursively rebuild until the algorithm reaches an ancestor whose output doesn't change and that doesn't error out, or until the root node is rebuilt. Root nodes don't have outputs, and they consume propagated errors using their configured error handling policy.
 
@@ -115,25 +117,11 @@ Every node is a stateful Bevy system that is operated by the web. Nodes have fiv
 
 Node systems are re-runnable 'constructors'. Every time a node runs, it needs to 'reconstruct' all of its child nodes. Children are tracked by `bevy_cobweb` and destroyed if not reconstructed when their parent runs. Node builders use change detection to avoid reconstructing a node if its state initialization or inputs have not changed, which minimizes the work needed to rebuild any node in the web.
 
-#### Node State Example
-
-TODO
-
-#### Node Input Example
-
-TODO
-
-#### Node Triggers Example
-
-TODO
-
 #### Inter-Node Dependencies via [NodeHandle\<O\>](bevy_cobweb::NodeHandle)
 
 Node handles represent a reference to a specific node's output that is stored in the web. They also contain a node id that can be used to send node events to the referenced node.
 
 The data in a node handle is not readable while the node is building. This means node handles are only readable within sibling and cousin nodes that are built downstream of the handle origins. The are *not* readable by parents and direct ancestors, which always finish running before their children.
-
-TODO
 
 #### Node Chaining via [NodeLink\<O\>](bevy_cobweb::NodeLink)
 
@@ -145,17 +133,13 @@ A producer only sets a new value to its `NodeLink` when rebuilt. If a producer i
 
 A consumer node can only consume one `NodeLink` and no other values when updating their node state. Unlike other aspects of the web design, `NodeLinks` do not use change detection because they can transmit non-hashable data (e.g. [`Packaged`](bevy_cobweb::Packaged) nodes). Whenever a non-empty node link is consumed, the consumer will always rebuild.
 
-TODO
-
 #### Node State Merging
 
 Often it's useful to incrementally update a node's state rather than completely reset it. In that case instead of setting node state in the node builder, you can merge existing state with initialization data (which may be data from the parent node, or a [`NodeLink`](bevy_cobweb::NodeLink)).
 
 Nodes that allow state merging must use the [`NodeState<S>`](bevy_cobweb::Node) system parameter to access the node state.
 
-TODO
-
-#### Change Detection
+#### [NodeHash](bevy_cobweb::NodeHash) Change Detection
 
 - node building as deferred mutation, change detection as carefully ordered data hashing
 
@@ -164,20 +148,14 @@ TODO
 - node input
 - node output
 
-TODO
-
 
 ### [NodeBuilder](bevy_cobweb::NodeBuilder)
 
-All nodes are constructed using the [NodeBuilder](bevy_cobweb::NodeBuilder).
+All nodes are constructed using the [`NodeBuilder`](bevy_cobweb::NodeBuilder).
 
 TODO
 
-#### Built-in Nodes
-
-TODO
-
-**Reinitialization**
+#### Reinitializing Nodes
 
 TODO
 
@@ -195,6 +173,8 @@ TODO
 
 #### [Packaged](bevy_cobweb::Packaged) Nodes
 
+- errors that propagate to a packaged node are ignored
+
 A [`PackagedNode`](bevy_cobweb::PackagedNode) is a node in the web with no parent. Packaged nodes cannot be reinitialized, but they can be moved anywhere.
 
 A `PackagedNode` can be scheduled to rebuild at any time (if you give it changed inputs), but does *not* produce a [`NodeHandle`](bevy_cobweb::NodeHandle), since handle access scoping is relative to a specific position within the web (whereas `PackagedNodes` have a 'floating' position). If you want to get a handle, then attach the node to another node to get a [`AttachedNode`](bevy_cobweb::AttachedNode) or [`ProducerNode`](bevy_cobweb::ProducerNode) before building it.
@@ -206,6 +186,8 @@ TODO
 
 ### Node Events
 
+- [`NodeEvent<E>`](bevy_cobweb::NodeEvent) event consumer
+
 TODO
 
 
@@ -214,10 +196,6 @@ TODO
 In `bevy_cobweb`, ECS reactivity is implemented through [`ReactCommands`](bevy_cobweb::ReactCommands). We use custom reactivity instead of Bevy change detection in order to achieve precise, responsive, recursive reactions with an ergonomic API that correctly integrates with `bevy_cobweb`'s node building protocol. In an ideal world `bevy_cobweb` would be upstreamed to Bevy, which would eliminate the ergonomic limitations of custom reactive elements (i.e. `ReactRes<>` resources and `React<>` components).
 
 See the [docs](bevy_cobweb::react) for more details (WILL BE MIGRATED FROM `BEVY_KOT`, SEE [THE DOCS](https://github.com/UkoeHB/bevy_kot/tree/master/bevy_kot_ecs) THERE).
-
-#### Example
-
-TODO
 
 #### Scheduler: Four-Tier Commands Framework
 
@@ -235,6 +213,409 @@ TODO
 
 - node errors vs accumulated web errors
 - system command: ignore failing children (clear error queue)
+
+TODO
+
+
+## SHOW ME THE CODE
+
+### Node State Examples
+
+A node can be built with no state with [`.new()`](bevy_cobweb::NodeBuilder::new)
+
+```rust
+fn no_state(mut web: Web) -> NodeResult<()>
+{
+    NodeBuilder::new(
+            || -> NodeResult<()>
+            {
+                println!("empty node");
+                Ok(())
+            }
+        )
+        .build(&mut web)?;
+    Ok(())
+}
+```
+
+Or with captured state with [`.new_with()`](bevy_cobweb::NodeBuilder::new_with). Note that the captured state is moved into the system via an intermediary closure. It is a compile error to capture anything from the environment.
+
+```rust
+fn captured_state(mut web: Web) -> NodeResult<()>
+{
+    let c = 0;
+    NodeBuilder::new_with(
+            c,
+            |mut c| move || -> NodeResult<()>
+            {
+                c += 1;
+                println!("we ran {c} times");
+                Ok(())
+            }
+        )
+        .build(&mut web)?;
+
+    Ok(())
+}
+```
+
+Or by storing the state separately with [`.from()`](bevy_cobweb::NodeBuilder::from) and accessing it with [`NodeState<S>`](bevy_cobweb::NodeState). This is necessary if your node system is a function pointer.
+
+```rust
+fn my_node(mut state: NodeState<usize>) -> NodeResult<()>
+{
+    *state += 25;
+    println!("{state}");
+    Ok(())
+}
+
+fn from_state(mut web: Web) -> NodeResult<()>
+{
+    NodeBuilder::from(0, my_node).build(&mut web)?;
+    Ok(())
+}
+```
+
+Or by merging existing state with new state with [`.from_merged()`](bevy_cobweb::NodeBuilder::from_merged). We need [`NodeState<S>`](bevy_cobweb::NodeState) to access the node state, which is stored separate from the node system in order to merge it with updates.
+
+```rust
+fn from_state_merged(mut web: Web) -> NodeResult<()>
+{
+    let c = 100;
+    NodeBuilder::from_merged(
+            c,
+            |old: Option<usize>, new: usize| -> MergeResult<usize>
+            {
+                Ok(old.map_or_else(
+                    || new,
+                    |old| new + *old
+                ))
+            }, 
+            |mut state: NodeState<usize>| -> NodeResult<()>
+            {
+                *state *= 2;
+                println!("{state}");
+                Ok(())
+            }
+        )
+        .build(&mut web)?;
+
+    Ok(())
+}
+```
+
+
+### Node Input Examples
+
+Data passed as an input with [`.input()`](bevy_cobweb::NodeBuilder::input) is readable with [`NodeInput<I>`](bevy_cobweb::NodeInput).
+
+```rust
+fn input(mut web: Web) -> NodeResult<()>
+{
+    NodeBuilder::new(
+            |input: NodeInput<usize>| -> NodeResult<()>
+            {
+                println!("{:?}", *input);
+                Ok(())
+            }
+        )
+        .input(10)
+        .build(&mut web)?;
+
+    Ok(())
+}
+```
+
+
+### Node Triggers Examples
+
+A node can react to ECS triggers with [`.triggers()`](bevy_cobweb::NodeBuilder::triggers).
+
+```rust
+fn parent_of_sensitive_child(mut web: Web) -> NodeResult<()>
+{
+    NodeBuilder::new(
+            || -> NodeResult<()>
+            {
+                println!("Stop triggering mee!!!");
+                Ok(())
+            }
+        )
+        .triggers(resource_mutation::<UnorganizedCode>())
+        .build(&mut web)?;
+
+    Ok(())
+}
+
+fn unorganize_it(mut rc: ReactCommands, mut uc: ReactResMut<UnorganizedCode>)
+{
+    uc.get_mut(&mut rc).jumble();
+}
+
+fn main()
+{
+    App::new()
+        .add_plugins(DefaultPlugins::default())
+        .add_plugins(CobwebPlugin::default())
+        .add_systems(Startup, parent_of_sensitive_child.webroot())
+        .add_systems(Update, unorganize_it)
+        .init_react_resource::<UnorganizedCode>();
+}
+```
+
+Triggers can be derived from deferred inputs with [`.triggers_from()`](bevy_cobweb::NodeBuilder::triggers_from).
+
+```rust
+fn derived_trigger(mut web: Web) -> NodeResult<()>
+{
+    // Make an entity with reactive Score component
+    let score_entity = NodeBuilder::new(
+            |mut commands: Commands| -> NodeResult<Entity>
+            {
+                let entity = commands.spawn(React::new(Score)).id();
+                Ok(entity)
+            }
+        )
+        .build(&mut web)?;
+
+    // Mutate the score when the IncrementScore event is detected in the environment
+    // - Uses a ReactorNode to avoid incrementing the score when the score entity is first set.
+    NodeBuilder::new_with(
+            score_entity,
+            |e| move |mut web: Web, mut score: Query<&mut React<Score>>| -> NodeResult<()>
+            {
+                let score = score.get_mut(web.read(e)?).map_err(|e| e.into())?;
+
+                score.get_mut(web.rc()).increment();
+                Ok(())
+            }
+        )
+        .triggers(event::<IncrementScore>())
+        .build_reactor(&mut web)?;
+
+    // React to component mutation
+    // - Uses a BasicNode so the score will be printed the first time this is built.
+    NodeBuilder::new_with(
+            score_entity,
+            |e| move |mut web: Web, score: Query<&React<Score>>| -> NodeResult<()>
+            {
+                let score = score.get(web.read(e)?).map_err(|e| e.into())?;
+
+                println!("Score: {:?}", score);
+                Ok(())
+            }
+        )
+        .triggers_from(
+            move |web: &mut Web| -> NodeResult<impl ReactionTriggerBundle>
+            {
+                Ok(entity_mutation::<Score>(*web.read(score_entity)?))
+            }
+        )
+        .build(&mut web)?;
+
+    Ok(())
+}
+```
+
+
+### [NodeHandle\<O\>](bevy_cobweb::NodeHandle) Examples
+
+A node handle can be stored in node state.
+
+```rust
+fn handle_into_state(mut web: Web) -> NodeResult<()>
+{
+    let the_answer = NodeBuilder::new(
+            || Ok(42.into()) -> NodeResult<TheAnswer>
+        )
+        .build(&mut web)?;
+
+    NodeBuilder::new_with(
+            the_answer,
+            |a| move |mut web: Web| -> NodeResult<()>
+            {
+                println!("The answer is {:?}", web.read(a)?.proclaim_it());
+                Ok(())
+            }
+        )
+        .build(&mut web)?;
+
+    Ok(())
+}
+```
+
+Or passed as input to a node.
+
+```rust
+fn handle_into_input(mut web: Web) -> NodeResult<()>
+{
+    let the_answer = NodeBuilder::new(
+            || Ok(42.into()) -> NodeResult<TheAnswer>
+        )
+        .build(&mut web)?;
+
+    NodeBuilder::new(
+            |mut web: Web, a: NodeInput<NodeHandle<TheAnswer>>| -> NodeResult<()>
+            {
+                println!("The answer is {:?}", web.read(*a)?.proclaim_it());
+                Ok(())
+            }
+        )
+        .input(the_answer)
+        .build(&mut web)?;
+
+    Ok(())
+}
+```
+
+Or used to derive triggers.
+
+```rust
+fn handle_into_triggers(mut web: Web) -> NodeResult<()>
+{
+    let the_man = NodeBuilder::new(
+            |mut commands: Commands| Ok(commands.spawn(React::new(TheMan)).id()) -> NodeResult<Entity>
+        )
+        .build(&mut web)?;
+
+    NodeBuilder::new(
+            || -> NodeResult<()>
+            {
+                println!("The man has spoken!");
+                Ok(())
+            }
+        )
+        .triggers_from(
+            move |web: &mut Web| -> NodeResult<impl ReactionTriggerBundle>
+            {
+                Ok(entity_mutation::<TheMan>(*web.read(the_man)?))
+            }
+        )
+        .build(&mut web)?;
+
+    Ok(())
+}
+```
+
+
+### [NodeLink\<O\>](bevy_cobweb::NodeLink) Examples
+
+A node link can pass any arbitrary data using [`.connect()`](bevy_cobweb::NodeBuilder::connect) or [`.connect_merged()`](bevy_cobweb::NodeBuilder::connect_merged) on the consumer.
+
+```rust
+fn node_link_connection(mut web: Web) -> NodeResult<()>
+{
+    let x = 5;
+    let y = 10;
+    let computed = NodeBuilder::new_with(
+            (x, y)
+            |(x, y)| move || Ok(x*x + y) -> NodeResult<usize>
+        )
+        .build_producer(&mut web)?;
+
+    NodeBuilder::connect(
+            computed,
+            |c| move || -> NodeResult<()>
+            {
+                println!("The computed result: {c}");
+                Ok(())
+            }
+        )
+        .build(&mut web)?;
+
+    Ok(())
+}
+```
+
+Node links can even pass packaged nodes. The example here is slightly complicated:
+1. The bug-spawner node receives node events with the number of bugs to be spawned.
+1. Every time it runs, it spawns packaged bug nodes based on the number commanded.
+1. The connected node merges the packaged bug nodes into its `BugCache`.
+1. The connected node then internally attaches all the packaged bug nodes as children of itself.
+1. Finally, we return the bug-spawner node's id so a user of this node can send bug spawn commands as node events to the internal bug-spawner.
+
+If we wanted the parent of `link_with_node_spawning` to send bug spawn commands, then we would need to send the commands to the `link_with_node_spawning` node and then marshal them into the bug-spawner with an internal node event. This would work because the parent has access to the [`NodeId`](bevy_cobweb::NodeId) of `link_with_node_spawning` but not the bug-spawner.
+
+```rust
+struct BugCache
+{
+    saved: Vec<BasicNode<(), (), ()>>,
+    pending: Vec<Packaged<BasicNode<(), (), ()>>>,
+}
+impl Default for BugCache { fn default() -> Self { Self{ saved: Vec::default(), pending: Vec::default() } } }
+
+fn link_with_node_spawning(mut web: Web) -> NodeResult<NodeId>
+{
+    let new_bugs = NodeBuilder::new(
+            |mut web: Web, num: NodeEvent<usize>| -> NodeResult<Vec<Packaged<BasicNode<(), (), ()>>>
+            {
+                let mut bugs = Vec::default();
+                for i in 0..num.take().unwrap_or_default()
+                {
+                    let bug = NodeBuilder::new(
+                            || -> NodeResult<()>
+                            {
+                                println!("I'm a bug");
+                                Ok(())
+                            }
+                        )
+                        .prepare(&mut web)?
+                        .packaged(&mut web)?;
+                    bugs.push(bug);
+                }
+                bugs
+            }
+        )
+        .build_producer(&mut web)?;
+    let bug_spawner_id = new_bugs.id();
+
+    NodeBuilder::connect_merged(
+            new_bugs,
+            |cache: Option<BugCache>, new_bugs: Vec<Packaged<BasicNode<(), (), ()>>>| -> MergeResult<BugCache>
+            {
+                let mut cache = cache.unwrap_or_default();
+                cache.pending.append(new_bugs);
+                Ok(cache)
+            },
+            |mut web: Web, mut cache: NodeState<BugCache>| -> NodeResult<()>
+            {
+                for new_bug in cache.pending.drain()
+                {
+                    let bug = new_bug.attach(&mut web)?;
+                    bug.build(&mut web)?;
+                    cache.saved.push(bug);
+                }
+
+                Ok(())
+            }
+        )
+        .build(&mut web)?;
+
+    Ok(bug_spawner_id)
+}
+```
+
+
+### [NodeHash](bevy_cobweb::NodeHash) Examples
+
+TODO
+
+
+### Node Event Examples
+
+TODO
+
+- basic event
+
+- relocation event
+
+
+### ECS Reactivity Examples
+
+TODO
+
+
+### Error Propagation Examples
 
 TODO
 
