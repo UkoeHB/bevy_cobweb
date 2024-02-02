@@ -53,7 +53,7 @@ fn main()
 
 The `WindowArea` and `TextNode` types seen here are custom node builders that internally use the `bevy_cobweb` API. The `hello_world` system is a root node owned by a system produced by the [`.webroot()`](bevy_cobweb::webroot) system adaptor, which packages and stores the node in a `Local`. If the `hello_world` node errors-out, then the error handling policy configured in [`CobwebPlugin`](bevy_cobweb::CobwebPlugin) will be used (panic by default).
 
-If the window is resized, then `WindowArea` will rebuild because it is internally set up to react to changes in the window size. When the `WindowArea`'s output changes, its parent node `hello_world` will be rebuilt automatically. When `hello_world` rebuilds, the `TextNode` child will also rebuild if `area` has changed, thereby propagating the window size change to its dependents. Internally, `TextNode` will re-use its existing `Text` entity, avoiding string reallocation.
+If the window is resized, then `WindowArea` will rebuild because it is internally set up to react to changes in the window size. When the `WindowArea`'s output changes, its parent node `hello_world` will be rebuilt automatically. When `hello_world` rebuilds, the `TextNode` child will also rebuild if `area` has changed, thereby propagating the window size change. Internally, `TextNode` will re-use its existing `Text` entity, avoiding string reallocation.
 
 
 
@@ -101,6 +101,11 @@ The [`CobwebPlugin`](bevy_cobweb::CobwebPlugin) is the starting point for using 
 - **[NodeCleanupPolicy](bevy_cobweb::NodeCleanupPolicy)**: The pre-configured node cleanup policy for [`RootNodes`](bevy_cobweb::RootNode) and [`Packaged`](bevy_cobweb::Packaged) nodes that are dropped. When a root or packaged node is dropped, it will be garbage collected, then cleaned up using the configured cleanup policy. Note that root and packaged nodes can never be completely detached to live in the background. You must store them, attach them to other nodes, destroy them, or send them back to the garbage collector.
 
 
+### [Web](bevy_cobweb::Web)
+
+The [`Web`](bevy_cobweb::Web) is a system parameter that will be used to build nodes, attach and detach nodes, read node outputs, and send node events.
+
+
 ### Nodes
 
 Every node is a stateful Bevy system that is operated by the web. Nodes have five pieces:
@@ -143,14 +148,19 @@ Nodes that allow state merging must use the [`NodeState<S>`](bevy_cobweb::Node) 
 
 #### [NodeHash](bevy_cobweb::NodeHash) Change Detection
 
-- node building as deferred mutation, change detection as carefully ordered data hashing
+In `bevy_cobweb`, building a node is a 'deferred web mutation'. Building a node schedules a system command (see [ECS Reactivity](#ecs-reactivity)), and the node output is not available until that command has been executed. However, we allow nodes to depend on the outputs of other nodes *and* we perform change detection so that nodes won't rebuild unless their inputs change (or their children's outputs change, in the case of children reacting to an ECS mutation).
 
-- state initializers (normal, merged, normal/merged + NodeLink)
-- node triggers
-- node input
-- node output
+This presents an ordering issue. If a child node depends on the output of a previous sibling node, how do we perform change detection when deciding if the child node should be built? This is tricky because the sibling node's output may internally contain references to its own children.
 
-TODO
+Our solution is to schedule 'node building' and 'node output handling' as two separate system commands. Since system commands are telescoped (see [ECS Reactivity](#ecs-reactivity)), all the children of the 'node building' step will be built before the 'node output handling' step is completed. This way all internal dependencies of a node output can be resolved before inspecting that output.
+
+Since node references ([`NodeHandles`](bevy_cobweb::NodeHandle)) are not directly hashable, we use a custom trait [`NodeHash`](bevy_cobweb::NodeHash) that allows inspecting the contents of node references in order to hash them. This trait is automatically implemented for types that implement `Hash`.
+
+Change detection is performed in the following areas:
+- **Node state data**: Including captured data, external data, merged external data, and [`NodeLinks`](bevy_cobweb::NodeLink). Node links are not actually hashed since they may contain non-hashable data (primarly [`Packaged`](bevy_cobweb::Packaged) nodes) and since node links are consumable so we always want to rebuild when link data is provided, so we hash a 'link counter' instead which tracks how many times a non-empty link has been consumed (as a proxy for change detection).
+- **Node triggers**: Including directly-supplied triggers and deferred triggers. These just use `Hash` since triggers cannot contain deferred data.
+- **Node inputs**: These are straightforward.
+- **Node outputs**: These are straightforward, however if a node output is an error then computing a [`NodeHash`](bevy_cobweb::NodeHash) for its [`NodeHandle`](bevy_cobweb::NodeHandle) will also error. In this sense, errors are contagious.
 
 
 ### [NodeBuilder](bevy_cobweb::NodeBuilder)
@@ -253,9 +263,11 @@ When a parent node is reinitialized (i.e. its node state is overwritten), it is 
 
 ### Node Events
 
-- [`NodeEvent<E>`](bevy_cobweb::NodeEvent) event consumer
+Node events allow you to send one-off data directly to a node system. Given a node id, you simply call `web.send(node_id, event_data)` and then in the target node can use the [`NodeEvent<E>`](bevy_cobweb::NodeEvent) system parameter to take the data.
 
-TODO
+Under the hood, node events use [`SystemEvents`](bevy_cobweb::SystemEvent) which use a system id to send event data.
+
+We discuss the implementation of system events further in the next section.
 
 
 ### ECS Reactivity
@@ -268,20 +280,79 @@ See the [docs](bevy_cobweb::react) for more details (WILL BE MIGRATED FROM `BEVY
 
 A foundational component of `bevy_cobweb` is a four-tier commands framework (aka the scheduler) that enables recursive rebuilds and reactions.
 
-TODO
+Conceptually, the four tiers are as follows:
 
-- bevy commands
-- system commands
-- system events
-- reaction commands
+1. `Commands`: single-system ECS mutations and system-specific deferred logic.
+1. System commands: propagation of a single system-web mutation (a rebuild of one node). Building a child node will schedule a system command that handles it.
+1. System events: propagation of a system-web transaction, which may be composed of multiple system-web mutations (eg extract a branch, reinsert a branch).
+1. Reactions: queued system-web transactions triggered by ECS mutations. We can consider normal reactions as 'single-node webs'.
+
+Each tier expands in a telescoping style. When one `Command` is done running, all commands queued by that `Command` are immediately executed before any previous commands. And so on for the other tiers.
+
+There are two important innovations that the `bevy_cobweb` command-resolver algorithm introduces.
+- **Rearrange `apply_deferred`**: Every Bevy system can have internally deferred logic that is saved in system parameters. After a system runs, that deferred logic can be applied by calling `system.apply_deferred(&mut world)`. The problem with this is if the deferred logic includes triggers to run the same system again (e.g. because of reactivity), an error will occur because the system is currently in use. To solve this, `bevy_cobweb` only uses `apply_deferred` to apply the first command tier. Everything else is executed after the system has been returned to the world.
+- **Injected cleanup**: In `bevy_cobweb` you access node state, node input, and node events with the [`NodeState`](bevy_cobweb::NodeState), [`NodeInput`](bevy_cobweb::NodeInput) and [`NodeEvent`](bevy_cobweb::NodeEvent) system parameters. In order to properly set the underlying data of these parameters such that future system calls won't accidentally have access to that data, our strategy is to insert the data to custom resources immediately before running node systems, and then remove that data immediately after the system has run but before calling `apply_deferred`. We do this with an injected cleanup callback in the system runner.
+
+In order to rearrange `apply_deferred` as described, all system commands, system events, and reactions are queued within a central `ReactCache` resource.
+
+The scheduler has three pieces. Note that all systems here are custom one-shot systems stored on entities.
+
+**1. System runner**
+
+At the lowest level is the system runner, which executes a single scheduled system. All Bevy `Commands` and system commands created by the system that is run will be resolved here.
+
+1. Remove the target system from the `World`.
+  - If the system is missing, run the cleanup callback and return.
+1. Remove pre-existing pending system commands. While not useful directly within `bevy_cobweb`, this allows reactive systems to be called manually within other reactive systems.
+1. Run the system on the world: `system.run(input, world)`.
+1. Invoke the cleanup callback.
+1. Apply deferred: `system.apply_deferred(world)`.
+1. Reinsert the system into its position on the `World`.
+1. Take pending system commands from the `ReactCache` and run them recursively with this system runner.
+    - After running one system command, take pending system commands again and push them to the front of the queue. Continue until all system commands are done.
+1. Replace pre-existing pending system commands that were removed.
+
+**2. System events**
+
+When [`ReactCommands`](bevy_cobweb::ReactCommands) receives a system-targeted event with `rc.system_event(sys_id, event)`, it wraps the system invocation and event data in a closure and inserts it into the system event queue.
+
+That closure does the following:
+
+1. Insert event data into system event resource.
+1. Call the system runner for the target system.
+    - Use a cleanup callback that clears the system event resource.
+
+Raw system events are readable with the [`SystemEvent`](bevy_cobweb::SystemEvent) system parameter, but we wrap that in [`NodeEvent`](bevy_cobweb::NodeEvent) in the web for a slightly more ergonomic API tailored to the web use-case (`SystemEvents` created for node events include the node id that originated the node event, and `NodeEvent` makes it easier to read the node event data).
+
+**3. Command resolver**
+
+When a system command, system event, or reaction is scheduled in 'user-land' (aka normal Bevy systems outside `bevy_cobweb`), we create a normal Bevy `Command` that launches a reaction tree. This reaction-resolver command is *only* emitted when we are not already inside a reaction tree.
+
+The reaction-resolver will fully execute all recursive system commands, system events, and reactions before returning to user-land. The resolver command's algorithm is as follows:
+
+1. Set the reaction tree flag to prevent the resolver from being recursively scheduled.
+1. Set up three queues: system commands, system events, reactions.
+1. Loop until there are no pending system commands, system events, or reactions.
+    1. Loop until there are no pending system commands or system events.
+        1. Loop until there are no pending system commands.
+            1. Remove pending system commands and push them to the front of the system commands queue.
+            1. Pop one system command from the queue and run it with the system runner.
+        1. Remove pending system events and push them to the front of the system events queue.
+        1. Pop one system event from the queue and run it.
+    1. Remove pending reactions and push them to the front of the reactions queue.
+    1. Pop one reaction from the queue and run it.
+1. Unset the reaction tree flag now that we are returning to user-land.
 
 
 ### Error Propagation
 
-- node errors vs accumulated web errors
-- system command: ignore failing children (clear error queue)
+All node systems must return `Result<O, NodeError>`. Node errors are collected by `bevy_cobweb`'s internal `WebCache` and saved in a [`WebError`](bevy_cobweb::WebError), which contains a trace of all node errors. If a node experiences an error, the node error will be saved but all sibling nodes will still run (and their errors will also be saved).
 
-TODO
+A parent node's output will internally be treated as an error if any of its children have errored-out. This will cause errors to propagate upward until they hit a [`Packaged`](bevy_cobweb::Packaged) node or a [`RootNode`](bevy_cobweb::RootNode). Errors that hit a packaged node are dropped, while errors that hit a root node are consumed by the node's configured [`NodeErrorPolicy`](bevy_cobweb::NodeErrorPolicy).
+
+Since error propagation isn't always desired, the [`Web`](bevy_cobweb::Web) system parameter includes two error helpers:
+- `.ignore_failing_children()`: This inserts a system command that clears errors detected for children of the current parent node. Note that errors from children after this is invoked won't be ignored, and errors from the parent won't be ignored.
+- `.capture_errors()`: This inserts a system command with a user-defined callback for consuming child errors.
 
 
 
