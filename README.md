@@ -148,38 +148,96 @@ Nodes that allow state merging must use the [`NodeState<S>`](bevy_cobweb::Node) 
 - node input
 - node output
 
+TODO
+
 
 ### [NodeBuilder](bevy_cobweb::NodeBuilder)
 
 All nodes are constructed using the [`NodeBuilder`](bevy_cobweb::NodeBuilder).
 
-TODO
+Building a node has five steps:
 
-#### Reinitializing Nodes
-
-TODO
+1. Initialize the builder. This is where the node state and node system are specified.
+    - **Simple**: `new(system)`. The node is state-less.
+    - **Built-in state**: `new_with(state, system)`. The node state is reset when the initial state changes, and is moved into the system.
+    - **External state**: `from(state, system)`. The node state is reset when the initial state changes, and is accessed with [`NodeState<S>`](bevy_cobweb::NodeState).
+    - **External state merged**: `from_merged(init data, merge callback, system)`. The node state is merged with initial state data when it changes, and is accessed with [`NodeState<S>`](bevy_cobweb::NodeState).
+    - **NodeLink**: `connect(node link, system)`. In this case the node becomes connected to the [`NodeLink`](bevy_cobweb) source.
+    - **NodeLink merged**: `connect_merged(node link, merge callback, system)`. In this case the node becomes connected to the [`NodeLink`](bevy_cobweb) source, but existing node state can be merged with the node link contents.
+1. Specify reaction triggers (optional).
+    - **Direct triggers**: `triggers(trigger bundle)`. Triggers are reset when the trigger bundle changes.
+    - **Deferred triggers**: `triggers_from(callback)`. Triggers are derived from a callback that takes `&Web`.
+1. Specify node input (optional).
+    - **Input**: `input(input)`. The node input is reset when the input value changes, and is accessed with [`NodeInput<I>`](bevy_cobweb::NodeInput).
+1. Finalize the builder. This is where you make either an object node or a built-in node.
+    - **Object node**: Nodes are prepared but not built. If you don't build or package the node then it will be destroyed.
+        - **BasicNode**: `prepare(&mut web)`. Outputs a [`BasicNode<S, I, O>`](bevy_cobweb::BasicNode). The basic node can be further converted into a [`RootNode<S, I>`](bevy_cobweb::RootNode) if `S` and `I` implement `Hash` and `O` is `()`.
+            - **RootNode**: `as_root()`.
+            - **RootNode with error policy**: `as_root_with(policy)`. Consumes a custom [`NodeErrorPolicy`](bevy_cobweb::NodeErrorPolicy).
+        - **ProducerNode**: `prepare_producer(&mut web)`. Outputs a [`ProducerNode<S, I, O>`](bevy_cobweb::ProducerNode).
+        - **ReactorNode**: `prepare_reactor(&mut web)`. Outputs a [`ReactorNode<S>`](bevy_cobweb::ReactorNode). You can't call this unless `I` and `O` are `()`.
+    - **Built-in node**: Nodes are built into the current parent. Nodes can be given a name manually, otherwise they are assigned a node name based on their index in the parent's anonymous node list. These cannot be called if there is no parent node.
+        - **Basic node**: `build{_named}(&mut web{, name})`. Outputs a [`NodeHandle<O>`](bevy_cobweb::NodeHandle).
+        - **Producer node**: `build_producer{_named}(&mut web{, name})`. Outputs a [`NodeLink<O>`](bevy_cobweb::NodeLink).
+        - **Reactor node**: `build_reactor{_named}(&mut web{, name})`. Outpus a [`NodeId`](bevy_cobweb::NodeId). This does not actually run the node system, it just prepares the node and registers it as a built-in child.
+1. [`BasicNodes`](bevy_cobweb::BasicNode) and [`ProducerNodes`](bevy_cobweb::ProducerNode) can then be built into the current parent:
+    - **Build BasicNode**: `build(&mut web)`. Outputs a [`NodeHandle<O>`](bevy_cobweb::NodeHandle).
+    - **Build ProducerNode**: `build(&mut web)`. Outputs a [`NodeLink<O>`](bevy_cobweb::NodeLink).
 
 #### [BasicNode](bevy_cobweb::BasicNode)
 
-TODO
+Once you have a [`BasicNode`](bevy_cobweb::BasicNode) object, you can specify new state or input before building it, or override existing triggers.
+
+```rust
+basic_node
+    .state(abc)
+    .triggers(resource_mutation::<A>)
+    .input(xyz)
+    .build(&mut web)?;
+```
+
+The same pattern works whether the internal node merges its state or consumes a [`NodeLink`](bevy_cobweb::NodeLink).
 
 #### [ProducerNode](bevy_cobweb::ProducerNode)
 
-TODO
+As with `BasicNode`, when you have a [`ProducerNode`](bevy_cobweb::ProducerNode) object, you can specify new state or input before building it, or override existing triggers.
+
+```rust
+basic_node
+    .state(abc)
+    .triggers(resource_mutation::<A>)
+    .input(xyz)
+    .build(&mut web)?;
+```
+
+Again, the same pattern works whether the internal node merges its state or consumes a [`NodeLink`](bevy_cobweb::NodeLink). Note that nodes are free to both consume and output node links, for producer-consumer chains of arbitrary length.
+
+Note that once a node has consumed a producer's `NodeLink`, no other node can consume it until the original consumer has been destroyed or detached.
 
 #### [ReactorNode](bevy_cobweb::ReactorNode)
 
-TODO
+[`ReactorNodes`](bevy_cobweb::ProducerNode) are somewhat simpler, you can specify new state or override existing triggers. Keep in mind that building one of these nodes doesn't actually run the internal system, but it *is* required to call `build()` so the web can track it.
+
+```rust
+basic_node
+    .state(abc)
+    .triggers(resource_mutation::<A>)
+    .build(&mut web)?;
+```
+
+And again, the same pattern works whether the internal node merges its state or consumes a [`NodeLink`](bevy_cobweb::NodeLink).
 
 #### [Packaged](bevy_cobweb::Packaged) Nodes
 
-- errors that propagate to a packaged node are ignored
+Node objects can be detached from their parents by packaging them in to [`Packaged`](bevy_cobweb::Packaged) nodes. Packaged nodes can be moved around freely, and reattached anywhere in the web.
 
-A [`PackagedNode`](bevy_cobweb::PackagedNode) is a node in the web with no parent. Packaged nodes cannot be reinitialized, but they can be moved anywhere.
+A packaged node cannot be directly built, but it may run anyway if triggered by a reaction. Since a packaged node is prone to having invalid node references, we avoid processing reactions until all pending web mutations have been resolved. This gives users a chance to reattach and rebuild packaged nodes, and hopefully repair any disjoint node handles in the detached branch. We recommend moving packaged nodes around with node events, since those are always handled before ECS reactions.
 
-A `PackagedNode` can be scheduled to rebuild at any time (if you give it changed inputs), but does *not* produce a [`NodeHandle`](bevy_cobweb::NodeHandle), since handle access scoping is relative to a specific position within the web (whereas `PackagedNodes` have a 'floating' position). If you want to get a handle, then attach the node to another node to get a [`AttachedNode`](bevy_cobweb::AttachedNode) or [`ProducerNode`](bevy_cobweb::ProducerNode) before building it.
+A packaged node may also run if it was built before being packaged, although that is less likely to error-out. In the event that an error does occur within a packaged node, the error (once it propagates to the packaged node) will be discarded. When the node is reattached and rebuilt, if the error is still present then it will propagate to the appropriate root node and be handled there.
 
-If a `PackagedNode` is dropped, then it will be sent to the `bevy_cobweb` garbage collector, where the preconfigured [`NodeCleanupPolicy`](bevy_cobweb::NodeCleanupPolicy) will decide what to do with it. Using a garbage collector makes it relatively safe to transfer `PackagedNodes` around your application (e.g. sending them between parts of the web through node events), since you won't be at risk of dangling nodes.
+If a `PackagedNode` is dropped, then it will be sent to the `bevy_cobweb` garbage collector, where the pre-configured [`NodeCleanupPolicy`](bevy_cobweb::NodeCleanupPolicy) will decide what to do with it. Using a garbage collector makes it relatively safe to transfer `PackagedNodes` around your application (e.g. sending them between parts of the web through node events), since you will always have a chance to recover from problems (i.e. nodes will never become completely detached).
+
+#### Reinitializing Nodes
 
 TODO
 
@@ -246,7 +304,7 @@ You can also configure the error handling policy for root nodes. Here is the imp
 ```rust
 fn webroot_with<M>(
     node   : impl IntoSystem<(), (), M> + 'static,
-    policy : impl Into<NodeErrorPolicy>,
+    policy : impl Into<NodeErrorPolicy> + 'static,
 ) -> impl FnMut<(Local<Option<RootNode<(), ()>>>, Web)> + 'static
 {
     move |mut cached: Local<Option<RootNode<(), ()>>>, mut web: Web|
@@ -448,7 +506,7 @@ fn derived_trigger(mut web: Web) -> NodeResult<()>
             }
         )
         .triggers_from(
-            move |web: &mut Web| -> NodeResult<impl ReactionTriggerBundle>
+            move |web: &Web| -> NodeResult<impl ReactionTriggerBundle>
             {
                 Ok(entity_mutation::<Score>(*web.read(score_entity)?))
             }
@@ -528,7 +586,7 @@ fn handle_into_triggers(mut web: Web) -> NodeResult<()>
             }
         )
         .triggers_from(
-            move |web: &mut Web| -> NodeResult<impl ReactionTriggerBundle>
+            move |web: &Web| -> NodeResult<impl ReactionTriggerBundle>
             {
                 Ok(entity_mutation::<TheMan>(*web.read(the_man)?))
             }
@@ -704,16 +762,21 @@ fn basic_event(mut web: Web) -> NodeResult<()>
 
 A major use-case is relocating node branches. In this example, nodes are spawned by a node factory whenever a `Weeble` component is inserted on any entity. The spawned nodes are sent to another node that manages them. The manager node could at a later time package its saved nodes and send them off to another node to be attached there.
 
+Here we also showcase a trick with `from_merged()` to default-initialize node state that isn't hashable.
+
 ```rust
 fn relocation_event(mut web: Web) -> NodeResult<()>
 {
-    let id = NodeBuilder::new_merged(
+    let id = NodeBuilder::from_merged(
             (),
             |prev, ()| -> MergeResult<Vec<BasicNode<(), (), ()>>>
             {
                 Ok(prev.unwrap_or_default())
             },
-            |mut nodes| move |event: NodeEvent<Packaged<BasicNode<(), (), ()>>>|
+            |
+                mut nodes : NodeState<Vec<BasicNode<(), (), ()>>>,
+                event     : NodeEvent<Packaged<BasicNode<(), (), ()>>>
+            |
             {
                 if let Some(new_node) = event.take()
                 {
@@ -743,7 +806,7 @@ fn relocation_event(mut web: Web) -> NodeResult<()>
                 web.send(id, packaged);
             }
         )
-        .triggers(insertion::<Weeble>)
+        .triggers(insertion::<Weeble>())
         .reactor(&mut web)?;
 
     Ok(())
