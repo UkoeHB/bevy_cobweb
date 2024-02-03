@@ -981,8 +981,7 @@ fn score_display(
                 score      : ReactRes<BlockScore>
             | -> NodeResult<()>
             {
-                writer.write(
-                        *web.read(text)?,
+                writer.write_node(&web, text,
                         |t| write!(t, "Score: {}", *score),
                     )?;
                 Ok(())
@@ -1022,7 +1021,109 @@ fn main()
 
 ### Unit Info Window Sync Example
 
-A unit frame whose displayed life value changes to synchronize with the unit's life
+In this example a unit card is displayed in the upper right corner when a unit is selected. The card updates to reflect the tracked unit's current health, and switches when a new unit is selected.
+
+We assume a unit is selected when the `SelectedUnit` reactive component is added to it. The info card will only display when one entity is selected. If the selected entity has no `React<Health>` component, then a health of `0/0` will be displayed.
+
+```rust
+use bevy::prelude::*;
+use bevy_cobweb::prelude::*;
+use bevy_cobweb_ui::{
+    Location, PlainBox, RectDims, TextNode, TextSize, TextWriter, WindowArea
+};
+
+#[derive(ReactComponent)]
+struct SelectedUnit;
+
+#[derive(ReactComponent, Default, Deref, DerefMut)]
+struct Health(u32, u32);
+
+/// Creates a node that translates a node handle of `Option<T>` into `bool`.
+fn handle_is_some<T: NodeHash>(web: &mut Web, handle: NodeHandle<Option<T>>) -> NodeResult<bool>
+{
+    NodeBuilder::new_with(
+            handle, |option| move |w: Web| -> NodeResult<bool>
+            {
+                Ok(w.read(option)?.is_some())
+            }
+        )
+        .build(&mut web)?;
+}
+
+/// Creates a unit info card.
+fn unit_info_window(
+    mut web : Web,
+    window  : Query<Entity, With<PrimaryWindow>>
+) -> NodeResult<()>
+{
+    // Detect the selected unit.
+    let selected_unit = NodeBuilder::new(
+            |s: Query<Entity, With<React<SelectedUnit>>>| -> NodeResult<Option<Entity>>
+            {
+                let Ok(unit_entity) = s.get_single() else { return Ok(None); };
+                Ok(Some(unit_entity))
+            }
+        )
+        .triggers((insertion::<SelectedUnit>(), removal::<SelectedUnit>()))
+        .build(&mut web)?;
+
+    // Decide visibility based on a unit being selected.
+    let info_visibility = handle_is_some(&mut web, selected_unit)?;
+
+    // Construct the info box.
+    let area = WindowArea::new(window.single()).build(&mut web)?;
+
+    let plain_box = PlainBox::new()
+        .location(area, Location::ShareAnchor)
+        .dimensions(area, RectDims::Relative(10., 7.5))
+        .visibility(info_visibility)
+        .build(&mut web)?;
+
+    let health_text = TextNode::new()
+        .location(plain_box, Location::CenterRelHeight(30.)
+        .size(plain_box, TextSize::RelativeHeight(30.))
+        .share_visibility(plain_box)
+        .build(&mut web)?;
+
+    // Write the health text.
+    NodeBuilder::new_with(
+            (selected_unit, health_text), |(unit, text)| move
+            |
+                web        : Web,
+                mut writer : TextWriter,
+                units      : Query<&React<Health>>
+            | -> NodeResult<()>
+            {
+                let Some(entity) = *web.read(unit)? else { return Ok(()); };
+                let health = units.get_single(entity).unwrap_or_default();
+                writer.write_node(&web, text,
+                        |t| write!(t, "Health: {}/{}", health.0, health.1),
+                    )?;
+                Ok(())
+            }
+        )
+        .triggers_from(move |web: &Web| -> NodeResult<impl ReactionTriggerBundle>
+            {
+                let Some(entity) = *web.read(selected_unit)? else { return Ok(()); };
+                Ok(entity_mutation::<Health>(entity))
+            }
+        )
+        .build(&mut web)?;
+
+    Ok(())
+}
+
+fn main()
+{
+    App::new()
+        .add_plugins(DefaultPlugins::default())
+        .add_plugins(CobwebPlugin::default())
+        //...
+        .add_systems(Startup, unit_info_window.webroot())
+        //...
+        .run();
+}
+```
 
 
 ### Exit Confirmation Popup Example
