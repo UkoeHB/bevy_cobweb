@@ -202,6 +202,8 @@ Building a node has five steps:
     - **Built-in state**: `new_with(state, system)`. The node state is reset when the initial state changes, and is moved into the system which must be a closure.
     - **External state**: `from(state, system)`. The node state is reset when the initial state changes, and is accessed with [`NodeState<S>`](bevy_cobweb::NodeState).
     - **External state merged**: `from_merged(init data, merge callback, system)`. The existing node state is merged with initial state data when that data changes, and is accessed with [`NodeState<S>`](bevy_cobweb::NodeState).
+    - **Initialized state**: `init(initial state callback, system)`. The first time a node is created, the 'initial state callback' is called to get the node state's starting value. This is useful if your node state is not hashable and you don't want to use a `NodeLink`.
+    - **Initialized state merged**: `init_merged(initial state callback, init data, merge callback, system)`. The first time a node is created, the 'initial state callback' is called to get the node state's starting value. Then, and for subsequent builds, the merge callback is used to merge external data with the node state.
     - **NodeLink**: `connect(node link, system)`. The node becomes connected to the [`NodeLink`](bevy_cobweb) source. The node state is reset when a non-empty link is received.
     - **NodeLink merged**: `connect_merged(node link, merge callback, system)`. The node becomes connected to the [`NodeLink`](bevy_cobweb) source, and existing node state is merged with the node link contents if the link is non-empty.
 1. Specify reaction triggers (optional).
@@ -519,6 +521,51 @@ fn from_state_merged(mut web: Web) -> NodeResult<()>
             {
                 *state *= 2;
                 println!("{state}");
+                Ok(())
+            }
+        )
+        .build(&mut web)?;
+
+    Ok(())
+}
+```
+
+Or by initializing the state with [`.init()`](bevy_cobweb::NodeBuilder::init) and accessing it with [`NodeState<S>`](bevy_cobweb::NodeState).
+
+```rust
+fn init_state(mut web: Web) -> NodeResult<()>
+{
+    NodeBuilder::init(
+            || -> usize { 0 },
+            |mut count: NodeState<usize>| -> NodeResult<()>
+            {
+                *count += 2;
+                println!("{count}");
+                Ok(())
+            }
+        )
+        .build(&mut web)?;
+
+    Ok(())
+}
+```
+
+Or by initializing mergeable state with [`.init_merged()`](bevy_cobweb::NodeBuilder::init_merged) and accessing it with [`NodeState<S>`](bevy_cobweb::NodeState).
+
+```rust
+fn init_state_merged(mut web: Web) -> NodeResult<()>
+{
+    let data = String::from("abc");
+    NodeBuilder::init_merged(
+            || -> usize { 0 },
+            data,
+            |existing: usize, data: String| -> MergeResult<usize>
+            {
+                Ok(existing + data.len())
+            },
+            |total_string_length: NodeState<usize>| -> NodeResult<()>
+            {
+                println!("{total_string_length}");
                 Ok(())
             }
         )
@@ -886,17 +933,11 @@ fn basic_event(mut web: Web) -> NodeResult<()>
 
 A major use-case is relocating node branches. In this example, nodes are spawned by a node factory whenever a `Weeble` component is inserted on any entity. The spawned nodes are sent to another node that manages them. The manager node could at a later time package its saved nodes and send them off to another node to be attached there.
 
-Here we also showcase a trick with `from_merged()` to default-initialize node state that isn't hashable.
-
 ```rust
 fn relocation_event(mut web: Web) -> NodeResult<()>
 {
-    let id = NodeBuilder::from_merged(
-            (),
-            |prev, ()| -> MergeResult<Vec<BasicNode<(), (), ()>>>
-            {
-                Ok(prev.unwrap_or_default())
-            },
+    let id = NodeBuilder::init(
+            || -> Vec<BasicNode<(), (), ()>> { Vec::default() },
             |
                 mut nodes : NodeState<Vec<BasicNode<(), (), ()>>>,
                 event     : NodeEvent<Packaged<BasicNode<(), (), ()>>>
@@ -918,7 +959,7 @@ fn relocation_event(mut web: Web) -> NodeResult<()>
             }
         )
         .build(&mut web)?
-        id();
+        .id();
 
     NodeBuilder::new_with(
             id,
@@ -1191,12 +1232,8 @@ fn exit_confirmation_popup(
 /// Root node: manages an exit confirmation popup.
 fn exit_confirmation_popup_handler(mut web: Web) -> NodeResult<()>
 {
-    // We use `from_merged` as a trick to initialize node state that isn't hashable.
-    NodeBuilder::from_merged((),
-            |prev: Option<Option<BasicNode<(), NodeId, ()>>, ()| -> MergeResult<Option<BasicNode<(), NodeId, ()>>
-            {
-                Ok(prev.flatten())
-            },
+    NodeBuilder::init(
+            || -> Option<BasicNode<(), NodeId, ()>> { None },
             |
                 mut web    : Web,
                 request    : ReactEvent<ExitRequest>,
