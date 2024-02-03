@@ -1047,7 +1047,7 @@ fn handle_is_some<T: NodeHash>(web: &mut Web, handle: NodeHandle<Option<T>>) -> 
                 Ok(w.read(option)?.is_some())
             }
         )
-        .build(&mut web)?;
+        .build(&mut web)?
 }
 
 /// Creates a unit info card.
@@ -1128,7 +1128,125 @@ fn main()
 
 ### Exit Confirmation Popup Example
 
-A UI popup that's spawned and absorbed AppExit with a "do you really want to quit"
+In this example the user can send an `ExitRequest` reactive event, which causes a popup to appear asking "Do you really want to quit?". If the user selects 'Quit' then `AppExit` is sent, otherwise the popup is closed.
+
+```rust
+use bevy::prelude::*;
+use bevy_cobweb::prelude::*;
+use bevy_cobweb_ui::{
+    Location, RectDims, SimpleOneoffPopup, TextNode, TextSize, TextWriter, WindowArea
+};
+
+#[derive(Default, Deref, DerefMut)]
+struct ExitRequest;
+
+struct Cancel;
+
+/// Node: exit confirmation popup.
+fn exit_confirmation_popup(
+    mut web : Web,
+    owner   : NodeInput<NodeId>,
+    window  : Query<Entity, With<PrimaryWindow>>,
+){
+    let area = WindowArea::new(window.single()).build(&mut web)?;
+
+    // Create a simple popup with two buttons.
+    let popup = SimpleOneoffPopup::new()
+        .location(area, Location::TotallyCentered)
+        .dimensions(area, RectDims::Relative(30., 20.))
+        .accept_text("Quit")
+        .reject_text("Cancel")
+        .on_accept(
+            |mut app_exit: EventWriter<AppExit>| -> NodeResult<()>
+            {
+                // Exit the app.
+                app_exit.send(AppExit);
+                Ok(())
+            }
+        )
+        .on_reject_with(*owner,
+            |owner| move |mut web: Web| -> NodeResult<()>
+            {
+                // Tell this node's owner to cancel the request so the popup will be destroyed.
+                web.send(owner, Cancel)?;
+                Ok(())
+            }
+        )
+        .build(&mut web)?;
+
+    // Extract `ScreenArea` from the popup's reference data.
+    // This is done by laundering the popup's output through another node.
+    let popup_area = SimpleOneoffPopup::get_user_area(&mut web, popup)?;
+
+    // Write a message in the popup's user area.
+    TextNode::new()
+        .default_text("Do you really want to quit?")
+        .location(popup_area, Location::CenterRelHeight(30.))
+        .size(popup_area, TextSize::RelativeHeight(30.))
+        .build(&mut web)?;
+
+    Ok(())
+}
+
+/// Root node: manages an exit confirmation popup.
+fn exit_confirmation_popup_handler(mut web: Web) -> NodeResult<()>
+{
+    // We use `from_merged` as a trick to initialize node state that isn't hashable.
+    NodeBuilder::from_merged((),
+            |prev: Option<Option<BasicNode<(), NodeId, ()>>, ()| -> MergeResult<Option<BasicNode<(), NodeId, ()>>
+            {
+                Ok(prev.flatten())
+            },
+            |
+                mut web    : Web,
+                request    : ReactEvent<ExitRequest>,
+                cancel     : NodeEvent<Cancel>,
+                mut window : NodeState<Option<BasicNode<(), NodeId, ()>>>
+            | -> NodeResult<()>
+            {
+                // If the window canceled itself, remove the window node so it will be destroyed.
+                if cancel.take().is_some()
+                {
+                    *window = None;
+                }
+
+                // If an exit request is received, prepare a new exit confirmation window.
+                if request.read().is_some()
+                {
+                    let parent_node_id = web.node_id()?;
+                    let node = NodeBuilder::new(exit_confirmation_popup)
+                        .input(parent_node_id)
+                        .prepare(web)?;
+                    *window = Some(node);
+                }
+
+                // Build the exit confirmation window if it exists.
+                if let Some(window) = &*window
+                {
+                    window.build(&mut web)?;
+                }
+
+                Ok(())
+            }
+        )
+        .triggers(event::<ExitRequest>())
+        .reactor(&mut web)?;
+
+    Ok(())
+}
+
+fn main()
+{
+    App::new()
+        .add_plugins(DefaultPlugins::default())
+        .add_plugins(CobwebPlugin::default())
+        .add_react_event::<ExitRequest>();
+        //...
+        .add_systems(Startup, exit_confirmation_popup_handler.webroot())
+        //...
+        .run();
+}
+```
 
 
 
