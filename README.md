@@ -1002,7 +1002,7 @@ struct BlockScore(u32);
 #[derive(Event)]
 struct BlockDestroyed;
 
-/// Node: Writes the block score to a text node.
+/// Writes the block score to a text node.
 fn write_score(
     web        : Web,
     text       : NodeInput<TextNodeOutput>,
@@ -1010,13 +1010,11 @@ fn write_score(
     score      : ReactRes<BlockScore>
 ) -> NodeResult<()>
 {
-    writer.write_node(&web, *text,
-            |t| write!(t, "Score: {}", *score),
-        )?;
+    writer.write_node(&web, *text, |t| write!(t, "Score: {}", *score))?;
     Ok(())
 }
 
-/// Root node: Displays the block score.
+/// Displays the block score.
 fn score_display(
     mut web : Web,
     window  : Query<Entity, With<PrimaryWindow>>
@@ -1082,19 +1080,19 @@ struct SelectedUnit;
 #[derive(ReactComponent, Default, Deref, DerefMut)]
 struct Health(u32, u32);
 
-/// Node: Creates a node that translates a node handle of `Option<T>` into `bool`.
-fn handle_is_some<T: NodeHash>(web: &mut Web, handle: NodeHandle<Option<T>>) -> NodeResult<bool>
+/// Creates a node that translates a node handle of `Option<T>` into `bool`.
+fn handle_is_some<T: NodeHash>(web: &mut Web, opt: NodeHandle<Option<T>>) -> NodeResult<bool>
 {
     NodeBuilder::new_with(
-            handle, |option| move |w: Web| -> NodeResult<bool>
+            opt, |opt| move |w: Web| -> NodeResult<bool>
             {
-                Ok(w.read(option)?.is_some())
+                Ok(w.read(opt)?.is_some())
             }
         )
         .build(&mut web)?
 }
 
-/// Node: Writes a unit's health to a text node.
+/// Writes a unit's health to a text node.
 fn write_unit_health(
     web        : Web,
     input      : NodeInput<(Handle<Option<Entity>>, Handle<TextNodeOutput>)>,
@@ -1103,15 +1101,15 @@ fn write_unit_health(
 ) -> NodeResult<()>
 {
     let (unit, text) = *input;
-    let Some(entity) = *web.read(unit)? else { return Ok(()); };
+    let Some(entity) = *web.read(*unit)? else { return Ok(()); };
     let health = units.get_single(entity).unwrap_or_default();
-    writer.write_node(&web, text,
+    writer.write_node(&web, *text,
             |t| write!(t, "Health: {}/{}", health.0, health.1),
         )?;
     Ok(())
 }
 
-/// Root node: Creates a unit info card.
+/// Creates a unit info card.
 fn unit_info_window(
     mut web : Web,
     window  : Query<Entity, With<PrimaryWindow>>
@@ -1148,7 +1146,8 @@ fn unit_info_window(
 
     // Write the health text.
     NodeBuilder::from((selected_unit, health_text), write_unit_health)
-        .triggers_from(move |web: &Web| -> NodeResult<impl ReactionTriggerBundle>
+        .triggers_from(
+            move |web: &Web| -> NodeResult<impl ReactionTriggerBundle>
             {
                 let Some(entity) = *web.read(selected_unit)? else { return Ok(()); };
                 Ok(entity_mutation::<Health>(entity))
@@ -1190,7 +1189,7 @@ struct Cancel;
 
 type ExitPopupNode = BasicNode<(), NodeId, ()>;
 
-/// Node: Creates an exit confirmation popup.
+/// Creates an exit confirmation popup.
 fn exit_confirmation_popup(
     mut web : Web,
     owner   : NodeInput<NodeId>,
@@ -1237,7 +1236,7 @@ fn exit_confirmation_popup(
     Ok(())
 }
 
-/// Root node: Creates an exit confirmation popup in reaction to `ExitRequests`.
+/// Creates an exit confirmation popup in reaction to `ExitRequests`.
 fn exit_confirmation_popup_handler(mut web: Web) -> NodeResult<()>
 {
     NodeBuilder::init(
@@ -1258,15 +1257,15 @@ fn exit_confirmation_popup_handler(mut web: Web) -> NodeResult<()>
                 // If an exit request is received, prepare a new exit confirmation popup.
                 if request.read().is_some()
                 {
-                    let parent_node_id = web.node_id()?;
+                    let this_node_id = web.node_id()?;
                     let node = NodeBuilder::new(exit_confirmation_popup)
-                        .input(parent_node_id)
+                        .input(this_node_id)
                         .prepare(web)?;
                     *popup = Some(node);
                 }
 
                 // Build the exit confirmation popup if it exists.
-                if let Some(popup) = &*popup
+                if let Some(popup) = &mut *popup
                 {
                     popup.build(&mut web)?;
                 }
