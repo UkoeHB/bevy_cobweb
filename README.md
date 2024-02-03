@@ -2,29 +2,29 @@
 
 **There is no code yet, only the design draft in this document.**
 
-Framework for building declarative reactive webs.
+Framework for building webs of interconnected, stateful Bevy systems that react to ECS mutations.
 
 - Nodes are stateful reactive Bevy systems.
-- Nodes react to resource mutations, entity changes, reactive events, and node events.
+- Node systems run (aka 'react') in response to resource mutations, entity changes, reactive events, and node events.
+- Node systems also react to changes in their dependencies (inputs) and dependents (child node outputs).
 - Node outputs can be accessed throughout the web via node handles that synchronize with rebuilds.
-- Change detection prevents reinitializing and rerunning nodes unless needed.
+- Change detection prevents reinitializing and rerunning child nodes unless needed.
 - Nodes may be detached and re-attached anywhere in the web.
 - Nodes are automatically cleaned up when no longer used.
 - Node error handling policy is customizable. Errors propagate to root nodes.
-- Web mutations and node reactions are processed immediately and recursion is allowed.
+- Node reactions are processed immediately and recursion is allowed.
 
 
 
 ## Motivation
 
-This crate is intended as the foundation for building UI in Bevy, with the following goals in mind.
+This crate is a general-purpose ECS tool, but was designed in order to be the foundation for building UI in Bevy, with the following goals in mind.
 
 - No macros required, no third-party dependencies.
 - Build UI declaratively in a Bevy-native style with heavy use of normal-looking Bevy systems.
-- Minimize the separation between UI element construction and updating.
+- Unify UI element construction and updating, with change detection to avoid updating unless necessary.
 - Enable asset and editor-driven hot-reloading that preserves the existing UI state as much as possible.
 - Provide a powerful, unopinionated API for building ergonomic UI widgets.
-- Avoid unnecessary rebuilding as much as possible (efficiency is key).
 
 
 
@@ -987,7 +987,7 @@ Here we imagine how `bevy_cobweb` might be used to build real UIs.
 
 ### Score Counter Example
 
-In this example, a game score display increments by 1 every time a game block is destroyed. We assume when blocks are destroyed a `BlockDestroyed` Bevy event is emitted. The score is stored in a `BlockScore` because that's how I would implement this (separation of concerns), however you could also store the score in the node that writes the score text and increment it directly on `BlockDestroyed` events.
+In this example, a game score display increments by 1 every time a game block is destroyed. We assume when blocks are destroyed a `BlockDestroyed` Bevy event is emitted. The score is stored in a `BlockScore`, however you could also store the score in the node that writes the score text and increment it directly on `BlockDestroyed` events.
 
 The `TextWriter` is a custom system parameter that writes to entities with `Text` components (internally it has a `Query<&mut Text>`). We obtain the text entity in this case from an empty `TextNode` located in the upper right corner of the screen.
 
@@ -1002,6 +1002,21 @@ struct BlockScore(u32);
 #[derive(Event)]
 struct BlockDestroyed;
 
+/// Node: Writes the block score to a text node.
+fn write_score(
+    web        : Web,
+    text       : NodeInput<TextNodeOutput>,
+    mut writer : TextWriter,
+    score      : ReactRes<BlockScore>
+) -> NodeResult<()>
+{
+    writer.write_node(&web, *text,
+            |t| write!(t, "Score: {}", *score),
+        )?;
+    Ok(())
+}
+
+/// Root node: Displays the block score.
 fn score_display(
     mut web : Web,
     window  : Query<Entity, With<PrimaryWindow>>
@@ -1014,26 +1029,14 @@ fn score_display(
         .size(area, TextSize::RelativeHeight(7.5))
         .build(&mut web)?;
 
-    NodeBuilder::new_with(
-            text, |text| move
-            |
-                web        : Web,
-                mut writer : TextWriter,
-                score      : ReactRes<BlockScore>
-            | -> NodeResult<()>
-            {
-                writer.write_node(&web, text,
-                        |t| write!(t, "Score: {}", *score),
-                    )?;
-                Ok(())
-            }
-        )
+    NodeBuilder::from(text, write_score)
         .triggers(resource_mutation::<BlockScore>())
         .build(&mut web)?;
 
     Ok(())
 }
 
+/// Reads `BlockDestroyed` events and updates the `BlockScore`.
 fn update_score(
     mut rcommands : ReactCommands,
     mut score     : ReactResMut<BlockScore>,
@@ -1079,7 +1082,7 @@ struct SelectedUnit;
 #[derive(ReactComponent, Default, Deref, DerefMut)]
 struct Health(u32, u32);
 
-/// Creates a node that translates a node handle of `Option<T>` into `bool`.
+/// Node: Creates a node that translates a node handle of `Option<T>` into `bool`.
 fn handle_is_some<T: NodeHash>(web: &mut Web, handle: NodeHandle<Option<T>>) -> NodeResult<bool>
 {
     NodeBuilder::new_with(
@@ -1091,7 +1094,24 @@ fn handle_is_some<T: NodeHash>(web: &mut Web, handle: NodeHandle<Option<T>>) -> 
         .build(&mut web)?
 }
 
-/// Creates a unit info card.
+/// Node: Writes a unit's health to a text node.
+fn write_unit_health(
+    web        : Web,
+    input      : NodeInput<(Handle<Option<Entity>>, Handle<TextNodeOutput>)>,
+    mut writer : TextWriter,
+    units      : Query<&React<Health>>,
+) -> NodeResult<()>
+{
+    let (unit, text) = *input;
+    let Some(entity) = *web.read(unit)? else { return Ok(()); };
+    let health = units.get_single(entity).unwrap_or_default();
+    writer.write_node(&web, text,
+            |t| write!(t, "Health: {}/{}", health.0, health.1),
+        )?;
+    Ok(())
+}
+
+/// Root node: Creates a unit info card.
 fn unit_info_window(
     mut web : Web,
     window  : Query<Entity, With<PrimaryWindow>>
@@ -1127,22 +1147,7 @@ fn unit_info_window(
         .build(&mut web)?;
 
     // Write the health text.
-    NodeBuilder::new_with(
-            (selected_unit, health_text), |(unit, text)| move
-            |
-                web        : Web,
-                mut writer : TextWriter,
-                units      : Query<&React<Health>>
-            | -> NodeResult<()>
-            {
-                let Some(entity) = *web.read(unit)? else { return Ok(()); };
-                let health = units.get_single(entity).unwrap_or_default();
-                writer.write_node(&web, text,
-                        |t| write!(t, "Health: {}/{}", health.0, health.1),
-                    )?;
-                Ok(())
-            }
-        )
+    NodeBuilder::from((selected_unit, health_text), write_unit_health)
         .triggers_from(move |web: &Web| -> NodeResult<impl ReactionTriggerBundle>
             {
                 let Some(entity) = *web.read(selected_unit)? else { return Ok(()); };
@@ -1183,12 +1188,15 @@ struct ExitRequest;
 
 struct Cancel;
 
-/// Node: exit confirmation popup.
+type ExitPopupNode = BasicNode<(), NodeId, ()>;
+
+/// Node: Creates an exit confirmation popup.
 fn exit_confirmation_popup(
     mut web : Web,
     owner   : NodeInput<NodeId>,
     window  : Query<Entity, With<PrimaryWindow>>,
-){
+) -> NodeResult<()>
+{
     let area = WindowArea::new(window.single()).build(&mut web)?;
 
     // Create a simple popup with two buttons.
@@ -1216,7 +1224,7 @@ fn exit_confirmation_popup(
         .build(&mut web)?;
 
     // Extract `ScreenArea` from the popup's reference data.
-    // This is done by laundering the popup's output through another node.
+    // - This is done by laundering the popup's output through another node.
     let popup_area = SimpleOneoffPopup::get_user_area(&mut web, popup)?;
 
     // Write a message in the popup's user area.
@@ -1229,38 +1237,38 @@ fn exit_confirmation_popup(
     Ok(())
 }
 
-/// Root node: manages an exit confirmation popup.
+/// Root node: Creates an exit confirmation popup in reaction to `ExitRequests`.
 fn exit_confirmation_popup_handler(mut web: Web) -> NodeResult<()>
 {
     NodeBuilder::init(
-            || -> Option<BasicNode<(), NodeId, ()>> { None },
+            || -> Option<ExitPopupNode> { None },
             |
-                mut web    : Web,
-                request    : ReactEvent<ExitRequest>,
-                cancel     : NodeEvent<Cancel>,
-                mut window : NodeState<Option<BasicNode<(), NodeId, ()>>>
+                mut web   : Web,
+                request   : ReactEvent<ExitRequest>,
+                cancel    : NodeEvent<Cancel>,
+                mut popup : NodeState<Option<ExitPopupNode>>
             | -> NodeResult<()>
             {
-                // If the window canceled itself, remove the window node so it will be destroyed.
+                // If the exit was canceled, remove the popup node so it will be destroyed.
                 if cancel.take().is_some()
                 {
-                    *window = None;
+                    *popup = None;
                 }
 
-                // If an exit request is received, prepare a new exit confirmation window.
+                // If an exit request is received, prepare a new exit confirmation popup.
                 if request.read().is_some()
                 {
                     let parent_node_id = web.node_id()?;
                     let node = NodeBuilder::new(exit_confirmation_popup)
                         .input(parent_node_id)
                         .prepare(web)?;
-                    *window = Some(node);
+                    *popup = Some(node);
                 }
 
-                // Build the exit confirmation window if it exists.
-                if let Some(window) = &*window
+                // Build the exit confirmation popup if it exists.
+                if let Some(popup) = &*popup
                 {
-                    window.build(&mut web)?;
+                    popup.build(&mut web)?;
                 }
 
                 Ok(())
