@@ -2,11 +2,11 @@
 
 **There is no code yet, only the design draft in this document.**
 
-Framework for building webs of interconnected, stateful Bevy systems that react to ECS mutations.
+Bevy Cobweb is a framework for building webs of interconnected, stateful Bevy systems that react to ECS mutations.
 
 - Nodes are stateful reactive Bevy systems.
-- Node systems run (aka 'react') in response to resource mutations, entity changes, reactive events, and node events.
-- Node systems also react to changes in their dependencies (inputs) and dependents (child node outputs).
+- Node systems run in response to resource mutations, entity changes, reactive events, and node events.
+- Node systems also react to changes in their dependencies (inputs) and dependents (their children).
 - Node outputs can be accessed throughout the web via node handles that synchronize with rebuilds.
 - Change detection prevents reinitializing and rerunning child nodes unless needed.
 - Nodes may be detached and re-attached anywhere in the web.
@@ -18,13 +18,13 @@ Framework for building webs of interconnected, stateful Bevy systems that react 
 
 ## Motivation
 
-This crate is a general-purpose ECS tool, but was designed in order to be the foundation for building UI in Bevy, with the following goals in mind.
+This crate is a general-purpose ECS tool, but was designed to be the foundation for building UI in Bevy, with the following goals in mind.
 
-- No macros required, no third-party dependencies.
 - Build UI declaratively in a Bevy-native style with heavy use of normal-looking Bevy systems.
 - Unify UI element construction and updating, with change detection to avoid updating unless necessary.
 - Enable asset and editor-driven hot-reloading that preserves the existing UI state as much as possible.
 - Provide a powerful, unopinionated API for building ergonomic UI widgets.
+- No macros required, no third-party dependencies.
 
 
 
@@ -74,7 +74,7 @@ If the window is resized, then `WindowArea` will rebuild because it is internall
 
 If you are here for code, [skip ahead](#api-examples).
 
-A web is a structure analogous to a forest covered in cobwebs. Each 'tree' is a physical branching structure of nodes that begins with a root node, and between all the nodes are reactive relationships (the 'web'). While we use a 'forest' metaphor here, it is more useful to think of it as an inverted forest that flows downward from the root nodes with a very 'functional programming' execution style.
+A web is a structure analogous to a forest covered in cobwebs. Each 'tree' is a physical branching structure of nodes that begins with a root node, and between all the nodes are reactive relationships (the 'web'). Trees are organized in a very 'functional programming' style, where building a tree begins in its root node, expands into a call tree of nodes, and then ends back at the end of the root node.
 
 There are two kinds of reactive relationships. One is ECS reactivity, where nodes will rebuild in response to changes in tracked ECS elements (resource mutations, entity changes, etc.). The other is inter-node dependencies, where nodes can depend on the outputs of upstream nodes. When a referenced node output changes, any nodes dependent on that output will rebuild.
 
@@ -85,13 +85,13 @@ As you might imagine, being able to reference the outputs of other nodes is both
 
 ### Web Structure Overview
 
-The web is a collection of node trees that each begin with a [`RootNode`](bevy_cobweb::RootNode). Root nodes are simple wrappers around packaged [`BasicNodes`](bevy_cobweb::BasicNode), which means they can be created from normal nodes in the web. Root nodes cannot depend on other nodes, and they do not have outputs which means other nodes cannot depend on them.
+The web is a collection of node trees that each begin with a [`RootNode`](bevy_cobweb::RootNode). Root nodes are simple wrappers around packaged [`BasicNodes`](bevy_cobweb::BasicNode), which means they can be created from normal nodes in the web. Root nodes cannot depend on other nodes, and they do not have outputs which means other nodes cannot depend on them. Typically a root node will only be built once, which will initialize all the nodes in its tree. Once initialized, the tree's nodes will automatically rebuild as necessary in response to various factors, which we will discuss below. Root nodes can of course be manually rebuilt if their state or inputs need to be updated, and doing so won't overwrite their node trees.
 
-Every node in the tree can have child nodes. Child nodes come in two types, built-in nodes that are easy to make but not movable, and object nodes whose lifetimes must be managed but can be packaged and relocated ([`BasicNodes`](bevy_cobweb::BasicNode), [`ProducerNodes`](bevy_cobweb::BasicNode), and [`ReactorNodes`](bevy_cobweb::BasicNode)). Parents track their child nodes through 'node names', which are unique identifiers that allow the web to compare node metadata between successive rebuilds. Built-in child nodes can be anonymous, which means they are assigned a name based on their index in the list of anonymous built-in child nodes, or they can be explicitly named by the user for cases where the built-in node list may be dynamically rearranged. Object node names are derived from their unique node ids, which are global ids within the web.
+Every node in the tree can have child nodes. Child nodes come in two types, built-in nodes that are easy to make but are not movable, and object nodes whose lifetimes must be managed but can be packaged and relocated. Parents track their child nodes through 'node names', which are unique identifiers that allow the web to compare node metadata between successive rebuilds. Built-in child nodes can be anonymous, which means they are assigned a name based on their index in the list of anonymous built-in child nodes, or they can be explicitly named by the user for cases where the built-in node list may be dynamically rearranged. Object node names are derived from their unique node ids, which are global ids within the web.
 
 Building a node involves specifying the node's initial state, input, reaction triggers, and internal system. Exactly how these are specified depends on the node type, which we will discuss in later sections. The first time a node is built, its internal system will be scheduled to run. After a node system runs, its output will be saved in the web so it can be read by downstream nodes with the node's [`NodeHandle`](bevy_cobweb::NodeHandle). We discuss the `bevy_cobweb` scheduling algorithm in [Scheduling](#scheduling).
 
-When a node runs its node system, it will detect which of its children were built, and then destroy any children that had been built in the past but failed to rebuild. It does this by comparing the child node name lists before and after the rebuild. Anonymous built-in, named built-in, and object nodes will all be destroyed if not rebuilt. Object node instances (e.g. a [`BasicNode`](bevy_cobweb::BasicNode) instance) cannot be used to rebuild nodes after being destroyed, but built-in node names can be reused for new nodes.
+When a node runs its node system, it will detect which of its children were built, and then destroy any children that had been built in the past but failed to rebuild. It does this by comparing the child node name lists before and after the rebuild. Anonymous built-in, named built-in, and object nodes will all be destroyed if not rebuilt. Object node instances (e.g. a [`BasicNode`](bevy_cobweb::BasicNode) instance) cannot be used to rebuild nodes after the internal node is destroyed, but built-in node names can be reused for new nodes.
 
 Building a child node uses change detection to avoid re-running the child node's internal node system unless necessary. The node state and node input passed to a node when building it are compared against hashes of state and input used the last time the node was built. If the hashes are the same, then the node system will not be scheduled and its output will stay the same.
 
@@ -99,11 +99,11 @@ As mentioned, child nodes can be assigned reaction triggers, which specify which
 
 Child node outputs are *deferred*, which means they cannot be accessed by their parents. However, they *can* be safely accessed by downstream sibling nodes, and child node output handles can be returned by a parent node for use in cousin nodes (but not direct ancestors). In order to perform change detection on data (node state/inputs/outputs) that may contain handles to the deferred outputs of other nodes, the node scheduler carefully orders events so that node outputs will be fully resolved by the time they might be needed for performing change detection in dependents. We compute change hashes using a custom [`NodeHash`](bevy_cobweb::NodeHash) trait that allows inspecting the contents of handles (which are not themselves hashable). This is the 'memoization magic' of `bevy_cobweb`.
 
-A triggered node can cause its parent to rebuild in two scenarios. One is if the node's output changes. The other is if the node errors out. We rebuild parents on error because it's possible that an error was caused by a failure to read an invalid node handle, and so we give the parent an opportunity to repair its children (parents also have the chance to discard errors before they can propagate further). Parents will recursively rebuild until the algorithm reaches an ancestor whose output doesn't change and that doesn't error out, or until the root node is rebuilt. Root nodes don't have outputs, and they consume propagated errors using their configured error handling policy.
+A triggered node can cause its parent to rebuild in two scenarios. One is if the node's output hash changes. The other is if the node errors out. We rebuild parents on error because it's possible that an error was caused by a failure to read an invalid node handle, so we give the parent an opportunity to repair its children (parents also have the chance to discard errors before they can propagate further). Parents will recursively rebuild until the algorithm reaches an ancestor whose output doesn't change and that doesn't error out, or until the root node is rebuilt. Root nodes don't have outputs, and they consume propagated errors using their configured error handling policy.
 
-A triggered node can error out either because it directly returned a [`NodeError`](bevy_cobweb::NodeError), or because a node error was propagated up by one of its children. Propagated errors are collected internally in [`WebErrors`](bevy_cobweb::WebError), which are only readable if they propagate to a root node and are consumed by its error handling policy.
+A triggered node can error out either because it directly returns a [`NodeError`](bevy_cobweb::NodeError), or because a node error was propagated up by one of its children. Propagated errors are collected internally in [`WebErrors`](bevy_cobweb::WebError), which are only readable if they propagate to a root node and are consumed by its error handling policy.
 
-Last but not least, child object nodes can be detached from their parents and reattached elsewhere in the web. This is done with [`Packaged`](bevy_cobweb::Packaged) node wrappers that can be sent through node events directly to other nodes (where they can be reattached and rebuilt). A node event is a special feature of `bevy_cobweb` that facilitates web mutations. One significant risk of moving a branch across the web is that if a node in the in-transit branch is triggered by an ECS mutation, then node references in the triggered node may be invalid and the reaction will error-out. To address this, the `bevy_cobweb` scheduler ensures that node events are fully resolved before processing ECS reactions. This allows branches transmitted by node events to safely reattach and then repair any internal node references by rebuilding, before they can be accessed erroneously. Of course, users can always shoot themselves in the foot by improperly handling node references, which is a weakness of this design.
+Last but not least, object nodes can be detached from their parents and reattached elsewhere in the web. This is done with [`Packaged`](bevy_cobweb::Packaged) node wrappers that can be sent through node events directly to other nodes (where they can be reattached and rebuilt). A node event is a special feature of `bevy_cobweb` that facilitates web mutations. One significant risk of moving a branch across the web is that if a node in the in-transit branch is triggered by an ECS mutation, then node references in the triggered node may be invalid and the reaction will error-out. To address this, the `bevy_cobweb` scheduler ensures that node events are fully resolved before processing ECS reactions. This allows branches transmitted by node events to safely reattach and then repair any internal node references by rebuilding before they can be accessed erroneously. Of course, users can always shoot themselves in the foot by improperly handling node references, which is a weakness of this design.
 
 
 ### Plugin
