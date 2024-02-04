@@ -394,7 +394,7 @@ The reaction-resolver will fully execute all recursive system commands, system e
 
 ## API Examples
 
-Here are a bunch of examples of using `bevy_cobweb`'s raw API. In practice, users of this crate would use a mixture of the raw API and ergonomic wrappers such as those showcased in the [Hello World](#hello-world).
+Here are examples of using `bevy_cobweb`'s raw API. In practice, users of this crate would use a mixture of the raw API and ergonomic wrappers such as those showcased in the [Hello World](#hello-world).
 
 For more speculative examples of how `bevy_cobweb` might be used in a real UI, [jump ahead](#speculative-examples).
 
@@ -987,14 +987,16 @@ Here we imagine how `bevy_cobweb` might be used to build real UIs.
 
 ### Score Counter Example
 
-In this example, a game score display increments by 1 every time a game block is destroyed. We assume when blocks are destroyed a `BlockDestroyed` Bevy event is emitted. The score is stored in a `BlockScore`, however you could also store the score in the node that writes the score text and increment it directly on `BlockDestroyed` events.
+In this example, a game score display increments by 1 every time a game block is destroyed. We assume when blocks are destroyed a `BlockDestroyed` Bevy event is emitted. We then store the score in a `BlockScore` resource, however you could also store the score in the node that writes the score text and increment it directly on `BlockDestroyed` events.
 
-The `TextWriter` is a custom system parameter that writes to entities with `Text` components (internally it has a `Query<&mut Text>`). We obtain the text entity in this case from an empty `TextNode` located in the upper right corner of the screen.
+The `TextWriter` is a custom system parameter that writes to entities with `Text` components (internally it has a `Query<&mut Text>`). We obtain the text entity in this case from an empty `TextNode` placed in the upper left corner of the screen.
 
 ```rust
 use bevy::prelude::*;
 use bevy_cobweb::prelude::*;
-use bevy_cobweb_ui::{Location, TextNode, TextSize, TextWriter, WindowArea};
+use bevy_cobweb_ui::{
+    Location, TextNode, TextNodeOutput, TextSize, TextWriter, WindowArea
+};
 
 #[derive(ReactResource, Default, Deref, DerefMut)]
 struct BlockScore(u32);
@@ -1005,12 +1007,12 @@ struct BlockDestroyed;
 /// Writes the block score to a text node.
 fn write_score(
     web        : Web,
-    text       : NodeInput<TextNodeOutput>,
+    text       : NodeInput<Handle<TextNodeOutput>>,
     mut writer : TextWriter,
     score      : ReactRes<BlockScore>
 ) -> NodeResult<()>
 {
-    writer.write_node(&web, *text, |t| write!(t, "Score: {}", *score))?;
+    writer.write(&web, *text, |t| write!(t, "Score: {}", *score))?;
     Ok(())
 }
 
@@ -1037,8 +1039,8 @@ fn score_display(
 /// Reads `BlockDestroyed` events and updates the `BlockScore`.
 fn update_score(
     mut rcommands : ReactCommands,
+    mut destroyed : EventReader<BlockDestroyed>,
     mut score     : ReactResMut<BlockScore>,
-    mut destroyed : EventReader<BlockDestroyed>
 ){
     if destroyed.is_empty() { return; }
     let num = destroyed.read().count();
@@ -1050,8 +1052,8 @@ fn main()
     App::new()
         .add_plugins(DefaultPlugins::default())
         .add_plugins(CobwebPlugin::default())
-        .init_react_resource::<BlockScore>()
         .add_event::<BlockDestroyed>()
+        .init_react_resource::<BlockScore>()
         //...
         .add_systems(Startup, score_display.webroot())
         .add_systems(Update, update_score)
@@ -1063,15 +1065,16 @@ fn main()
 
 ### Unit Info Window Sync Example
 
-In this example a unit card is displayed in the upper right corner when a unit is selected. The card updates to reflect the tracked unit's current health, and switches when a new unit is selected.
+In this example a unit card is displayed in the upper left corner when a unit is selected. The card updates to reflect the tracked unit's current health, and switches when a new unit is selected.
 
-We assume a unit is selected when the `SelectedUnit` reactive component is added to it. The info card will only display when one entity is selected. If the selected entity has no `React<Health>` component, then a health of `0/0` will be displayed.
+We assume a unit is selected when the `React<SelectedUnit>` component is added to it. The info card will only display when one entity is selected. If the selected entity has no `React<Health>` component, then a health of `0/0` will be displayed.
 
 ```rust
 use bevy::prelude::*;
 use bevy_cobweb::prelude::*;
 use bevy_cobweb_ui::{
-    Location, PlainBox, RectDims, TextNode, TextSize, TextWriter, WindowArea
+    Location, PlainBox, RectDims, TextNode, TextNodeOutput,
+    TextSize, TextWriter, WindowArea
 };
 
 #[derive(ReactComponent)]
@@ -1081,7 +1084,7 @@ struct SelectedUnit;
 struct Health(u32, u32);
 
 /// Creates a node that translates a node handle of `Option<T>` into `bool`.
-fn handle_is_some<T: NodeHash>(web: &mut Web, opt: NodeHandle<Option<T>>) -> NodeResult<bool>
+fn handle_is_some<T: NodeHash>(web: &mut Web, opt: NodeHandle<Option<T>>) -> NodeHandle<bool>
 {
     NodeBuilder::new_with(
             opt, |opt| move |w: Web| -> NodeResult<bool>
@@ -1100,12 +1103,14 @@ fn write_unit_health(
     units      : Query<&React<Health>>,
 ) -> NodeResult<()>
 {
+    // Get the unit entity.
     let (unit, text) = *input;
     let Some(entity) = *web.read(*unit)? else { return Ok(()); };
+
+    // Write its health to the text node.
     let health = units.get_single(entity).unwrap_or_default();
-    writer.write_node(&web, *text,
-            |t| write!(t, "Health: {}/{}", health.0, health.1),
-        )?;
+    writer.write(&web, *text, |t| write!(t, "Health: {}/{}", health.0, health.1))?;
+
     Ok(())
 }
 
@@ -1133,7 +1138,7 @@ fn unit_info_window(
     let area = WindowArea::new(window.single()).build(&mut web)?;
 
     let plain_box = PlainBox::new()
-        .location(area, Location::ShareAnchor)
+        .location(area, Location::Relative(0., 0.))
         .dimensions(area, RectDims::Relative(10., 7.5))
         .visibility(info_visibility)
         .build(&mut web)?;
@@ -1179,7 +1184,7 @@ In this example the user can send an `ExitRequest` reactive event, which causes 
 use bevy::prelude::*;
 use bevy_cobweb::prelude::*;
 use bevy_cobweb_ui::{
-    Location, RectDims, SimpleOneoffPopup, TextNode, TextSize, TextWriter, WindowArea
+    Location, RectDims, SimplePopup, TextNode, TextSize, TextWriter, WindowArea
 };
 
 #[derive(Default, Deref, DerefMut)]
@@ -1199,7 +1204,7 @@ fn exit_confirmation_popup(
     let area = WindowArea::new(window.single()).build(&mut web)?;
 
     // Create a simple popup with two buttons.
-    let popup = SimpleOneoffPopup::new()
+    let popup = SimplePopup::new()
         .location(area, Location::TotallyCentered)
         .dimensions(area, RectDims::Relative(30., 20.))
         .accept_text("Quit")
@@ -1224,7 +1229,7 @@ fn exit_confirmation_popup(
 
     // Extract `ScreenArea` from the popup's reference data.
     // - This is done by laundering the popup's output through another node.
-    let popup_area = SimpleOneoffPopup::get_user_area(&mut web, popup)?;
+    let popup_area = SimplePopup::get_user_area(&mut web, popup)?;
 
     // Write a message in the popup's user area.
     TextNode::new()
@@ -1243,9 +1248,9 @@ fn exit_confirmation_popup_handler(mut web: Web) -> NodeResult<()>
             || -> Option<ExitPopupNode> { None },
             |
                 mut web   : Web,
+                mut popup : NodeState<Option<ExitPopupNode>>,
                 request   : ReactEvent<ExitRequest>,
-                cancel    : NodeEvent<Cancel>,
-                mut popup : NodeState<Option<ExitPopupNode>>
+                cancel    : NodeEvent<Cancel>
             | -> NodeResult<()>
             {
                 // If the exit was canceled, remove the popup node so it will be destroyed.
@@ -1265,6 +1270,7 @@ fn exit_confirmation_popup_handler(mut web: Web) -> NodeResult<()>
                 }
 
                 // Build the exit confirmation popup if it exists.
+                // - We must always build all children every time we run a node system.
                 if let Some(popup) = &mut *popup
                 {
                     popup.build(&mut web)?;
