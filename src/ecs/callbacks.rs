@@ -229,6 +229,11 @@ where
 
     pub fn run(&mut self, world: &mut World, input: I) -> Option<O>
     {
+        self.run_with_cleanup(world, input, |_| {})
+    }
+
+    pub fn run_with_cleanup(&mut self, world: &mut World, input: I, cleanup: impl FnOnce(&mut World) + 'static) -> Option<O>
+    {
         let mut system = match std::mem::take(self)
         {
             CallbackSystem::Empty => return None,
@@ -240,6 +245,7 @@ where
             CallbackSystem::Initialized(system) => system,
         };
         let result = system.run(input, world);
+        (cleanup)(world);
         system.apply_deferred(world);
         *self = CallbackSystem::Initialized(system);
 
