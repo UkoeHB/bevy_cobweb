@@ -1,6 +1,6 @@
-# Bevy Cobweb (IN DEVELOPMENT)
+# Bevy Cobweb
 
-**There is no code yet, only the design draft in this document.**
+**This crate is under development, however the API discussed below reflects the intended end state.**
 
 Bevy Cobweb is a framework for building webs of interconnected, stateful Bevy systems that react to ECS mutations.
 
