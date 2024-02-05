@@ -20,9 +20,9 @@ Bevy Cobweb is a framework for building webs of interconnected, stateful Bevy sy
 
 This crate is a general-purpose ECS tool, but was designed to be the foundation for building UI in Bevy, with the following goals in mind.
 
-- Build UI declaratively in a Bevy-native style with heavy use of normal-looking Bevy systems.
-- Unify UI element construction and updating, with change detection to avoid updating unless necessary.
-- Enable asset and editor-driven hot-reloading that preserves the existing UI state as much as possible.
+- Build UI declaratively in a Bevy-native style using normal-looking Bevy systems.
+- Unify UI element construction and mutation, with change detection to avoid updating unless necessary.
+- Enable asset- and editor-driven hot-reloading that preserves the existing UI state as much as possible.
 - Provide a powerful, unopinionated API for building ergonomic UI widgets.
 - No macros required, no third-party dependencies.
 
@@ -35,15 +35,11 @@ Here is a hypothetical example of writing `"Hello, World!"` to the screen. Note 
 ```rust
 use bevy::prelude::*;
 use bevy_cobweb::{CobwebPlugin, NodeHandle, SystemExt, Web};
-use bevy_cobweb_ui::{Location, ScreenArea, TextNode, TextSize, WindowArea};
+use bevy_cobweb_ui::{Location, PrimaryWindowArea, TextNode, TextSize};
 
-fn hello_world(
-    mut web : Web,
-    window  : Query<Entity, With<PrimaryWindow>>
-) -> NodeResult<()>
+fn hello_world(mut web: Web) -> NodeResult<()>
 {
-    let area: NodeHandle<ScreenArea> = WindowArea::new(window.single())
-        .build(&mut web)?;
+    let area = PrimaryWindowArea::new().build(&mut web)?;
 
     TextNode::new()
         .default_text("Hello, World!")
@@ -64,9 +60,9 @@ fn main()
 }
 ```
 
-The `WindowArea` and `TextNode` types seen here are custom node builders that internally use the `bevy_cobweb` API. The `hello_world` system is a root node owned by a system produced by the [`.webroot()`](bevy_cobweb::webroot) system adaptor, which packages and stores the node in a `Local`. If the `hello_world` node errors-out, then the error handling policy configured in [`CobwebPlugin`](bevy_cobweb::CobwebPlugin) will be used (panic by default).
+The `PrimaryWindowArea` and `TextNode` types seen here are custom node builders that internally use the `bevy_cobweb` API. The `hello_world` system is a root node owned by a system produced by the [`.webroot()`](bevy_cobweb::webroot) system adaptor, which packages and stores the node in a `Local`. If the `hello_world` node errors-out, then the error handling policy configured in [`CobwebPlugin`](bevy_cobweb::CobwebPlugin) will be used (panic by default).
 
-If the window is resized, then `WindowArea` will rebuild because it is internally set up to react to changes in the window size. When the `WindowArea`'s output changes, its parent node `hello_world` will be rebuilt automatically. When `hello_world` rebuilds, the `TextNode` child will also rebuild if `area` has changed, thereby propagating the window size change. Internally, `TextNode` will re-use its existing `Text` entity, avoiding string reallocation.
+If the primary window (the window with the `PrimaryWindow` component) is resized, then `PrimaryWindowArea` will rebuild because it is internally set up to react to changes in the window size. When the `PrimaryWindowArea`'s output changes, its parent node `hello_world` will be rebuilt automatically. When `hello_world` rebuilds, its `TextNode` child will also rebuild if the data referenced by `area` (which is a `NodeHandle<ScreenArea>`) has changed, thereby propagating the window size change. Internally, `TextNode` will re-use its existing `Text` entity, avoiding string reallocation.
 
 
 
@@ -1017,12 +1013,9 @@ fn write_score(
 }
 
 /// Displays the block score.
-fn score_display(
-    mut web : Web,
-    window  : Query<Entity, With<PrimaryWindow>>
-) -> NodeResult<()>
+fn score_display(mut web: Web) -> NodeResult<()>
 {
-    let area = WindowArea::new(window.single()).build(&mut web)?;
+    let area = PrimaryWindowArea::new().build(&mut web)?;
 
     let text = TextNode::new()
         .location(area, Location::AnchorRelative(1.0, 2.5)
@@ -1073,8 +1066,8 @@ We assume a unit is selected when the `React<SelectedUnit>` component is added t
 use bevy::prelude::*;
 use bevy_cobweb::prelude::*;
 use bevy_cobweb_ui::{
-    Location, PlainBox, RectDims, TextNode, TextNodeOutput,
-    TextSize, TextWriter, WindowArea
+    Location, PlainBox, PrimaryWindowArea, RectDims, TextNode,
+    TextNodeOutput, TextSize, TextWriter,
 };
 
 #[derive(ReactComponent)]
@@ -1115,10 +1108,7 @@ fn write_unit_health(
 }
 
 /// Creates a unit info card.
-fn unit_info_window(
-    mut web : Web,
-    window  : Query<Entity, With<PrimaryWindow>>
-) -> NodeResult<()>
+fn unit_info_window(mut web: Web) -> NodeResult<()>
 {
     // Detect the selected unit.
     let selected_unit = NodeBuilder::new(
@@ -1135,7 +1125,7 @@ fn unit_info_window(
     let info_visibility = handle_is_some(&mut web, selected_unit)?;
 
     // Construct the info box.
-    let area = WindowArea::new(window.single()).build(&mut web)?;
+    let area = PrimaryWindowArea::new().build(&mut web)?;
 
     let plain_box = PlainBox::new()
         .location(area, Location::Relative(0., 0.))
@@ -1184,7 +1174,7 @@ In this example the user can send an `ExitRequest` reactive event, which causes 
 use bevy::prelude::*;
 use bevy_cobweb::prelude::*;
 use bevy_cobweb_ui::{
-    Location, RectDims, SimplePopup, TextNode, TextSize, TextWriter, WindowArea
+    Location, PrimaryWindowArea, RectDims, SimplePopup, TextNode, TextSize, TextWriter
 };
 
 #[derive(Default, Deref, DerefMut)]
@@ -1195,13 +1185,9 @@ struct Cancel;
 type ExitPopupNode = BasicNode<(), NodeId, ()>;
 
 /// Creates an exit confirmation popup.
-fn exit_confirmation_popup(
-    mut web : Web,
-    owner   : NodeInput<NodeId>,
-    window  : Query<Entity, With<PrimaryWindow>>,
-) -> NodeResult<()>
+fn exit_confirmation_popup(mut web: Web, owner: NodeInput<NodeId>) -> NodeResult<()>
 {
-    let area = WindowArea::new(window.single()).build(&mut web)?;
+    let area = PrimaryWindowArea::new().build(&mut web)?;
 
     // Create a simple popup with two buttons.
     let popup = SimplePopup::new()
