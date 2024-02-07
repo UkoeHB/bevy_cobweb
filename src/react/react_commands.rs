@@ -66,45 +66,7 @@ fn revoke_entity_reactor(
 /// Requires [`ReactPlugin`].
 ///
 /// Note that each time you register a reactor, it is assigned a unique system state (including unique `Local`s). To avoid
-/// leaking memory, be sure to revoke reactors when you are done with them. Despawn reactors are automatically cleaned up.
-///
-/// ## Ordering and determinism
-///
-/// `ReactCommands` requires exclusive access to an internal cache, which means the order of react events is fully
-/// specified. Reactors of the same type will react to an event in the order they are added, and react commands will
-/// be applied in the order they were invoked (note that all reactor registration is deferred).
-/// Reactions to a reactor will always be resolved immediately after the reactor ends,
-/// in the order they were queued (and so on up the reaction tree). A reactor's component removals and entity despawns
-/// are queued alongside child reactions, which means a removal/despawn can only be 'seen' once its place in the queue
-/// has been processed. Reactors always schedule reactions to available removals/despawns after they run, so if you have
-/// [despawn A, reaction X, despawn B], and both despawns have reactions, then despawn A will be the first despawn reacted
-/// to at the end of reaction X (or at end of the first leaf node of a reaction branch stemming from X), before any of X's
-/// despawns.
-///
-/// A reaction tree is single-threaded by default (it may be multi-threaded if you manually invoke a bevy schedule within
-/// the tree), so trees are deterministic. However, root-level reactive systems (systems that cause reactions but are
-/// not themselves reactors) are subject to the ordering constraints of their callers (e.g. a bevy app schedule), and
-/// reaction trees can only be initiated by calling [`apply_deferred()`]. This means the order that root-level reactors are
-/// queued, and the order of root-level removals/despawns, is unspecified by the react framework.
-///
-///
-/// ## Notes
-///
-/// A reaction tree is like a multi-layered accordion of command queues that automatically expands and resolves itself. Of
-/// note, the 'current' structure of that accordion tree cannot be modified. For
-/// example, you cannot add a data event reactor after an instance of a data event of that type that is below you in the
-/// reaction tree and expect the new reactor will respond to that data event instance. Moreover, already-queued reactions/
-/// react commands cannot be removed from the tree. However, modifications to the ECS world will be reflected in the
-/// behavior of future reactors, which may effect the structure of not-yet-expanded parts of the accordion.
-///
-/// Component removal and entity despawn reactions can only occur if you explicitly call [`react_to_removals()`],
-/// [`react_to_despawns()`], or [`react_to_all_removals_and_despawns()`]. We call those automatically in reaction trees, but
-/// if a root-level reactive system doesn't cause any reactions then removals/despawns won't be handled. For that reason,
-/// we recommand always pessimistically checking for removals/despawns manually after a call to `apply_deferred` after
-/// root-level reactive systems.
-///
-/// WARNING: All ordering constraints may be thrown out the window with bevy native command batching.
-///
+/// leaking memory, be sure to revoke reactors when you are done with them.
 #[derive(SystemParam)]
 pub struct ReactCommands<'w, 's>
 {
@@ -232,10 +194,10 @@ impl<'w, 's> ReactCommands<'w, 's>
     /// ```no_run
     /// rcommands.on((resource_mutation::<MyRes>(), component_mutation::<MyComponent>()), my_reactor_system);
     /// ```
-    pub fn on<I, Marker>(
+    pub fn on<Marker>(
         &mut self,
         triggers : impl ReactionTriggerBundle<I>,
-        reactor  : impl IntoSystem<I, (), Marker> + Send + Sync + 'static
+        reactor  : impl IntoSystem<(), (), Marker> + Send + Sync + 'static
     ) -> RevokeToken
     where
         I: Send + Sync + 'static
@@ -243,26 +205,21 @@ impl<'w, 's> ReactCommands<'w, 's>
         let sys_id = self.commands.spawn_system(reactor);
         let sys_handle = self.despawner.prepare(sys_id.entity());
 
-        reactor_registration(self, &sys_handle, triggers)
+        self.with_syscommand()
     }
 
-    /// Register a reactor to an entity despawn.
-    ///
-    /// Despawn reactors are one-shot systems and will automatically clean themselves up when the entity despawns.
-    ///
-    /// Returns `Err` if the entity does not exist.
-    ///
-    /// Example:
-    /// ```no_run
-    /// rcommands.on_despawn(entity, my_reactor_system).expect("entity is missing");
-    /// ```
-    pub fn on_despawn<Marker>(
+    pub fn with_syscommand<Marker>(
         &mut self,
-        entity  : Entity,
-        reactor : impl IntoSystem<(), (), Marker> + Send + Sync + 'static
-    ) -> Result<RevokeToken, ()>
+        triggers   : impl ReactionTriggerBundle<I>,
+        reactor    : SystemCommand,
+        sys_handle : &AutoDespawnSignal,
+    ) -> RevokeToken
+    where
+        I: Send + Sync + 'static
     {
-        register_despawn_reactor(self, entity, reactor)
+        let sys_id = self.commands.spawn_system(reactor);
+
+        reactor_registration(self, &sys_handle, triggers)
     }
 
     /// Register a one-off reactor triggered by ECS changes.

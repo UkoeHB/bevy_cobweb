@@ -312,11 +312,9 @@ We discuss the implementation of system events further in [Scheduling](#scheduli
 
 ### ECS Reactivity
 
-In `bevy_cobweb`, ECS reactivity is implemented through [`ReactCommands`](bevy_cobweb::ReactCommands). We use custom reactivity instead of Bevy change detection in order to achieve precise, responsive, recursive reactions with an ergonomic API that correctly integrates with `bevy_cobweb`'s node building protocol. In an ideal world `bevy_cobweb` would be upstreamed to Bevy, which would eliminate the ergonomic limitations of custom reactive elements (i.e. `ReactRes<>` resources and `React<>` components).
+In `bevy_cobweb`, ECS reactivity is implemented through [`ReactCommands`](bevy_cobweb::ReactCommands). We use custom reactivity instead of Bevy change detection in order to achieve precise, responsive, recursive reactions with an ergonomic API that correctly integrates with `bevy_cobweb`'s node building protocol. When Bevy implements [observers](https://github.com/bevyengine/bevy/pull/10839), this crate's custom reactive elements will be deprecated (i.e. `ReactRes<>` resources and `React<>` components).
 
-Note that 'observers' are currently planned for Bevy-native reactivity, however it is not clear that the [proposed implementation](https://github.com/bevyengine/bevy/pull/10839) is compatible with `bevy_cobweb`'s API and scheduling invariants.
-
-See the [docs](bevy_cobweb::react) for more details (TODO: will be migrated from `bevy_kot` then updated, see [the docs](https://github.com/UkoeHB/bevy_kot/tree/master/bevy_kot_ecs) there).
+See the [docs](bevy_cobweb::react) for more details (TODO: in progress of migrating from `bevy_kot`, see [the docs](https://github.com/UkoeHB/bevy_kot/tree/master/bevy_kot_ecs) there).
 
 
 ### Scheduling

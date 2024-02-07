@@ -9,122 +9,31 @@ use std::hash::Hash;
 
 //-------------------------------------------------------------------------------------------------------------------
 
-/// Owns a system callback.
-///
-/// The callback should own the actual system that you want to run. The [`SystemCleanup`] callback must be invoked
-/// between running your system and calling `apply_deferred` on that system.
-//todo: wrap the callback in a trait that lets you reassign the injected callback if it is the same type
-#[derive(Default, Component)]
-pub struct SystemCallback
-{
-    inner: Box<dyn FnMut(&mut World, SystemCleanup) + Send + Sync 'static>,
-}
-
-impl SystemCallback
-{
-    /// Makes a new system callback.
-    pub fn new(callback: impl FnMut(&mut World, SystemCleanup) + Send + Sync 'static) -> Self
-    {
-        Self{ inner: Box::new(callback) }
-    }
-
-    /// Runs the system callback.
-    ///
-    /// The `cleanup` should be invoked between running the callback's inner system and
-    /// calling `apply_deferred` on the inner system.
-    pub fn run(&mut self, world: &mut World, cleanup: SystemCleanup)
-    {
-        (self.inner)(world, cleanup);
-    }
-}
-
-//-------------------------------------------------------------------------------------------------------------------
-
-/// Stores a callable system.
-///
-/// We store the callback in an option in order to avoid archetype moves when taking/reinserting the callback in order to
-/// call it.
-#[derive(Component)]
-pub(crate) struct SystemStorage
-{
-    callback: Option<SystemCallback>,
-}
-
-impl SystemStorage
-{
-    pub(crate) fn new(callback: SystemCallback) -> Self
-    {
-        Self{ callback: Some(callback) }
-    }
-
-    pub(crate) fn insert(&mut self, callback: SystemCallback)
-    {
-        self.callback = Some(callback);
-    }
-
-    pub(crate) fn take(&mut self) -> Option<SystemCallback>
-    {
-        self.callback.take()
-    }
-}
-
-//-------------------------------------------------------------------------------------------------------------------
-
-/// Records a cleanup callback that can be injected into system commands for cleanup after the system command
-/// runs but before its `apply_deferred` is called.
-///
-/// For efficiency, only function pointer callbacks are supported.
-#[derive(Debug, Default, Copy, Clone)]
-pub(crate) struct SystemCleanup
-{
-    cleanup: Option<fn(&mut World)>,
-}
-
-impl SystemCleanup
-{
-    /// Makes a new system cleanup.
-    pub(crate) fn new(cleanup: fn(&mut World)) -> Self
-    {
-        Self{ cleanup: Some(cleanup) }
-    }
-
-    /// Runs the system cleanup on the world.
-    ///
-    /// Does nothing if no callback is stored.
-    pub(crate) fn run(self, world: &mut World)
-    {
-        let Some(cleanup) = self.cleanup else { return; };
-        (cleanup)(world);
-    }
-}
-
-//-------------------------------------------------------------------------------------------------------------------
-
 /// Executes a system on the world.
 ///
 /// System commands scheduled by this system will be run recursively.
 ///
 /// Pre-existing system commands will be temporarily removed then reinserted once the internal recursion is finished.
-pub fn system_runner(world: &mut World, id: SysId, cleanup: SystemCleanup)
+pub fn syscommand_runner(world: &mut World, command: SystemCommand, cleanup: SystemCommandCleanup)
 {
     // extract the callback
-    let Some(mut entity_mut) = world.get_entity_mut(id.entity())
+    let Some(mut entity_mut) = world.get_entity_mut(*command)
     else
     {
         cleanup.run(world);
         return;
     };
-    let Some(mut system_command) = entity_mut.get_mut::<SystemStorage>()
+    let Some(mut system_command) = entity_mut.get_mut::<SystemCommandStorage>()
     else
     {
-        tracing::error!(?id, "system command component is missing");
+        tracing::error!(?command, "system command component is missing");
         cleanup.run(world);
         return;
     };
     let Some(mut callback) = system_command.take()
     else
     {
-        tracing::warn!(?id, "system command missing");
+        tracing::warn!(?command, "system command missing");
         cleanup.run(world);
         return;
     };
@@ -137,15 +46,15 @@ pub fn system_runner(world: &mut World, id: SysId, cleanup: SystemCleanup)
 
     // reinsert the callback if its target hasn't been despawned
     // - We don't log an error if the entity is missing in case the callback despawned itself (e.g. one-off commands).
-    if let Some(mut entity_mut) = world.get_entity_mut(id.entity())
+    if let Some(mut entity_mut) = world.get_entity_mut(*command)
     {
-        if let Some(mut system_command) = entity_mut.get_mut::<SystemStorage>()
+        if let Some(mut system_command) = entity_mut.get_mut::<SystemCommandStorage>()
         {
             system_command.insert(callback);
         }
         else
         {
-            tracing::error!(?id, "system command component is missing");
+            tracing::error!(?command, "system command component is missing");
         }
     }
 
@@ -157,7 +66,7 @@ pub fn system_runner(world: &mut World, id: SysId, cleanup: SystemCleanup)
         next_command.run(world);
     }
 
-    // replace previously-existing system commands
+    // reinsert previously-existing system commands
     world.resource_mut::<CobwebCommandQueue<SystemCommand>>().append(preexisting_syscommands);
 
     Ok(())

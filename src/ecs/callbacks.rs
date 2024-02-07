@@ -236,7 +236,11 @@ where
     {
         let mut system = match std::mem::take(self)
         {
-            CallbackSystem::Empty => return None,
+            CallbackSystem::Empty =>
+            {
+                (cleanup)(world);
+                return None;
+            }
             CallbackSystem::New(mut system) =>
             {
                 system.initialize(world);

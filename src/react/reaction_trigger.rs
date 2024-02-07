@@ -11,16 +11,16 @@ use bevy::utils::all_tuples;
 //-------------------------------------------------------------------------------------------------------------------
 
 /// Helper trait for registering reactors with [`ReactCommands`].
-pub trait ReactionTrigger<I>
+pub trait ReactionTrigger
 {
     /// Register a trigger with [`ReactCommands`].
     fn register(self,
         rcommands  : &mut ReactCommands,
         sys_handle : &AutoDespawnSignal,
-    ) -> ReactorType;
+    ) -> Option<ReactorType>;
 }
 
-impl<I, R: ReactionTrigger<I>> ReactionTriggerBundle<I> for R
+impl<R: ReactionTrigger> ReactionTriggerBundle for R
 {
     fn len(&self) -> usize { 1 }
 
@@ -28,7 +28,7 @@ impl<I, R: ReactionTrigger<I>> ReactionTriggerBundle<I> for R
             self,
             rcommands  : &mut ReactCommands,
             sys_handle : &AutoDespawnSignal,
-            func       : &mut impl FnMut(ReactorType)
+            func       : &mut impl FnMut(Option<ReactorType>)
         )
     {
         func(self.register(rcommands, sys_handle));
@@ -41,7 +41,7 @@ impl<I, R: ReactionTrigger<I>> ReactionTriggerBundle<I> for R
 ///
 /// All members of a trigger bundle must implement [`ReactionTriggerBundle`]. You should implement [`ReactionTrigger`]
 /// on the root members of a bundle.
-pub trait ReactionTriggerBundle<I>
+pub trait ReactionTriggerBundle
 {
     /// Get the number of triggers in the bundle
     fn len(&self) -> usize;
@@ -51,22 +51,23 @@ pub trait ReactionTriggerBundle<I>
             self,
             rcommands  : &mut ReactCommands,
             sys_handle : &AutoDespawnSignal,
-            func       : &mut impl FnMut(ReactorType)
+            func       : &mut impl FnMut(Option<ReactorType>)
         );
 }
 
 //-------------------------------------------------------------------------------------------------------------------
 
-pub fn reactor_registration<I>(
+pub fn reactor_registration(
     rcommands  : &mut ReactCommands,
     sys_handle : &AutoDespawnSignal,
-    triggers   : impl ReactionTriggerBundle<I>,
+    triggers   : impl ReactionTriggerBundle,
 ) -> RevokeToken
 {
     let mut reactors = Vec::with_capacity(triggers.len());
     let mut func =
-        |reactor_type: ReactorType|
+        |reactor_type: Option<ReactorType>|
         {
+            let Some(reactor_type) = reactor_type else { return; };
             reactors.push(reactor_type);
         };
     triggers.get_reactor_types(rcommands, sys_handle, &mut func);
@@ -76,12 +77,12 @@ pub fn reactor_registration<I>(
 
 //-------------------------------------------------------------------------------------------------------------------
 
-// Implements [`ReactionTriggerBundle`] for tuples of `()`-input triggers.
+// Implements [`ReactionTriggerBundle`] for tuples of triggers.
 macro_rules! tuple_impl
 {
     ($($name: ident),*) =>
     {
-        impl<$($name: ReactionTriggerBundle<()>),*> ReactionTriggerBundle<()> for ($($name,)*)
+        impl<$($name: ReactionTriggerBundle),*> ReactionTriggerBundle for ($($name,)*)
         {
             #[allow(unused_variables, unused_mut)]
             #[inline(always)]
@@ -103,50 +104,7 @@ macro_rules! tuple_impl
                 self,
                 rcommands  : &mut ReactCommands,
                 sys_handle : &AutoDespawnSignal,
-                func       : &mut impl FnMut(ReactorType)
-            ){
-                #[allow(non_snake_case)]
-                let ($(mut $name,)*) = self;
-                $(
-                    $name.get_reactor_types(rcommands, sys_handle, &mut *func);
-                )*
-            }
-        }
-    }
-}
-
-all_tuples!(tuple_impl, 0, 15, B);
-
-//-------------------------------------------------------------------------------------------------------------------
-
-// Implements [`ReactionTriggerBundle`] for tuples of `Entity`-input triggers.
-macro_rules! tuple_impl
-{
-    ($($name: ident),*) =>
-    {
-        impl<$($name: ReactionTriggerBundle<Entity>),*> ReactionTriggerBundle<Entity> for ($($name,)*)
-        {
-            #[allow(unused_variables, unused_mut)]
-            #[inline(always)]
-            fn len(&self) -> usize
-            {
-                let mut len = 0;
-                #[allow(non_snake_case)]
-                let ($($name,)*) = self;
-                $(
-                    len += $name.len();
-                )*
-
-                len
-            }
-
-            #[allow(unused_variables, unused_mut)]
-            #[inline(always)]
-            fn get_reactor_types(
-                self,
-                rcommands  : &mut ReactCommands,
-                sys_handle : &AutoDespawnSignal,
-                func       : &mut impl FnMut(ReactorType)
+                func       : &mut impl FnMut(Option<ReactorType>)
             ){
                 #[allow(non_snake_case)]
                 let ($(mut $name,)*) = self;

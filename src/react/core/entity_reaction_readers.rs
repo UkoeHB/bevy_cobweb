@@ -8,6 +8,35 @@ use bevy::prelude::*;
 use std::hash::Hash;
 
 //-------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------
+
+struct ReactComponentId<T: ReactComponent>
+{
+    id: ComponentId,
+    p: PhantomData<T>,
+};
+
+impl<T: ReactComponent> ReactComponentId<T>
+{
+    fn id(&self) -> ComponentId
+    {
+        self.id
+    }
+}
+
+impl<T: ReactComponent> FromWorld for ReactComponentId<T>
+{
+    fn from_world(world: &mut World) -> Self
+    {
+        Self{
+            id: world.components().get_id(std::any::TypeId::of::<React<T>>()),
+            p: PhantomData::default(),
+        }
+    }
+}
+
+//-------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------
 
 /// The type of an entity reaction.
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
@@ -91,11 +120,10 @@ impl Default for EntityReactionAccessTracker
 
 /// System parameter for reading entity component insertion events in systems that react to those events.
 #[derive(SystemParam)]
-pub struct InsertionEvent<'w, T: ReactComponent>
+pub struct InsertionEvent<'w, 's, T: ReactComponent>
 {
+    component_id: Local<'s, ReactComponentId<T>>,
     tracker: Res<'w, EntityReactionAccessTracker>,
-    components: Components<'w>,
-    p: PhantomData<T>,
 }
 
 impl<'w, T: ReactComponent> InsertionEvent<'w, T>
@@ -108,9 +136,7 @@ impl<'w, T: ReactComponent> InsertionEvent<'w, T>
     {
         if !self.tracker.is_reacting() { return None; }
         let EntityReactionType::Insertion(component_id) = self.tracker.reaction_type() else { return None; };
-        //todo: is there some way to cache this and avoid a hashmap lookup?
-        let Some(expected_component_id) = self.components.get_id(std::any::TypeId::of::<React<T>>()) else { return None; };
-        if component_id != expected_component_id { return None; }
+        if component_id != self.component_id.id() { return None; }
 
         Some(self.tracker.source())
     }
@@ -120,11 +146,10 @@ impl<'w, T: ReactComponent> InsertionEvent<'w, T>
 
 /// System parameter for reading entity component removal events in systems that react to those events.
 #[derive(SystemParam)]
-pub struct RemovalEvent<'w, T: ReactComponent>
+pub struct RemovalEvent<'w, 's, T: ReactComponent>
 {
+    component_id: Local<'s, ReactComponentId<T>>,
     tracker: Res<'w, EntityReactionAccessTracker>,
-    components: Components<'w>,
-    p: PhantomData<T>,
 }
 
 impl<'w, T: ReactComponent> RemovalEvent<'w, T>
@@ -137,9 +162,7 @@ impl<'w, T: ReactComponent> RemovalEvent<'w, T>
     {
         if !self.tracker.is_reacting() { return None; }
         let EntityReactionType::Removal(component_id) = self.tracker.reaction_type() else { return None; };
-        //todo: is there some way to cache this and avoid a hashmap lookup?
-        let Some(expected_component_id) = self.components.get_id(std::any::TypeId::of::<React<T>>()) else { return None; };
-        if component_id != expected_component_id { return None; }
+        if component_id != self.component_id.id() { return None; }
 
         Some(self.tracker.source())
     }
@@ -149,16 +172,15 @@ impl<'w, T: ReactComponent> RemovalEvent<'w, T>
 
 /// System parameter for reading entity component mutation events in systems that react to those events.
 #[derive(SystemParam)]
-pub struct MutationEvent<'w, T: ReactComponent>
+pub struct MutationEvent<'w, 's, T: ReactComponent>
 {
+    component_id: Local<'s, ReactComponentId<T>>,
     tracker: Res<'w, EntityReactionAccessTracker>,
-    components: Components<'w>,
-    p: PhantomData<T>,
 }
 
 impl<'w, T: ReactComponent> MutationEvent<'w, T>
 {
-    /// Returns the entity from which a `React<T>` component was removed if the current system is
+    /// Returns the entity on which a `React<T>` component was mutated if the current system is
     /// reacting to that mutation.
     ///
     /// This will return at most one unique entity each time a reactor runs.
@@ -166,9 +188,7 @@ impl<'w, T: ReactComponent> MutationEvent<'w, T>
     {
         if !self.tracker.is_reacting() { return None; }
         let EntityReactionType::Mutation(component_id) = self.tracker.reaction_type() else { return None; };
-        //todo: is there some way to cache this and avoid a hashmap lookup?
-        let Some(expected_component_id) = self.components.get_id(std::any::TypeId::of::<React<T>>()) else { return None; };
-        if component_id != expected_component_id { return None; }
+        if component_id != self.component_id.id() { return None; }
 
         Some(self.tracker.source())
     }

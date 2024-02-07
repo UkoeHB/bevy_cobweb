@@ -28,36 +28,18 @@ fn end_entity_reaction(world: &mut World)
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
-fn end_entity_event(world: &mut World)
+fn end_event(world: &mut World)
 {
-    world.resource_mut::<EntityEventAccessTracker>().end();
-    // note: cleanup is end_entity_event_with_cleanup()
+    world.resource_mut::<EventAccessTracker>().end();
+    // note: cleanup is end_event_with_cleanup()
 }
 
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
-fn end_entity_event_with_cleanup(world: &mut World)
+fn end_event_with_cleanup(world: &mut World)
 {
-    let data_entity = world.resource_mut::<EntityEventAccessTracker>().end();
-    world.despawn(data_entity);
-}
-
-//-------------------------------------------------------------------------------------------------------------------
-//-------------------------------------------------------------------------------------------------------------------
-
-fn end_broadcast_event(world: &mut World)
-{
-    world.resource_mut::<BroadcastEventAccessTracker>().end();
-    // note: cleanup is end_broadcast_event_with_cleanup()
-}
-
-//-------------------------------------------------------------------------------------------------------------------
-//-------------------------------------------------------------------------------------------------------------------
-
-fn end_broadcast_event_with_cleanup(world: &mut World)
-{
-    let data_entity = world.resource_mut::<BroadcastEventAccessTracker>().end();
+    let data_entity = world.resource_mut::<EventAccessTracker>().end();
     world.despawn(data_entity);
 }
 
@@ -65,14 +47,29 @@ fn end_broadcast_event_with_cleanup(world: &mut World)
 //-------------------------------------------------------------------------------------------------------------------
 
 /// A system command.
+///
+/// If scheduled as a `Command` from user-land, this will cause a [`reaction_tree()`] to execute, otherwise it will be
+/// processed within the already-running reaction tree.
 #[derive(Debug, Copy, Clone, Deref)]
-pub(crate) struct SystemCommand(pub(crate) SysId);
+pub struct SystemCommand(pub(crate) Entity);
 
 impl SystemCommand
 {
     pub(crate) fn run(self, &mut World)
     {
-        system_runner(world, self.0, SystemCommandCleanup::default());
+        syscommand_runner(world, self, SystemCommandCleanup::default());
+    }
+}
+
+impl Command for SystemCommand
+{
+    fn apply(self, world: &mut World)
+    {
+        move |world: &mut World|
+        {
+            world.resource_mut::<CobwebCommandQueue<SystemCommand>>().push(self);
+            reaction_tree(world);
+        }
     }
 }
 
@@ -80,10 +77,17 @@ impl SystemCommand
 
 /// A system event command.
 //todo: validate that data entities will always be cleaned up
+///
+/// If scheduled as a `Command` from user-land, this will cause a [`reaction_tree()`] to execute, otherwise it will be
+/// processed within the already-running reaction tree.
 #[derive(Debug, Copy, Clone)]
-pub(crate) struct EventCommand
+pub struct EventCommand
 {
-    pub(crate) system: SysId,
+    /// The system command triggered by this event.
+    pub(crate) system: SystemCommand,
+    /// Entity where the event data is stored.
+    ///
+    /// This entity will despawned in the system command cleanup callback.
     pub(crate) data_entity: Entity,
 }
 
@@ -93,7 +97,19 @@ impl EventCommand
     pub(crate) fn run(self, &mut World)
     {
         world.resource_mut::<SystemEventAccessTracker>().start(self.data_entity);
-        system_runner(world, self.system, SystemCommandCleanup::new(end_system_event));
+        syscommand_runner(world, self.system, SystemCommandCleanup::new(end_system_event));
+    }
+}
+
+impl Command for EventCommand
+{
+    fn apply(self, world: &mut World)
+    {
+        move |world: &mut World|
+        {
+            world.resource_mut::<CobwebCommandQueue<EventCommand>>().push(self);
+            reaction_tree(world);
+        }
     }
 }
 
@@ -101,14 +117,17 @@ impl EventCommand
 
 /// A reaction command.
 //todo: validate that data entities will always be cleaned up
+///
+/// If scheduled as a `Command` from user-land, this will cause a [`reaction_tree()`] to execute, otherwise it will be
+/// processed within the already-running reaction tree.
 #[derive(Debug, Copy, Clone)]
-pub(crate) enum ReactionCommand
+pub enum ReactionCommand
 {
     /// A reaction to a resource mutation.
     ResourceReaction
     {
         /// The system command triggered by this event.
-        reactor: SysId,
+        reactor: SystemCommand,
     },
     /// A reaction to an entity mutation.
     EntityReaction
@@ -118,26 +137,18 @@ pub(crate) enum ReactionCommand
         /// The type of the entity reaction trigger.
         reaction_type: EntityReactionType,
         /// The system command triggered by this event.
-        reactor: SysId,
+        reactor: SystemCommand,
     },
-    /// A reaction to an event targeted at a specific entity.
-    EntityEvent
+    /// A reaction to an event (can be a broadcasted event or an entity event).
+    Event
     {
         /// Entity where the event data is stored.
         data_entity: Entity,
         /// The system command triggered by this event.
-        reactor: SysId,
+        reactor: SystemCommand,
         /// True if this is the last reaction that will read this event.
-        last_reader: bool,
-    },
-    /// A reaction to a broadcasted event.
-    BroadcastEvent
-    {
-        /// Entity where the event data is stored.
-        data_entity: Entity,
-        /// The system command triggered by this event.
-        reactor: SysId,
-        /// True if this is the last reaction that will read this event.
+        ///
+        /// The `data_entity` will despawned in the system command cleanup callback if this is true.
         last_reader: bool,
     },
 }
@@ -150,25 +161,31 @@ impl ReactionCommand
         {
             Self::ResourceReaction{ reactor } =>
             {
-                system_runner(world, reactor, SystemCommandCleanup::default());
+                syscommand_runner(world, reactor, SystemCommandCleanup::default());
             }
             Self::EntityReaction{ reaction_source, reaction_type, reactor } =>
             {
                 world.resource_mut::<EntityReactionAccessTracker>().start(reaction_source, reaction_type);
-                system_runner(world, reactor, SystemCommandCleanup::new(end_entity_reaction, None));
+                syscommand_runner(world, reactor, SystemCommandCleanup::new(end_entity_reaction, None));
             }
-            Self::EntityEvent{ data_entity, reactor, last_reader } =>
+            Self::Event{ data_entity, reactor, last_reader } =>
             {
-                world.resource_mut::<EntityEventAccessTracker>().start(data_entity);
-                let cleanup = if last_reader { end_entity_event_with_cleanup } else { end_entity_event };
-                system_runner(world, reactor, SystemCommandCleanup::new(cleanup));
+                world.resource_mut::<EventAccessTracker>().start(data_entity);
+                let cleanup = if last_reader { end_event_with_cleanup } else { end_event };
+                syscommand_runner(world, reactor, SystemCommandCleanup::new(cleanup));
             }
-            Self::BroadcastEvent{ data_entity, reactor, last_reader } =>
-            {
-                world.resource_mut::<BroadcastEventAccessTracker>().start(data_entity);
-                let cleanup = if last_reader { end_broadcast_event_with_cleanup } else { end_broadcast_event };
-                system_runner(world, reactor, SystemCommandCleanup::new(cleanup));
-            }
+        }
+    }
+}
+
+impl Command for ReactionCommand
+{
+    fn apply(self, world: &mut World)
+    {
+        move |world: &mut World|
+        {
+            world.resource_mut::<CobwebCommandQueue<ReactionCommand>>().push(self);
+            reaction_tree(world);
         }
     }
 }
