@@ -196,9 +196,9 @@ Building a node has five steps:
 
 1. Initialize the builder. This is where the node state and node system are specified.
     - **Simple**: `new(system)`. The node is state-less.
-    - **Built-in state**: `new_with(state, system)`. The node state is reset when the initial state changes, and is moved into the system which must be a closure.
-    - **External state**: `from(state, system)`. The node state is reset when the initial state changes, and is accessed with [`NodeState<S>`](bevy_cobweb::NodeState).
-    - **External state merged**: `from_merged(init data, merge callback, system)`. The existing node state is merged with initial state data when that data changes, and is accessed with [`NodeState<S>`](bevy_cobweb::NodeState).
+    - **Built-in state**: `new_capture(state, system)`. The node state is reset when the initial state changes, and is moved into the system which must be a closure.
+    - **External state**: `new_with(state, system)`. The node state is reset when the initial state changes, and is accessed with [`NodeState<S>`](bevy_cobweb::NodeState).
+    - **External state merged**: `new_merged(init data, merge callback, system)`. The existing node state is merged with initial state data when that data changes, and is accessed with [`NodeState<S>`](bevy_cobweb::NodeState).
     - **Initialized state**: `init(initial state callback, system)`. The first time a node is created, the 'initial state callback' is called to get the node state's starting value. This is useful if your node state is not hashable and you don't want to use a `NodeLink`.
     - **Initialized state merged**: `init_merged(initial state callback, init data, merge callback, system)`. The first time a node is created, the 'initial state callback' is called to get the node state's starting value. Then, and for subsequent builds, the merge callback is used to merge external data with the node state.
     - **NodeLink**: `connect(node link, system)`. The node becomes connected to the [`NodeLink`](bevy_cobweb) source. The node state is reset when a non-empty link is received.
@@ -459,13 +459,13 @@ fn no_state(mut web: Web) -> NodeResult<()>
 }
 ```
 
-Or with captured state with [`.new_with()`](bevy_cobweb::NodeBuilder::new_with). Note that the captured state is moved into the system via an intermediary closure. It is a compile error to capture anything from the environment.
+Or with captured state with [`.new_capture()`](bevy_cobweb::NodeBuilder::new_capture). Note that the captured state is moved into the system via an intermediary closure. It is a compile error to capture anything from the environment.
 
 ```rust
 fn captured_state(mut web: Web) -> NodeResult<()>
 {
     let c = 0;
-    NodeBuilder::new_with(
+    NodeBuilder::new_capture(
             c,
             |mut c| move || -> NodeResult<()>
             {
@@ -480,7 +480,7 @@ fn captured_state(mut web: Web) -> NodeResult<()>
 }
 ```
 
-Or by storing the state separately with [`.from()`](bevy_cobweb::NodeBuilder::from) and accessing it with [`NodeState<S>`](bevy_cobweb::NodeState). This is necessary if your node system is a function pointer.
+Or by storing the state separately with [`.new_with()`](bevy_cobweb::NodeBuilder::new_with) and accessing it with [`NodeState<S>`](bevy_cobweb::NodeState). This is necessary if your node system is a function pointer.
 
 ```rust
 fn my_node(mut state: NodeState<usize>) -> NodeResult<()>
@@ -492,18 +492,18 @@ fn my_node(mut state: NodeState<usize>) -> NodeResult<()>
 
 fn from_state(mut web: Web) -> NodeResult<()>
 {
-    NodeBuilder::from(0, my_node).build(&mut web)?;
+    NodeBuilder::new_with(0, my_node).build(&mut web)?;
     Ok(())
 }
 ```
 
-Or by merging existing state with new state with [`.from_merged()`](bevy_cobweb::NodeBuilder::from_merged). We need [`NodeState<S>`](bevy_cobweb::NodeState) to access the node state, which is stored separate from the node system in order to merge it with updates.
+Or by merging existing state with new state with [`.new_merged()`](bevy_cobweb::NodeBuilder::new_merged). We need [`NodeState<S>`](bevy_cobweb::NodeState) to access the node state, which is stored separate from the node system in order to merge it with updates.
 
 ```rust
 fn from_state_merged(mut web: Web) -> NodeResult<()>
 {
     let c = 100;
-    NodeBuilder::from_merged(
+    NodeBuilder::new_merged(
             c,
             |old: Option<usize>, new: usize| -> MergeResult<usize>
             {
@@ -646,7 +646,7 @@ fn derived_trigger(mut web: Web) -> NodeResult<()>
 
     // Mutate the score when the IncrementScore event is detected in the environment
     // - Uses a ReactorNode to avoid incrementing the score when the score entity is first set.
-    NodeBuilder::new_with(
+    NodeBuilder::new_capture(
             score_entity,
             |e| move |mut web: Web, mut score: Query<&mut React<Score>>| -> NodeResult<()>
             {
@@ -661,7 +661,7 @@ fn derived_trigger(mut web: Web) -> NodeResult<()>
 
     // React to component mutation
     // - Uses a BasicNode so the score will be printed the first time this is built.
-    NodeBuilder::new_with(
+    NodeBuilder::new_capture(
             score_entity,
             |e| move |mut web: Web, score: Query<&React<Score>>| -> NodeResult<()>
             {
@@ -696,7 +696,7 @@ fn handle_into_state(mut web: Web) -> NodeResult<()>
         )
         .build(&mut web)?;
 
-    NodeBuilder::new_with(
+    NodeBuilder::new_capture(
             the_answer,
             |a| move |mut web: Web| -> NodeResult<()>
             {
@@ -773,9 +773,8 @@ fn node_link_connection(mut web: Web) -> NodeResult<()>
 {
     let x = 5;
     let y = 10;
-    let computed = NodeBuilder::new_with(
-            (x, y)
-            |(x, y)| move || Ok(x*x + y) -> NodeResult<usize>
+    let computed = NodeBuilder::new_capture(
+            (x, y) |(x, y)| move || Ok(x*x + y) -> NodeResult<usize>
         )
         .build_producer(&mut web)?;
 
@@ -956,9 +955,8 @@ fn relocation_event(mut web: Web) -> NodeResult<()>
         .build(&mut web)?
         .id();
 
-    NodeBuilder::new_with(
-            id,
-            |id| move |mut web: Web|
+    NodeBuilder::new_capture(
+            id, |id| move |mut web: Web|
             {
                 let packaged = NodeBuilder::new(|| {})
                     .prepare(&mut web)?
@@ -1021,8 +1019,9 @@ fn score_display(mut web: Web) -> NodeResult<()>
         .size(area, TextSize::RelativeHeight(7.5))
         .build(&mut web)?;
 
-    NodeBuilder::from(text, write_score)
+    NodeBuilder::new(write_score)
         .triggers(resource_mutation::<BlockScore>())
+        .input(text)
         .build(&mut web)?;
 
     Ok(())
@@ -1078,7 +1077,7 @@ struct Health(u32, u32);
 /// Creates a node that translates a node handle of `Option<T>` into `bool`.
 fn handle_is_some<T: NodeHash>(web: &mut Web, opt: NodeHandle<Option<T>>) -> NodeHandle<bool>
 {
-    NodeBuilder::new_with(
+    NodeBuilder::new_capture(
             opt, |opt| move |w: Web| -> NodeResult<bool>
             {
                 Ok(w.read(opt)?.is_some())
@@ -1139,7 +1138,7 @@ fn unit_info_window(mut web: Web) -> NodeResult<()>
         .build(&mut web)?;
 
     // Write the health text.
-    NodeBuilder::from((selected_unit, health_text), write_unit_health)
+    NodeBuilder::new_with((selected_unit, health_text), write_unit_health)
         .triggers_from(
             move |web: &Web| -> NodeResult<impl ReactionTriggerBundle>
             {
