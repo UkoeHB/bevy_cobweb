@@ -24,6 +24,7 @@ This crate is a general-purpose ECS tool, but was designed to be the foundation 
 - Unify UI element construction and mutation, with change detection to avoid updating unless necessary.
 - Enable asset- and editor-driven hot-reloading that preserves the existing UI state as much as possible.
 - Provide a powerful, unopinionated API for building ergonomic UI widgets.
+- Enable highly-responsive multi-widget structures that react to ECS mutations and automatically update when internal dependencies change.
 - No macros required, no third-party dependencies.
 
 
