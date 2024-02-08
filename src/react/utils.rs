@@ -12,49 +12,6 @@ use std::sync::Arc;
 
 //-------------------------------------------------------------------------------------------------------------------
 
-/// Queue a command with a call to react to all removals and despawns.
-///
-/// Note that we assume the specified command internally handles its deferred state. We don't want to call
-/// `apply_deferred` here since the global `apply_deferred` is inefficient.
-pub(crate) fn enque_command(commands: &mut Commands, cb: impl Command)
-{
-    commands.add(
-            move |world: &mut World|
-            {
-                cb.apply(world);
-                react_to_all_removals_and_despawns(world);
-            }
-        );
-}
-
-//-------------------------------------------------------------------------------------------------------------------
-
-/// Queue a named system then react to all removals and despawns.
-/// - Note that all side effects and chained reactions will be applied when the syscall applies its deferred commands.
-///   This means this reaction's effects will be propagated before any 'sibling' reactions/commands.
-pub(crate) fn enque_reaction<I: Send + Sync + 'static>(commands: &mut Commands, sys_id: SysId, input: I)
-{
-    commands.add(
-            move |world: &mut World|
-            {
-                let Ok(()) = spawned_syscall::<I, ()>(world, sys_id, input)
-                else { tracing::warn!(?sys_id, "reaction system failed"); return; };
-                react_to_all_removals_and_despawns(world);
-            }
-        );
-}
-
-//-------------------------------------------------------------------------------------------------------------------
-
-pub(crate) enum EntityReactType
-{
-    Insertion,
-    Mutation,
-    Removal,
-}
-
-//-------------------------------------------------------------------------------------------------------------------
-
 #[derive(Component)]
 pub(crate) struct EntityReactors
 {
@@ -98,7 +55,7 @@ pub enum ReactorType
     ComponentRemoval(ComponentId),
     ResourceMutation(ComponentId),
     Event(TypeId),
-EntityEvent(Entity, TypeId),
+    EntityEvent(Entity, TypeId),
     Despawn(Entity),
 }
 

@@ -35,6 +35,19 @@ impl<R: ReactionTrigger> ReactionTriggerBundle for R
     }
 }
 
+impl ReactionTriggerBundle for ()
+{
+    fn len(&self) -> usize { 0 }
+
+    fn get_reactor_types(
+            self,
+            _ : &mut ReactCommands,
+            _ : &AutoDespawnSignal,
+            _ : &mut impl FnMut(Option<ReactorType>)
+        )
+    {}
+}
+
 //-------------------------------------------------------------------------------------------------------------------
 
 /// Helper trait for registering reactors with [`ReactCommands`].

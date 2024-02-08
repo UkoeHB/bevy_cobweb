@@ -9,16 +9,41 @@ use bevy_fn_plugin::*;
 
 //-------------------------------------------------------------------------------------------------------------------
 
+/// Queues removal and despawn reactors.
+///
+/// This system should be scheduled manually if you want to promptly detect removals or despawns that occur after
+/// normal systems that don't trigger other reactions.
+pub fn schedule_removal_and_despawn_reactors(world: &mut World)
+{
+    let mut react_cache = world.remove_resource::<ReactCache>().unwrap();
+    react_cache.react_to_removals(world);
+    react_cache.react_to_despawns(world);
+    world.insert_resource(react_cache);
+}
+
+//-------------------------------------------------------------------------------------------------------------------
+
 /// Prepares the react framework so that reactors may be registered with [`ReactCommands`].
-/// - Does NOT schedule any component removal or entity despawn reactor systems. You must schedule those yourself!
-/// 
-/// WARNING: If reactivity is implemented natively in Bevy, then this implementation may become obsolete.
+/// - Un-handled removals and despawns will be automatically processed in `Last`.
 #[bevy_plugin]
 pub fn ReactPlugin(app: &mut App)
 {
     app.init_resource::<ReactCache>()
-        .init_resource::<ReactEventCounter>()
-        .setup_auto_despawn();
+        .init_resource::<CobwebCommandQueue<SystemCommand>>()
+        .init_resource::<CobwebCommandQueue<EventCommand>>()
+        .init_resource::<CobwebCommandQueue<ReactionCommand>>()
+        .init_resource::<SystemEventAccessTracker>()
+        .init_resource::<EntityReactionAccessTracker>()
+        .init_resource::<EventAccessTracker>()
+        .setup_auto_despawn()
+        .add_systems(Last,
+            (
+                schedule_removal_and_despawn_reactors,
+                reaction_tree,
+            )
+                .chain()
+                .after(AutoDespawnSet)
+        );
 }
 
 //-------------------------------------------------------------------------------------------------------------------

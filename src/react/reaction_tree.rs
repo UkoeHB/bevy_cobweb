@@ -8,14 +8,29 @@ use bevy::prelude::*;
 use std::hash::Hash;
 
 //-------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------
 
-/// Executes a system on the world.
+fn garbage_collect_entities(world: &mut World)
+{
+    while let Some(entity) = world.resource::<AutoDespawner>().try_recv()
+    {
+        world.despawn(entity);
+    }
+}
+
+//-------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------
+
+/// Executes a system command on the world.
 ///
 /// System commands scheduled by this system will be run recursively.
 ///
 /// Pre-existing system commands will be temporarily removed then reinserted once the internal recursion is finished.
-pub fn syscommand_runner(world: &mut World, command: SystemCommand, cleanup: SystemCommandCleanup)
+pub(crate) fn syscommand_runner(world: &mut World, command: SystemCommand, cleanup: SystemCommandCleanup)
 {
+    // cleanup
+    garbage_collect_entities(world);
+
     // extract the callback
     let Some(mut entity_mut) = world.get_entity_mut(*command)
     else
@@ -44,8 +59,11 @@ pub fn syscommand_runner(world: &mut World, command: SystemCommand, cleanup: Sys
     // run the system command
     callback.run(world, cleanup);
 
+    // cleanup
+    // - We do this before reinserting the callback in case the callback garbage collected itself.
+    garbage_collect_entities(world);
+
     // reinsert the callback if its target hasn't been despawned
-    // - We don't log an error if the entity is missing in case the callback despawned itself (e.g. one-off commands).
     if let Some(mut entity_mut) = world.get_entity_mut(*command)
     {
         if let Some(mut system_command) = entity_mut.get_mut::<SystemCommandStorage>()
@@ -54,9 +72,21 @@ pub fn syscommand_runner(world: &mut World, command: SystemCommand, cleanup: Sys
         }
         else
         {
+            std::mem::drop(callback);
             tracing::error!(?command, "system command component is missing");
         }
     }
+    else
+    {
+        std::mem::drop(callback);
+    }
+
+    // cleanup
+    // - We do this again just in case dropping the callback caused entities to be garbage collected.
+    garbage_collect_entities(world);
+
+    // schedule component removal and despawn reactors
+    schedule_removal_and_despawn_reactors(world);
 
     // recurse over new system commands
     // - Note that when we recurse, any system commands from this scope will be removed and reinserted, so this
@@ -78,7 +108,7 @@ pub fn syscommand_runner(world: &mut World, command: SystemCommand, cleanup: Sys
 ///
 /// This is used for running system commands, system events, and reactions that are scheduled from outside the
 /// reaction tree.
-pub(crate) fn reaction_tree(world: &mut World)
+pub fn reaction_tree(world: &mut World)
 {
     // Set the reaction tree flag to prevent the reaction tree from being recursively scheduled.
     // - We return if a reaction tree was already started.
@@ -87,6 +117,13 @@ pub(crate) fn reaction_tree(world: &mut World)
     let mut reaction_queue = world.resource_mut::<CobwebCommandQueue<ReactionCommand>>().remove();
     let mut event_queue = world.resource_mut::<CobwebCommandQueue<EventCommand>>().remove();
 
+    // Schedule component removal and despawn reactors.
+    // - We do this once at the beginning of the tree in case the scheduled command that triggered the tree
+    //   fails to actually run. Even if it doesn't run, we should still handle removals and despawns.
+    garbage_collect_entities(world);
+    schedule_removal_and_despawn_reactors(world);
+
+    // Run the tree.
     'r: loop
     {
         'e: loop
@@ -98,8 +135,7 @@ pub(crate) fn reaction_tree(world: &mut World)
             }
 
             // new events go to the front
-            world.resource_mut::<CobwebCommandQueue<EventCommand>>().append(std::mem::take(event_queue));
-            event_queue = world.resource_mut::<CobwebCommandQueue<EventCommand>>().remove();
+            event_queue = world.resource_mut::<CobwebCommandQueue<EventCommand>>().append_and_remove(event_queue);
 
             // run one system event
             let Some(next_event) = event_queue.pop_front() else { break 'e; };
@@ -107,8 +143,7 @@ pub(crate) fn reaction_tree(world: &mut World)
         }
 
         // new reactions go to the front
-        world.resource_mut::<CobwebCommandQueue<ReactionCommand>>().append(std::mem::take(reaction_queue));
-        reaction_queue = world.resource_mut::<CobwebCommandQueue<ReactionCommand>>().remove();
+        reaction_queue = world.resource_mut::<CobwebCommandQueue<ReactionCommand>>().append_and_remove(reaction_queue);
 
         // run one reaction
         let Some(next_reaction) = reaction_queue.pop_front() else { break 'r; };

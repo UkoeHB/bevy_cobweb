@@ -28,6 +28,14 @@ fn end_entity_reaction(world: &mut World)
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
+fn end_despawn_reaction(world: &mut World)
+{
+    world.resource_mut::<DespawnAccessTracker>().end();
+}
+
+//-------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------
+
 fn end_event(world: &mut World)
 {
     world.resource_mut::<EventAccessTracker>().end();
@@ -65,11 +73,8 @@ impl Command for SystemCommand
 {
     fn apply(self, world: &mut World)
     {
-        move |world: &mut World|
-        {
-            world.resource_mut::<CobwebCommandQueue<SystemCommand>>().push(self);
-            reaction_tree(world);
-        }
+        world.resource_mut::<CobwebCommandQueue<SystemCommand>>().push(self);
+        reaction_tree(world);
     }
 }
 
@@ -105,11 +110,8 @@ impl Command for EventCommand
 {
     fn apply(self, world: &mut World)
     {
-        move |world: &mut World|
-        {
-            world.resource_mut::<CobwebCommandQueue<EventCommand>>().push(self);
-            reaction_tree(world);
-        }
+        world.resource_mut::<CobwebCommandQueue<EventCommand>>().push(self);
+        reaction_tree(world);
     }
 }
 
@@ -124,7 +126,7 @@ impl Command for EventCommand
 pub enum ReactionCommand
 {
     /// A reaction to a resource mutation.
-    ResourceReaction
+    Resource
     {
         /// The system command triggered by this event.
         reactor: SystemCommand,
@@ -138,6 +140,19 @@ pub enum ReactionCommand
         reaction_type: EntityReactionType,
         /// The system command triggered by this event.
         reactor: SystemCommand,
+    },
+    /// A reaction to an entity despawn.
+    Despawn
+    {
+        /// The entity that triggered this reaction.
+        reaction_source: Entity,
+        /// The system command triggered by this event.
+        reactor: SystemCommand,
+        /// A despawn handle for the reactor.
+        ///
+        /// This will be dropped after the reactor runs, ensuring the reactor will be cleaned up if there are
+        /// no other owners of the handle.
+        handle: AutoDespawnSignal,
     },
     /// A reaction to an event (can be a broadcasted event or an entity event).
     Event
@@ -155,18 +170,24 @@ pub enum ReactionCommand
 
 impl ReactionCommand
 {
-    pub(crate) fn run(self, &mut World)
+    /// Runs the reaction on the world.
+    pub(crate) fn run(self, world: &mut World)
     {
         match self
         {
-            Self::ResourceReaction{ reactor } =>
+            Self::Resource{ reactor } =>
             {
                 syscommand_runner(world, reactor, SystemCommandCleanup::default());
             }
             Self::EntityReaction{ reaction_source, reaction_type, reactor } =>
             {
                 world.resource_mut::<EntityReactionAccessTracker>().start(reaction_source, reaction_type);
-                syscommand_runner(world, reactor, SystemCommandCleanup::new(end_entity_reaction, None));
+                syscommand_runner(world, reactor, SystemCommandCleanup::new(end_entity_reaction));
+            }
+            Self::EntityReaction{ reaction_source, reactor, handle } =>
+            {
+                world.resource_mut::<DespawnAccessTracker>().start(reaction_source, handle);
+                syscommand_runner(world, reactor, SystemCommandCleanup::new(end_despawn_reaction));
             }
             Self::Event{ data_entity, reactor, last_reader } =>
             {
@@ -182,11 +203,8 @@ impl Command for ReactionCommand
 {
     fn apply(self, world: &mut World)
     {
-        move |world: &mut World|
-        {
-            world.resource_mut::<CobwebCommandQueue<ReactionCommand>>().push(self);
-            reaction_tree(world);
-        }
+        world.resource_mut::<CobwebCommandQueue<ReactionCommand>>().push(self);
+        reaction_tree(world);
     }
 }
 

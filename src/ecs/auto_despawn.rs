@@ -63,7 +63,8 @@ impl AutoDespawner
         AutoDespawnSignal::new(entity, self.sender.clone())
     }
 
-    fn try_recv(&self) -> Option<Entity>
+    /// Removes one pending despawned entity.
+    pub(crate) fn try_recv(&self) -> Option<Entity>
     {
          self.receiver.try_recv()
     }
@@ -96,6 +97,11 @@ impl Clone for AutoDespawnSignal
 
 //-------------------------------------------------------------------------------------------------------------------
 
+#[derive(SystemSet)]
+pub struct AutoDespawnSet;
+
+//-------------------------------------------------------------------------------------------------------------------
+
 /// Extends the `App` API with a method to set up auto despawning.
 pub trait AutoDespawnAppExt
 {
@@ -109,7 +115,7 @@ impl AutoDespawnAppExt for App
     {
         if self.world.contains_resource::<AutoDespawner>() { return self; }
         self.insert_resource(AutoDespawner::new())
-            .add_systems(Last, auto_despawn)
+            .add_systems(Last, auto_despawn.in_set(AutoDespawnSet))
     }
 }
 

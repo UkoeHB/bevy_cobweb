@@ -436,7 +436,8 @@ fn react_entity_removal()
     // no immediate reaction
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
     // check for removals (reaction)
-    react_to_all_removals_and_despawns(world);
+    schedule_removal_and_despawn_reactors(world);
+    reaction_tree(world);
     assert_eq!(world.resource::<TestReactRecorder>().0, usize::MAX);
 
     // removal of already removed (no reaction)

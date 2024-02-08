@@ -5,14 +5,18 @@ use crate::*;
 use bevy::prelude::*;
 
 //standard shortcuts
+use std::any::TypeId;
 use std::hash::Hash;
 
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
+//todo: switch to ComponentId when observers are implemented
+//(cannot do so yet because component ids are not available when reactions are triggered, only type ids)
 struct ReactComponentId<T: ReactComponent>
 {
-    id: ComponentId,
+    //id: ComponentId,
+    id: TypeId,
     p: PhantomData<T>,
 };
 
@@ -29,7 +33,8 @@ impl<T: ReactComponent> FromWorld for ReactComponentId<T>
     fn from_world(world: &mut World) -> Self
     {
         Self{
-            id: world.components().get_id(std::any::TypeId::of::<React<T>>()),
+            //id: world.components().get_id(std::any::TypeId::of::<React<T>>()),
+            id: TypeId::of::<T>(),
             p: PhantomData::default(),
         }
     }
@@ -39,6 +44,7 @@ impl<T: ReactComponent> FromWorld for ReactComponentId<T>
 //-------------------------------------------------------------------------------------------------------------------
 
 /// The type of an entity reaction.
+//todo: switch to ComponentId when observers are integrated
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
 pub(crate) enum EntityReactionType
 {
@@ -46,13 +52,11 @@ pub(crate) enum EntityReactionType
     #[default]
     None,
     /// A component was inserted.
-    Insertion(ComponentId),
+    Insertion(TypeId),
     /// A component was removed.
-    Removal(ComponentId),
+    Removal(TypeId),
     /// A component was mutated.
-    Mutation(ComponentId),
-    /// An entity was despawned.
-    Despawn,
+    Mutation(TypeId),
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -189,29 +193,6 @@ impl<'w, T: ReactComponent> MutationEvent<'w, T>
         if !self.tracker.is_reacting() { return None; }
         let EntityReactionType::Mutation(component_id) = self.tracker.reaction_type() else { return None; };
         if component_id != self.component_id.id() { return None; }
-
-        Some(self.tracker.source())
-    }
-}
-
-//-------------------------------------------------------------------------------------------------------------------
-
-/// System parameter for reading entity despawn events in systems that react to those events.
-#[derive(SystemParam)]
-pub struct DespawnEvent<'w>
-{
-    tracker: Res<'w, EntityReactionAccessTracker>,
-}
-
-impl<'w> DespawnEvent<'w>
-{
-    /// Returns the entity that was despawned if the current system is reacting to that despawn.
-    ///
-    /// This will return at most one unique entity each time a reactor runs.
-    pub fn read(&self) -> Option<Entity>
-    {
-        if !self.tracker.is_reacting() { return None; }
-        let EntityReactionType::Despawn = self.tracker.reaction_type() else { return None; };
 
         Some(self.tracker.source())
     }
