@@ -69,6 +69,29 @@ impl Default for DespawnAccessTracker
 //-------------------------------------------------------------------------------------------------------------------
 
 /// System parameter for reading entity despawn events in systems that react to those events.
+///
+/// Can only be used within [`SystemCommands`](super::SystemCommand).
+///
+/*
+```rust
+fn example(mut rcommands: ReactCommands)
+{
+    let entity = rcommands.commands().spawn_empty().id();
+    rcommands.on(
+        despawn(entity),
+        |event: DespawnEvent|
+        {
+            if let Some(entity) = event.read()
+            {
+                println!("{:?} was despawned", entity);
+            }
+        }
+    );
+
+    rcommands.commands().despawn(entity);
+}
+```
+*/
 #[derive(SystemParam)]
 pub struct DespawnEvent<'w>
 {

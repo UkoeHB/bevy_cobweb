@@ -24,6 +24,7 @@ impl EventAccessTracker
     /// Sets the 'is reacting' flag.
     pub(crate) fn start(&mut self, data_id: TypeId, data_entity: Entity)
     {
+        debug_assert!(!self.currently_reacting);
         self.currently_reacting = true;
         self.data_entity = data_entity;
     }
@@ -112,6 +113,28 @@ impl<T: Send + Sync + 'static> EntityEventData<T>
 //-------------------------------------------------------------------------------------------------------------------
 
 /// System parameter for reading broadcast event data.
+///
+/// Can only be used within [`SystemCommands`](super::SystemCommand).
+///
+/*
+```rust
+fn example(mut rcommands: ReactCommands)
+{
+    rcommands.on(
+        broadcast::<()>(),
+        |mut event: BroadcastEvent<()>|
+        {
+            if let Some(()) = event.take()
+            {
+                println!("event received");
+            }
+        }
+    );
+
+    rcommands.broadcast(());
+}
+```
+*/
 #[derive(SystemParam)]
 pub struct BroadcastEvent<'w, 's, T: Send + Sync + 'static>
 {
@@ -136,6 +159,29 @@ impl<'w, 's, T: Send + Sync + 'static> BroadcastEvent<'w, 's, T>
 //-------------------------------------------------------------------------------------------------------------------
 
 /// System parameter for reading entity event data.
+///
+/// Can only be used within [`SystemCommands`](super::SystemCommand).
+///
+/*
+```rust
+fn example(mut rcommands: ReactCommands)
+{
+    let entity = rcommands.commands.spawn_empty();
+    rcommands.on(
+        entity_event::<()>(entity),
+        |mut event: EntityEvent<()>|
+        {
+            if let Some(()) = event.take()
+            {
+                println!("event received");
+            }
+        }
+    );
+
+    rcommands.send_entity_event(entity, ());
+}
+```
+*/
 #[derive(SystemParam)]
 pub struct EntityEvent<'w, 's, T: Send + Sync + 'static>
 {

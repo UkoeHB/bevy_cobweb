@@ -12,6 +12,20 @@ use std::sync::Arc;
 
 //-------------------------------------------------------------------------------------------------------------------
 
+/// Queues removal and despawn reactors.
+///
+/// This system should be scheduled manually if you want to promptly detect removals or despawns that occur after
+/// normal systems that don't trigger other reactions.
+pub fn schedule_removal_and_despawn_reactors(world: &mut World)
+{
+    let mut react_cache = world.remove_resource::<ReactCache>().unwrap();
+    react_cache.schedule_removal_reactions(world);
+    react_cache.schedule_despawn_reactions(world);
+    world.insert_resource(react_cache);
+}
+
+//-------------------------------------------------------------------------------------------------------------------
+
 #[derive(Component)]
 pub(crate) struct EntityReactors
 {

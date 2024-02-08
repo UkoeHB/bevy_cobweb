@@ -361,7 +361,7 @@ impl ReactCache
     }
 
     /// Queues reactions to a component insertion on an entity.
-    pub(crate) fn react_to_insertion<C: ReactComponent>(
+    pub(crate) fn schedule_insertion_reaction<C: ReactComponent>(
         &mut self,
         commands : &mut Commands,
         queue    : &mut CobwebCommandQueue<ReactionCommand>,
@@ -391,7 +391,7 @@ impl ReactCache
     }
 
     /// Queues reactions to a component mutation on an entity.
-    pub(crate) fn react_to_mutation<C: ReactComponent>(
+    pub(crate) fn schedule_mutation_reaction<C: ReactComponent>(
         &mut self,
         commands : &mut Commands,
         queue    : &mut CobwebCommandQueue<ReactionCommand>,
@@ -421,7 +421,7 @@ impl ReactCache
     }
 
     /// Schedules component removal reactors.
-    pub(crate) fn react_to_removals(&mut self, world: &mut World)
+    pub(crate) fn schedule_removal_reactions(&mut self, world: &mut World)
     {
         // extract cached
         let mut buffer = self.removal_buffer.take().unwrap_or_else(|| Vec::default());
@@ -476,7 +476,7 @@ impl ReactCache
     }
 
     /// Queues reactions to tracked despawns.
-    pub(crate) fn react_to_despawns(world: &mut World)
+    pub(crate) fn schedule_despawn_reactions(world: &mut World)
     {
         while let Some(despawned_entity) = self.despawn_receiver.try_recv()
         {
@@ -500,7 +500,7 @@ impl ReactCache
     }
 
     /// Queues reactions to a resource mutation.
-    pub(crate) fn react_to_resource_mutation<R: ReactResource>(
+    pub(crate) fn schedule_resource_mutation_reaction<R: ReactResource>(
         &mut self,
         commands : &mut Commands,
         queue    : &mut CobwebCommandQueue<ReactionCommand>
@@ -520,7 +520,7 @@ impl ReactCache
     }
 
     /// Queues reactions to a broadcasted event.
-    pub(crate) fn react_to_event<E: 'static>(
+    pub(crate) fn schedule_event_reaction<E: 'static>(
         &mut self,
         commands : &mut Commands,
         queue    : &mut CobwebCommandQueue<ReactionCommand>,
@@ -547,7 +547,7 @@ impl ReactCache
     }
 
     /// Queues reactions to an entity event.
-    pub(crate) fn react_to_entity_mutation<E: 'static>(
+    pub(crate) fn schedule_entity_event_reaction<E: 'static>(
         &mut self,
         commands : &mut Commands,
         queue    : &mut CobwebCommandQueue<ReactionCommand>,

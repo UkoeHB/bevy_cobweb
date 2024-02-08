@@ -101,10 +101,10 @@ fn register_entity_reactor(
 
 /// Reaction trigger for [`ReactComponent`] insertions on any entity.
 /// - For reactors that take the entity the component was inserted to.
-pub struct Insertion<C: ReactComponent>(PhantomData<C>);
-impl<C: ReactComponent> Default for Insertion<C> { fn default() -> Self { Self(PhantomData::default()) } }
+pub struct InsertionTrigger<C: ReactComponent>(PhantomData<C>);
+impl<C: ReactComponent> Default for InsertionTrigger<C> { fn default() -> Self { Self(PhantomData::default()) } }
 
-impl<C: ReactComponent> ReactionTrigger for Insertion<C>
+impl<C: ReactComponent> ReactionTrigger for InsertionTrigger<C>
 {
     fn register(self, rcommands: &mut ReactCommands, sys_handle: &AutoDespawnSignal) -> Option<ReactorType>
     {
@@ -112,17 +112,17 @@ impl<C: ReactComponent> ReactionTrigger for Insertion<C>
     }
 }
 
-/// Obtain a [`Insertion`] reaction trigger.
-pub fn insertion<C: ReactComponent>() -> Insertion<C> { Insertion::default() }
+/// Returns a [`InsertionTrigger`] reaction trigger.
+pub fn insertion<C: ReactComponent>() -> InsertionTrigger<C> { InsertionTrigger::default() }
 
 //-------------------------------------------------------------------------------------------------------------------
 
 /// Reaction trigger for [`ReactComponent`] mutations on any entity.
 /// - For reactors that take the entity the component was mutated on.
-pub struct Mutation<C: ReactComponent>(PhantomData<C>);
-impl<C: ReactComponent> Default for Mutation<C> { fn default() -> Self { Self(PhantomData::default()) } }
+pub struct MutationTrigger<C: ReactComponent>(PhantomData<C>);
+impl<C: ReactComponent> Default for MutationTrigger<C> { fn default() -> Self { Self(PhantomData::default()) } }
 
-impl<C: ReactComponent> ReactionTrigger for Mutation<C>
+impl<C: ReactComponent> ReactionTrigger for MutationTrigger<C>
 {
     fn register(self, rcommands: &mut ReactCommands, sys_handle: &AutoDespawnSignal) -> Option<ReactorType>
     {
@@ -130,18 +130,18 @@ impl<C: ReactComponent> ReactionTrigger for Mutation<C>
     }
 }
 
-/// Obtain a [`Mutation`] reaction trigger.
-pub fn mutation<C: ReactComponent>() -> Mutation<C> { Mutation::default() }
+/// Returns a [`MutationTrigger`] reaction trigger.
+pub fn mutation<C: ReactComponent>() -> MutationTrigger<C> { MutationTrigger::default() }
 
 //-------------------------------------------------------------------------------------------------------------------
 
 /// Reaction trigger for [`ReactComponent`] removals from any entity.
 /// - For reactors that take the entity the component was removed from.
 /// - Reactions are not triggered if the entity was despawned.
-pub struct Removal<C: ReactComponent>(PhantomData<C>);
-impl<C: ReactComponent> Default for Removal<C> { fn default() -> Self { Self(PhantomData::default()) } }
+pub struct RemovalTrigger<C: ReactComponent>(PhantomData<C>);
+impl<C: ReactComponent> Default for RemovalTrigger<C> { fn default() -> Self { Self(PhantomData::default()) } }
 
-impl<C: ReactComponent> ReactionTrigger for Removal<C>
+impl<C: ReactComponent> ReactionTrigger for RemovalTrigger<C>
 {
     fn register(self, rcommands: &mut ReactCommands, sys_handle: &AutoDespawnSignal) -> Option<ReactorType>
     {
@@ -150,16 +150,16 @@ impl<C: ReactComponent> ReactionTrigger for Removal<C>
     }
 }
 
-/// Obtain a [`Removal`] reaction trigger.
-pub fn removal<C: ReactComponent>() -> Removal<C> { Removal::default() }
+/// Returns a [`RemovalTrigger`] reaction trigger.
+pub fn removal<C: ReactComponent>() -> RemovalTrigger<C> { RemovalTrigger::default() }
 
 //-------------------------------------------------------------------------------------------------------------------
 
 /// Reaction trigger for [`ReactComponent`] insertions on a specific entity.
 /// - Registration does nothing if the entity does not exist.
-pub struct EntityInsertion<C: ReactComponent>(Entity, PhantomData<C>);
+pub struct EntityInsertionTrigger<C: ReactComponent>(Entity, PhantomData<C>);
 
-impl<C: ReactComponent> ReactionTrigger for EntityInsertion<C>
+impl<C: ReactComponent> ReactionTrigger for EntityInsertionTrigger<C>
 {
     fn register(self, rcommands: &mut ReactCommands, sys_handle: &AutoDespawnSignal) -> Option<ReactorType>
     {
@@ -172,23 +172,23 @@ impl<C: ReactComponent> ReactionTrigger for EntityInsertion<C>
                 syscall(world, (EntityReactionType::Insertion(comp_id), entity, sys_handle), register_entity_reactor)
             );
 
-        Some(ReactorType::EntityInsertion(entity, comp_id))
+        Some(ReactorType::EntityInsertionTrigger(entity, comp_id))
     }
 }
 
-/// Obtain a [`EntityInsertion`] reaction trigger.
-pub fn entity_insertion<C: ReactComponent>(entity: Entity) -> EntityInsertion<C>
+/// Returns a [`EntityInsertionTrigger`] reaction trigger.
+pub fn entity_insertion<C: ReactComponent>(entity: Entity) -> EntityInsertionTrigger<C>
 {
-    EntityInsertion(entity, PhantomData::default())
+    EntityInsertionTrigger(entity, PhantomData::default())
 }
 
 //-------------------------------------------------------------------------------------------------------------------
 
 /// Reaction trigger for [`ReactComponent`] mutations on a specific entity.
 /// - Registration does nothing if the entity does not exist.
-pub struct EntityMutation<C: ReactComponent>(Entity, PhantomData<C>);
+pub struct EntityMutationTrigger<C: ReactComponent>(Entity, PhantomData<C>);
 
-impl<C: ReactComponent> ReactionTrigger for EntityMutation<C>
+impl<C: ReactComponent> ReactionTrigger for EntityMutationTrigger<C>
 {
     fn register(self, rcommands: &mut ReactCommands, sys_handle: &AutoDespawnSignal) -> Option<ReactorType>
     {
@@ -201,14 +201,14 @@ impl<C: ReactComponent> ReactionTrigger for EntityMutation<C>
                 syscall(world, (EntityReactionType::Mutation(comp_id), entity, sys_handle), register_entity_reactor)
             );
 
-        Some(ReactorType::EntityMutation(entity, comp_id))
+        Some(ReactorType::EntityMutationTrigger(entity, comp_id))
     }
 }
 
-/// Obtain a [`EntityMutation`] reaction trigger.
-pub fn entity_mutation<C: ReactComponent>(entity: Entity) -> EntityMutation<C>
+/// Returns a [`EntityMutationTrigger`] reaction trigger.
+pub fn entity_mutation<C: ReactComponent>(entity: Entity) -> EntityMutationTrigger<C>
 {
-    EntityMutation(entity, PhantomData::default())
+    EntityMutationTrigger(entity, PhantomData::default())
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -217,9 +217,9 @@ pub fn entity_mutation<C: ReactComponent>(entity: Entity) -> EntityMutation<C>
 /// - Registration does nothing if the entity does not exist.
 /// - If a component is removed from the entity then despawned (or removed due to a despawn) before
 ///   [`react_to_removals()`] is executed, then the reactor will not be scheduled.
-pub struct EntityRemoval<C: ReactComponent>(Entity, PhantomData<C>);
+pub struct EntityRemovalTrigger<C: ReactComponent>(Entity, PhantomData<C>);
 
-impl<C: ReactComponent> ReactionTrigger for EntityRemoval<C>
+impl<C: ReactComponent> ReactionTrigger for EntityRemovalTrigger<C>
 {
     fn register(self, rcommands: &mut ReactCommands, sys_handle: &AutoDespawnSignal) -> Option<ReactorType>
     {
@@ -234,23 +234,23 @@ impl<C: ReactComponent> ReactionTrigger for EntityRemoval<C>
                 syscall(world, (EntityReactionType::Removal(comp_id), entity, sys_handle), register_entity_reactor)
             );
 
-        Some(ReactorType::EntityRemoval(entity, comp_id))
+        Some(ReactorType::EntityRemovalTrigger(entity, comp_id))
     }
 }
 
-/// Obtain a [`EntityRemoval`] reaction trigger.
-pub fn entity_removal<C: ReactComponent>(entity: Entity) -> EntityRemoval<C>
+/// Returns a [`EntityRemovalTrigger`] reaction trigger.
+pub fn entity_removal<C: ReactComponent>(entity: Entity) -> EntityRemovalTrigger<C>
 {
-    EntityRemoval(entity, PhantomData::default())
+    EntityRemovalTrigger(entity, PhantomData::default())
 }
 
 //-------------------------------------------------------------------------------------------------------------------
 
 /// Reaction trigger for [`ReactResource`] mutations.
-pub struct ResourceMutation<R: ReactResource>(PhantomData<R>);
-impl<R: ReactResource> Default for ResourceMutation<R> { fn default() -> Self { Self(PhantomData::default()) } }
+pub struct ResourceMutationTrigger<R: ReactResource>(PhantomData<R>);
+impl<R: ReactResource> Default for ResourceMutationTrigger<R> { fn default() -> Self { Self(PhantomData::default()) } }
 
-impl<R: ReactResource> ReactionTrigger for ResourceMutation<R>
+impl<R: ReactResource> ReactionTrigger for ResourceMutationTrigger<R>
 {
     fn register(self, rcommands: &mut ReactCommands, sys_handle: &AutoDespawnSignal) -> Option<ReactorType>
     {
@@ -258,8 +258,8 @@ impl<R: ReactResource> ReactionTrigger for ResourceMutation<R>
     }
 }
 
-/// Obtain a [`ResourceMutation`] reaction trigger.
-pub fn resource_mutation<R: ReactResource>() -> ResourceMutation<R> { ResourceMutation::default() }
+/// Returns a [`ResourceMutationTrigger`] reaction trigger.
+pub fn resource_mutation<R: ReactResource>() -> ResourceMutationTrigger<R> { ResourceMutationTrigger::default() }
 
 //-------------------------------------------------------------------------------------------------------------------
 
@@ -276,8 +276,8 @@ impl<E: Send + Sync + 'static> ReactionTrigger for BroadcastEventTrigger<E>
     }
 }
 
-/// Obtain a [`BroadcastEventTrigger`] reaction trigger.
-pub fn event<E: Send + Sync + 'static>() -> BroadcastEventTrigger<E> { BroadcastEventTrigger::default() }
+/// Returns a [`BroadcastEventTrigger`] reaction trigger.
+pub fn broadcast<E: Send + Sync + 'static>() -> BroadcastEventTrigger<E> { BroadcastEventTrigger::default() }
 
 //-------------------------------------------------------------------------------------------------------------------
 
@@ -293,7 +293,7 @@ impl<E: Send + Sync + 'static> ReactionTrigger for EntityEventTrigger<E>
     }
 }
 
-/// Obtain an [`EntityEventTrigger`] reaction trigger.
+/// Returns an [`EntityEventTrigger`] reaction trigger.
 pub fn entity_event<E: Send + Sync + 'static>(target: Entity) -> EntityEventTrigger<E>
 {
     EntityEventTrigger(target, PhantomData::default())
@@ -302,9 +302,9 @@ pub fn entity_event<E: Send + Sync + 'static>(target: Entity) -> EntityEventTrig
 //-------------------------------------------------------------------------------------------------------------------
 
 /// Reaction trigger for despawns.
-pub struct Despawn(Entity);
+pub struct DespawnTrigger(Entity);
 
-impl ReactionTrigger for Despawn
+impl ReactionTrigger for DespawnTrigger
 {
     fn register(self, rcommands: &mut ReactCommands, sys_handle: &AutoDespawnSignal) -> Option<ReactorType>
     {
@@ -319,7 +319,7 @@ impl ReactionTrigger for Despawn
     }
 }
 
-/// Obtain a [`Despawn`] reaction trigger.
-pub fn despawn(entity: Entity) -> Despawn { Despawn(entity) }
+/// Returns a [`DespawnTrigger`] reaction trigger.
+pub fn despawn(entity: Entity) -> DespawnTrigger { DespawnTrigger(entity) }
 
 //-------------------------------------------------------------------------------------------------------------------

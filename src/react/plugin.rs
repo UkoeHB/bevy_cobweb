@@ -9,20 +9,6 @@ use bevy_fn_plugin::*;
 
 //-------------------------------------------------------------------------------------------------------------------
 
-/// Queues removal and despawn reactors.
-///
-/// This system should be scheduled manually if you want to promptly detect removals or despawns that occur after
-/// normal systems that don't trigger other reactions.
-pub fn schedule_removal_and_despawn_reactors(world: &mut World)
-{
-    let mut react_cache = world.remove_resource::<ReactCache>().unwrap();
-    react_cache.react_to_removals(world);
-    react_cache.react_to_despawns(world);
-    world.insert_resource(react_cache);
-}
-
-//-------------------------------------------------------------------------------------------------------------------
-
 /// Prepares the react framework so that reactors may be registered with [`ReactCommands`].
 /// - Un-handled removals and despawns will be automatically processed in `Last`.
 #[bevy_plugin]

@@ -24,6 +24,7 @@ impl SystemEventAccessTracker
     /// Sets the 'is reacting' flag.
     pub(crate) fn start(&mut self, data_entity: Entity)
     {
+        debug_assert!(!self.currently_reacting);
         self.currently_reacting = true;
         self.data_entity = data_entity;
     }
@@ -88,6 +89,24 @@ impl<T: Send + Sync + 'static> SystemEventData<T>
 //-------------------------------------------------------------------------------------------------------------------
 
 /// System parameter for receiving system event data.
+///
+/// Can only be used within [`SystemCommands`](super::SystemCommand).
+///
+/*
+```rust
+let cmd = commands.spawn_system_command(
+    |mut event: SystemEvent<()>|
+    {
+        if let Some(()) = event.take()
+        {
+            println!("event received");
+        }
+    }
+);
+
+commands.send_system_event(cmd, ());
+```
+*/
 #[derive(SystemParam)]
 pub struct SystemEvent<'w, 's, T: Send + Sync + 'static>
 {

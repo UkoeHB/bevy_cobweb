@@ -56,10 +56,19 @@ fn end_event_with_cleanup(world: &mut World)
 
 /// A system command.
 ///
-/// If scheduled as a `Command` from user-land, this will cause a [`reaction_tree()`] to execute, otherwise it will be
-/// processed within the already-running reaction tree.
+/// System commands are stored on entities and must be manually scheduled with
+/// [`commands.apply()`](bevy::prelude::Commands::apply) or
+/// [`commands.send_system_event()`](super::ReactCommandsExt::send_system_event).
+///
+/// You can spawn your own system command with
+/// [`commands.spawn_system_command()`](super::ReactCommandsExt::spawn_system_command).
+///
+/// All reactors are stored as system commands (i.e. systems registered with [`ReactCommands::on`]).
+///
+/// If scheduled as a [`Command`](bevy::prelude::Command) from user-land, this will cause a [`reaction_tree()`] to
+/// execute, otherwise it will be processed within the already-running reaction tree.
 #[derive(Debug, Copy, Clone, Deref)]
-pub struct SystemCommand(pub(crate) Entity);
+pub struct SystemCommand(pub Entity);
 
 impl SystemCommand
 {
@@ -81,12 +90,13 @@ impl Command for SystemCommand
 //-------------------------------------------------------------------------------------------------------------------
 
 /// A system event command.
-//todo: validate that data entities will always be cleaned up
+///
+/// System events are sent with  [`commands.send_system_event()`](super::ReactCommandsExt::send_system_event).
 ///
 /// If scheduled as a `Command` from user-land, this will cause a [`reaction_tree()`] to execute, otherwise it will be
 /// processed within the already-running reaction tree.
 #[derive(Debug, Copy, Clone)]
-pub struct EventCommand
+pub(crate) struct EventCommand
 {
     /// The system command triggered by this event.
     pub(crate) system: SystemCommand,
@@ -118,12 +128,13 @@ impl Command for EventCommand
 //-------------------------------------------------------------------------------------------------------------------
 
 /// A reaction command.
-//todo: validate that data entities will always be cleaned up
+///
+/// Reaction commands are sent by the internals of [`ReactCommands`].
 ///
 /// If scheduled as a `Command` from user-land, this will cause a [`reaction_tree()`] to execute, otherwise it will be
 /// processed within the already-running reaction tree.
 #[derive(Debug, Copy, Clone)]
-pub enum ReactionCommand
+pub(crate) enum ReactionCommand
 {
     /// A reaction to a resource mutation.
     Resource

@@ -78,6 +78,7 @@ impl EntityReactionAccessTracker
     /// Sets metadata for the current entity reaction.
     pub(crate) fn start(&mut self, source: Entity, reaction: EntityReactionType)
     {
+        debug_assert!(!self.currently_reacting);
         self.currently_reacting = true;
         self.reaction_source = source;
         self.reaction_type = reaction;
@@ -123,6 +124,27 @@ impl Default for EntityReactionAccessTracker
 //-------------------------------------------------------------------------------------------------------------------
 
 /// System parameter for reading entity component insertion events in systems that react to those events.
+///
+/*
+```rust
+fn example(mut rcommands: ReactCommands)
+{
+    let entity = rcommands.commands().spawn_empty().id();
+    rcommands.on(
+        insertion::<A>(),  // entity-specific: entity_insertion::<A>(target_entity)
+        |event: InsertionEvent<A>|
+        {
+            if let Some(entity) = event.read()
+            {
+                println!("'A' was inserted to {:?}", entity);
+            }
+        }
+    );
+
+    rcommands.insert(entity, A);
+}
+```
+*/
 #[derive(SystemParam)]
 pub struct InsertionEvent<'w, 's, T: ReactComponent>
 {
@@ -149,6 +171,26 @@ impl<'w, T: ReactComponent> InsertionEvent<'w, T>
 //-------------------------------------------------------------------------------------------------------------------
 
 /// System parameter for reading entity component removal events in systems that react to those events.
+///
+/*
+```rust
+fn example(mut rcommands: ReactCommands, query: Query<Entity, With<React<A>>>)
+{
+    rcommands.on(
+        removal::<A>(),  // entity-specific: entity_removal::<A>(target_entity)
+        |event: RemovalEvent<A>|
+        {
+            if let Some(entity) = event.read()
+            {
+                println!("'A' was removed from {:?}", entity);
+            }
+        }
+    );
+
+    rcommands.commands().entity(*query.single()).remove::<A>();
+}
+```
+*/
 #[derive(SystemParam)]
 pub struct RemovalEvent<'w, 's, T: ReactComponent>
 {
@@ -175,6 +217,28 @@ impl<'w, T: ReactComponent> RemovalEvent<'w, T>
 //-------------------------------------------------------------------------------------------------------------------
 
 /// System parameter for reading entity component mutation events in systems that react to those events.
+///
+/// Can only be used within [`SystemCommands`](super::SystemCommand).
+///
+/*
+```rust
+fn example(mut rcommands: ReactCommands, query: Query<&mut React<A>>)
+{
+    rcommands.on(
+        mutation::<A>(),  // entity-specific: entity_mutation::<A>(target_entity)
+        |event: MutationEvent<A>|
+        {
+            if let Some(entity) = event.read()
+            {
+                println!("'A' was mutated on {:?}", entity);
+            }
+        }
+    );
+
+    query.single_mut().get_mut(&mut rcommands);  //triggers mutation reactions
+}
+```
+*/
 #[derive(SystemParam)]
 pub struct MutationEvent<'w, 's, T: ReactComponent>
 {

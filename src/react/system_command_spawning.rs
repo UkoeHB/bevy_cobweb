@@ -14,7 +14,7 @@ use std::hash::Hash;
 ///
 /// For efficiency, only function pointer callbacks are supported.
 #[derive(Debug, Default, Copy, Clone)]
-pub(crate) struct SystemCommandCleanup
+pub struct SystemCommandCleanup
 {
     cleanup: Option<fn(&mut World)>,
 }
@@ -22,7 +22,7 @@ pub(crate) struct SystemCommandCleanup
 impl SystemCommandCleanup
 {
     /// Makes a new system cleanup.
-    pub(crate) fn new(cleanup: fn(&mut World)) -> Self
+    pub fn new(cleanup: fn(&mut World)) -> Self
     {
         Self{ cleanup: Some(cleanup) }
     }
@@ -44,7 +44,7 @@ impl SystemCommandCleanup
 /// The callback should own the actual system that you want to run. The [`SystemCommandCleanup`] callback must be invoked
 /// between running your system and calling `apply_deferred` on that system.
 //todo: wrap the callback in a trait that lets you reassign the injected callback if it is the same type
-pub(crate) struct SystemCommandCallback
+pub struct SystemCommandCallback
 {
     inner: Box<dyn FnMut(&mut World, SystemCommandCleanup) + Send + Sync 'static>,
 }
@@ -52,7 +52,7 @@ pub(crate) struct SystemCommandCallback
 impl SystemCommandCallback
 {
     /// Makes a new system command callback.
-    pub(crate) fn new(callback: impl FnMut(&mut World, SystemCommandCleanup) + Send + Sync 'static) -> Self
+    pub fn new(callback: impl FnMut(&mut World, SystemCommandCleanup) + Send + Sync 'static) -> Self
     {
         Self{ inner: Box::new(callback) }
     }
@@ -99,22 +99,10 @@ impl SystemCommandStorage
 
 //-------------------------------------------------------------------------------------------------------------------
 
-/// Spawns a system command as an entity.
-///
-/// The system can be invoked by calling [`syscommand_runner()`].
-pub fn spawn_system_command(world: &mut World, callback: SystemCommandCallback) -> SystemCommand
-{
-    SystemCommand::new(SysId::new(world.spawn(SystemCommandStorage::new(callback)).id()))
-}
-
-//-------------------------------------------------------------------------------------------------------------------
-
-/// Spawns a system as a system command from a given raw system.
+/// Spawns a system as a [`SystemCommand`].
 ///
 /// Systems are not initialized until they are first run.
-///
-/// The system can be invoked by calling [`syscommand_runner()`].
-pub fn spawn_system_command_from<S, Marker>(world: &mut World, system: S) -> SystemCommand
+pub fn spawn_system_command<S, Marker>(world: &mut World, system: S) -> SystemCommand
 where
     S: IntoSystem<(), (), Marker> + Send + Sync + 'static,
 {
@@ -124,38 +112,48 @@ where
         callback.run_with_cleanup(world, (), |world: &mut World| cleanup.run(world));
     };
 
-    spawn_system_command(world, SystemCommandCallback::new(command))
+    spawn_system_command_from(world, SystemCommandCallback::new(command))
 }
+
+//-------------------------------------------------------------------------------------------------------------------
+
+/// Spawns a [`SystemCommand`] from a pre-defined callback.
+pub fn spawn_system_command_from(world: &mut World, callback: SystemCommandCallback) -> SystemCommand
+{
+    SystemCommand::new(SysId::new(world.spawn(SystemCommandStorage::new(callback)).id()))
+}
+
+//-------------------------------------------------------------------------------------------------------------------
 
 //todo: allow overwriting an existing command's callback
 
 //-------------------------------------------------------------------------------------------------------------------
 
-/// Spawns a ref-counted system command.
-///
-/// Returns a cleanup handle. The system will be dropped when the last copy of the handle is dropped.
-///
-/// Panics if [`setup_auto_despawn()`] was not added to your app.
-pub fn spawn_rc_system_command(world: &mut World, callback: SystemCommandCallback) -> AutoDespawnSignal
-{
-    let system_command = spawn_system_command(world, callback);
-    world.resource::<AutoDespawner>().prepare(system_command.entity())
-}
-
-//-------------------------------------------------------------------------------------------------------------------
-
-/// Spawns a ref-counted system command from a given raw system.
+/// Spawns a ref-counted [`SystemCommand`] from a given raw system.
 ///
 /// Systems are not initialized until they are first run.
 ///
 /// Returns a cleanup handle. The system will be dropped when the last copy of the handle is dropped.
 ///
 /// Panics if [`setup_auto_despawn()`] was not added to your app.
-pub fn spawn_rc_system_command_from<S, Marker>(world: &mut World, system: S) -> AutoDespawnSignal
+pub fn spawn_rc_system_command<S, Marker>(world: &mut World, system: S) -> AutoDespawnSignal
 where
     S: IntoSystem<(), (), Marker> + Send + Sync + 'static,
 {
-    let system_command = spawn_system_command_from(world, system);
+    let system_command = spawn_system_command(world, system);
+    world.resource::<AutoDespawner>().prepare(system_command.entity())
+}
+
+//-------------------------------------------------------------------------------------------------------------------
+
+/// Spawns a ref-counted [`SystemCommand`] from a pre-defined callback.
+///
+/// Returns a cleanup handle. The system will be dropped when the last copy of the handle is dropped.
+///
+/// Panics if [`setup_auto_despawn()`] was not added to your app.
+pub fn spawn_rc_system_command_from(world: &mut World, callback: SystemCommandCallback) -> AutoDespawnSignal
+{
+    let system_command = spawn_system_command_from(world, callback);
     world.resource::<AutoDespawner>().prepare(system_command.entity())
 }
 

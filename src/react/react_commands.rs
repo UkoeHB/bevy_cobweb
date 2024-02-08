@@ -19,7 +19,6 @@ fn revoke_reactor_triggers(In(revoke_token): In<RevokeToken>, mut rcommands: Rea
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
-/// Revoke an entity reactor.
 fn revoke_entity_reactor(
     In((
         entity,
@@ -60,7 +59,7 @@ fn revoke_entity_reactor(
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
-/// Drives reactivity.
+/// System paramter that drives reactivity.
 ///
 /// Requires [`ReactPlugin`].
 ///
@@ -77,7 +76,7 @@ pub struct ReactCommands<'w, 's>
 
 impl<'w, 's> ReactCommands<'w, 's>
 {
-    /// Accesses [`Commands`].
+    /// Returns a mutable reference to `Commands`.
     pub fn commands<'a>(&'a mut self) -> &'a mut Commands<'w, 's>
     {
         &mut self.commands
@@ -89,24 +88,26 @@ impl<'w, 's> ReactCommands<'w, 's>
     pub fn insert<C: ReactComponent>(&mut self, entity: Entity, component: C)
     {
         let Some(mut entity_commands) = self.commands.get_entity(entity) else { return; };
-        entity_commands.insert( React{ entity, component } );
-        self.cache.react_to_insertion::<C>(&mut self.commands, &mut self.react_queue, entity);
+        entity_commands.try_insert( React{ entity, component } );
+        self.cache.schedule_insertion_reaction::<C>(&mut self.commands, &mut self.react_queue, entity);
     }
 
     /// Sends a broadcasted event.
     /// - Reactions are enacted after `apply_deferred` is invoked.
-    /// - Reactors can access the event with the [`BroadcastEvent<E>`] system parameter.
+    /// - Reactors can listen for the event with the [`event()`] trigger.
+    /// - Reactors can read the event with the [`BroadcastEvent`] system parameter.
     pub fn broadcast<E: Send + Sync + 'static>(&mut self, event: E)
     {
-        self.cache.react_to_event::<E>(&mut self.commands, &mut self.react_queue, event);
+        self.cache.schedule_event_reaction::<E>(&mut self.commands, &mut self.react_queue, event);
     }
 
     /// Sends an entity-targeted event.
     /// - Reactions are enacted after `apply_deferred` is invoked.
-    /// - Reactors can access the event with the [`EntityEvent<E>`] system parameter.
-    pub fn entity_event<E: Send + Sync + 'static>(&mut self, entity: Entity, event: E)
+    /// - Reactors can listen for the event with the [`entity_event()`] trigger.
+    /// - Reactors can read the event with the [`EntityEvent`] system parameter.
+    pub fn send_entity_event<E: Send + Sync + 'static>(&mut self, entity: Entity, event: E)
     {
-        self.cache.react_to_entity_event::<E>(&mut self.commands, &mut self.react_queue, entity, event);
+        self.cache.schedule_entity_event_reaction::<E>(&mut self.commands, &mut self.react_queue, entity, event);
     }
 
     /// Triggers resource mutation reactions.
@@ -114,7 +115,7 @@ impl<'w, 's> ReactCommands<'w, 's>
     /// Useful for initializing state after a reactor is registered.
     pub fn trigger_resource_mutation<R: ReactResource + Send + Sync + 'static>(&mut self)
     {
-        self.cache.react_to_resource_mutation::<R>(&mut self.commands, &mut self.react_queue);
+        self.cache.schedule_resource_mutation_reaction::<R>(&mut self.commands, &mut self.react_queue);
     }
 
     /// Revokes a reactor.
@@ -181,7 +182,7 @@ impl<'w, 's> ReactCommands<'w, 's>
         }
     }
 
-    /// Registesr a reactor triggered by ECS changes.
+    /// Registers a reactor triggered by ECS changes.
     ///
     /// You can tie a reactor to multiple reaction triggers.
     /// Duplicate triggers will be ignored.

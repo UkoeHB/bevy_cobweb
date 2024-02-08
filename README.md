@@ -18,7 +18,7 @@ Bevy Cobweb is a framework for building webs of interconnected, stateful Bevy sy
 
 ## Motivation
 
-This crate is a general-purpose ECS tool, but was designed to be the foundation for building UI in Bevy, with the following goals in mind.
+This crate is a general-purpose ECS tool, but was designed as a foundation for building UI in Bevy, with the following goals in mind.
 
 - Build UI declaratively in a Bevy-native style using normal-looking Bevy systems.
 - Unify UI element construction and mutation, with change detection to avoid updating unless necessary.
