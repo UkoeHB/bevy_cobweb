@@ -1,11 +1,11 @@
 //local shortcuts
-use crate::*;
 
 //third-party shortcuts
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
 //standard shortcuts
-use std::hash::Hash;
+
 
 //-------------------------------------------------------------------------------------------------------------------
 
@@ -22,7 +22,7 @@ pub(crate) struct EventAccessTracker
 impl EventAccessTracker
 {
     /// Sets the 'is reacting' flag.
-    pub(crate) fn start(&mut self, data_id: TypeId, data_entity: Entity)
+    pub(crate) fn start(&mut self, data_entity: Entity)
     {
         debug_assert!(!self.currently_reacting);
         self.currently_reacting = true;

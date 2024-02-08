@@ -1,11 +1,11 @@
 //local shortcuts
-use crate::*;
+use crate::prelude::*;
 
 //third-party shortcuts
 use bevy::prelude::*;
 
 //standard shortcuts
-use std::hash::Hash;
+
 
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
@@ -91,15 +91,13 @@ pub(crate) fn syscommand_runner(world: &mut World, command: SystemCommand, clean
     // recurse over new system commands
     // - Note that when we recurse, any system commands from this scope will be removed and reinserted, so this
     //   loop will only act on commands added by the system command for this scope.
-    while let Some(next_command) = world.resource_mut::<CobwebCommandQueue<SystemCommand>>().pop_front();
+    while let Some(next_command) = world.resource_mut::<CobwebCommandQueue<SystemCommand>>().pop_front()
     {
         next_command.run(world);
     }
 
     // reinsert previously-existing system commands
     world.resource_mut::<CobwebCommandQueue<SystemCommand>>().append(preexisting_syscommands);
-
-    Ok(())
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -111,7 +109,7 @@ pub(crate) fn syscommand_runner(world: &mut World, command: SystemCommand, clean
 pub fn reaction_tree(world: &mut World)
 {
     // Set the reaction tree flag to prevent the reaction tree from being recursively scheduled.
-    // - We return if a reaction tree was already started.
+    // - We return if we are already in a reaction tree.
     if !world.resource_mut::<ReactCache>().start_reaction_tree() { return; }
 
     let mut reaction_queue = world.resource_mut::<CobwebCommandQueue<ReactionCommand>>().remove();
@@ -129,7 +127,7 @@ pub fn reaction_tree(world: &mut World)
         'e: loop
         {
             // run all system commands recursively
-            while let Some(next_command) = world.resource_mut::<CobwebCommandQueue<SystemCommand>>().pop_front();
+            while let Some(next_command) = world.resource_mut::<CobwebCommandQueue<SystemCommand>>().pop_front()
             {
                 next_command.run(world);
             }

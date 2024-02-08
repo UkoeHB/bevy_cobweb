@@ -1,12 +1,12 @@
 //local shortcuts
-use crate::*;
+use crate::prelude::*;
 
 //third-party shortcuts
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
 //standard shortcuts
-use core::any::TypeId;
+
 
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
@@ -201,7 +201,7 @@ impl<'w, 's> ReactCommands<'w, 's>
         reactor  : impl IntoSystem<(), (), M> + Send + Sync + 'static
     ) -> RevokeToken
     {
-        let sys_id = self.commands.spawn_system_command_from(reactor);
+        let sys_id = self.commands.spawn_system_command(reactor);
         let sys_handle = self.despawner.prepare(*sys_id);
 
         reactor_registration(self, &sys_handle, triggers)
@@ -225,8 +225,7 @@ impl<'w, 's> ReactCommands<'w, 's>
     ) -> RevokeToken
     {
         // register reactors
-        let mut entity_commands = self.commands.spawn_empty();
-        let entity = entity_commands.id();
+        let entity = self.commands.spawn_empty().id();
         let sys_handle = self.despawner.prepare(entity);
         let revoke_token = reactor_registration(self, &sys_handle, triggers);
 
@@ -237,7 +236,7 @@ impl<'w, 's> ReactCommands<'w, 's>
             let mut system = IntoSystem::into_system(reactor);
             system.initialize(world);
             system.run((), world);
-            (cleanup)(world);
+            cleanup.run(world);
             system.apply_deferred(world);
             world.despawn(entity);
             syscall(world, revoke_token_clone, revoke_reactor_triggers);
@@ -246,7 +245,7 @@ impl<'w, 's> ReactCommands<'w, 's>
         {
             if let Some(reactor) = once_reactor.take() { (reactor)(world, cleanup); };
         };
-        entity_commands.try_insert(SystemCommandStorage::new(SystemCommandCallback(once_system)));
+        self.commands.entity(entity).try_insert(SystemCommandStorage::new(SystemCommandCallback::new(once_system)));
 
         revoke_token
     }

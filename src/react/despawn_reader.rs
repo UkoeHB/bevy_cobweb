@@ -1,12 +1,12 @@
 //local shortcuts
-use crate::*;
+use crate::prelude::*;
 
 //third-party shortcuts
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
 //standard shortcuts
-use std::any::TypeId;
-use std::hash::Hash;
+
 
 //-------------------------------------------------------------------------------------------------------------------
 
@@ -21,7 +21,7 @@ pub(crate) struct DespawnAccessTracker
     /// A handle to the current reactor.
     ///
     /// This will be dropped after the reactor runs, allowing it to be cleaned up automatically.
-    reactor_handle: AutoDespawnSignal,
+    reactor_handle: Option<AutoDespawnSignal>,
 }
 
 impl DespawnAccessTracker

@@ -1,12 +1,12 @@
 //local shortcuts
-use crate::*;
+use crate::prelude::*;
 
 //third-party shortcuts
+use bevy::ecs::system::Command;
 use bevy::prelude::*;
 
 //standard shortcuts
-use std::any::TypeId;
-use std::hash::Hash;
+
 
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
@@ -65,14 +65,14 @@ fn end_event_with_cleanup(world: &mut World)
 ///
 /// All reactors are stored as system commands (i.e. systems registered with [`ReactCommands::on`]).
 ///
-/// If scheduled as a [`Command`](bevy::prelude::Command) from user-land, this will cause a [`reaction_tree()`] to
+/// If scheduled as a [`Command`](bevy::ecs::system::Command) from user-land, this will cause a [`reaction_tree()`] to
 /// execute, otherwise it will be processed within the already-running reaction tree.
 #[derive(Debug, Copy, Clone, Deref)]
 pub struct SystemCommand(pub Entity);
 
 impl SystemCommand
 {
-    pub(crate) fn run(self, &mut World)
+    pub(crate) fn run(self, world: &mut World)
     {
         syscommand_runner(world, self, SystemCommandCleanup::default());
     }
@@ -109,7 +109,7 @@ pub(crate) struct EventCommand
 impl EventCommand
 {
     /// Runs this event command on the world.
-    pub(crate) fn run(self, &mut World)
+    pub(crate) fn run(self, world: &mut World)
     {
         world.resource_mut::<SystemEventAccessTracker>().start(self.data_entity);
         syscommand_runner(world, self.system, SystemCommandCleanup::new(end_system_event));
@@ -133,7 +133,7 @@ impl Command for EventCommand
 ///
 /// If scheduled as a `Command` from user-land, this will cause a [`reaction_tree()`] to execute, otherwise it will be
 /// processed within the already-running reaction tree.
-#[derive(Debug, Copy, Clone)]
+#[derive(Clone)]
 pub(crate) enum ReactionCommand
 {
     /// A reaction to a resource mutation.
@@ -195,7 +195,7 @@ impl ReactionCommand
                 world.resource_mut::<EntityReactionAccessTracker>().start(reaction_source, reaction_type);
                 syscommand_runner(world, reactor, SystemCommandCleanup::new(end_entity_reaction));
             }
-            Self::EntityReaction{ reaction_source, reactor, handle } =>
+            Self::Despawn{ reaction_source, reactor, handle } =>
             {
                 world.resource_mut::<DespawnAccessTracker>().start(reaction_source, handle);
                 syscommand_runner(world, reactor, SystemCommandCleanup::new(end_despawn_reaction));

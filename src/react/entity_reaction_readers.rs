@@ -1,12 +1,14 @@
 //local shortcuts
-use crate::*;
+use crate::prelude::*;
 
 //third-party shortcuts
+//use bevy::ecs::component::ComponentId;
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
 //standard shortcuts
 use std::any::TypeId;
-use std::hash::Hash;
+use std::marker::PhantomData;
 
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
@@ -18,11 +20,11 @@ struct ReactComponentId<T: ReactComponent>
     //id: ComponentId,
     id: TypeId,
     p: PhantomData<T>,
-};
+}
 
 impl<T: ReactComponent> ReactComponentId<T>
 {
-    fn id(&self) -> ComponentId
+    fn id(&self) -> TypeId
     {
         self.id
     }
@@ -30,7 +32,7 @@ impl<T: ReactComponent> ReactComponentId<T>
 
 impl<T: ReactComponent> FromWorld for ReactComponentId<T>
 {
-    fn from_world(world: &mut World) -> Self
+    fn from_world(_world: &mut World) -> Self
     {
         Self{
             //id: world.components().get_id(std::any::TypeId::of::<React<T>>()),
@@ -45,12 +47,9 @@ impl<T: ReactComponent> FromWorld for ReactComponentId<T>
 
 /// The type of an entity reaction.
 //todo: switch to ComponentId when observers are integrated
-#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub(crate) enum EntityReactionType
 {
-    /// Default type.
-    #[default]
-    None,
     /// A component was inserted.
     Insertion(TypeId),
     /// A component was removed.
@@ -116,7 +115,7 @@ impl Default for EntityReactionAccessTracker
         Self{
             currently_reacting: false,
             reaction_source: Entity::from_raw(0u32),
-            reaction_type: EntityReactionType::default(),
+            reaction_type: EntityReactionType::Insertion(TypeId::of::<()>()),
         }
     }
 }
@@ -152,7 +151,7 @@ pub struct InsertionEvent<'w, 's, T: ReactComponent>
     tracker: Res<'w, EntityReactionAccessTracker>,
 }
 
-impl<'w, T: ReactComponent> InsertionEvent<'w, T>
+impl<'w, 's, T: ReactComponent> InsertionEvent<'w, 's, T>
 {
     /// Returns the entity that received a `React<T>` component insertion if the current system is
     /// reacting to that insertion.
@@ -198,7 +197,7 @@ pub struct RemovalEvent<'w, 's, T: ReactComponent>
     tracker: Res<'w, EntityReactionAccessTracker>,
 }
 
-impl<'w, T: ReactComponent> RemovalEvent<'w, T>
+impl<'w, 's, T: ReactComponent> RemovalEvent<'w, 's, T>
 {
     /// Returns the entity from which a `React<T>` component was removed if the current system is
     /// reacting to that removal.
@@ -246,7 +245,7 @@ pub struct MutationEvent<'w, 's, T: ReactComponent>
     tracker: Res<'w, EntityReactionAccessTracker>,
 }
 
-impl<'w, T: ReactComponent> MutationEvent<'w, T>
+impl<'w, 's, T: ReactComponent> MutationEvent<'w, 's, T>
 {
     /// Returns the entity on which a `React<T>` component was mutated if the current system is
     /// reacting to that mutation.

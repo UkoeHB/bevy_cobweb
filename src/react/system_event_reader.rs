@@ -1,11 +1,11 @@
 //local shortcuts
-use crate::*;
 
 //third-party shortcuts
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
 //standard shortcuts
-use std::hash::Hash;
+
 
 //-------------------------------------------------------------------------------------------------------------------
 
@@ -122,7 +122,7 @@ impl<'w, 's, T: Send + Sync + 'static> SystemEvent<'w, 's, T>
     pub fn take(&mut self) -> Option<T>
     {
         if !self.tracker.is_reacting() { return None; }
-        let Ok(data) = self.data.get_mut(self.tracker.data_entity()) else { return None; };
+        let Ok(mut data) = self.data.get_mut(self.tracker.data_entity()) else { return None; };
 
         data.take()
     }

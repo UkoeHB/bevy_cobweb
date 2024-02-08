@@ -1,13 +1,11 @@
 //local shortcuts
-use crate::*;
+use crate::prelude::*;
 
 //third-party shortcuts
-use bevy::ecs::system::CommandQueue;
 use bevy::prelude::*;
 
 //standard shortcuts
 use core::ops::Deref;
-use std::vec::Vec;
 
 //-------------------------------------------------------------------------------------------------------------------
 

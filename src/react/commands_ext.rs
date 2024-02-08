@@ -1,11 +1,11 @@
 //local shortcuts
-use crate::*;
+use crate::prelude::*;
 
 //third-party shortcuts
 use bevy::prelude::*;
 
 //standard shortcuts
-use std::hash::Hash;
+
 
 //-------------------------------------------------------------------------------------------------------------------
 
@@ -48,7 +48,7 @@ impl<'w, 's> ReactCommandsExt for Commands<'w, 's>
         let mut callback = CallbackSystem::new(system);
         let command = move |world: &mut World, cleanup: SystemCommandCleanup|
         {
-            callback.run_with_cleanup(world, (), |world: &mut World| cleanup.run(world));
+            callback.run_with_cleanup(world, (), move |world: &mut World| cleanup.run(world));
         };
 
         self.spawn_system_command_from(SystemCommandCallback::new(command))
@@ -56,13 +56,13 @@ impl<'w, 's> ReactCommandsExt for Commands<'w, 's>
 
     fn spawn_system_command_from(&mut self, callback: SystemCommandCallback) -> SystemCommand
     {
-        SystemCommand::new(self.spawn(SystemCommandStorage::new(callback)).id())
+        SystemCommand(self.spawn(SystemCommandStorage::new(callback)).id())
     }
 
     fn send_system_event<T: Send + Sync + 'static>(&mut self, command: SystemCommand, event: T)
     {
         let data_entity = self.spawn(SystemEventData::new(event)).id();
-        self.add(EventCommand{ system: *command, data_entity });
+        self.add(EventCommand{ system: command, data_entity });
     }
 }
 

@@ -1,11 +1,10 @@
 //local shortcuts
-use crate::*;
 
 //third-party shortcuts
 use bevy::prelude::*;
 
 //standard shortcuts
-use std::hash::Hash;
+use std::collections::VecDeque;
 
 //-------------------------------------------------------------------------------------------------------------------
 
@@ -32,7 +31,7 @@ impl<T: Send + Sync + 'static> CobwebCommandQueue<T>
     /// Adds a cobweb command to the end of the queue.
     pub(crate) fn push(&mut self, command: T)
     {
-        self.commands.push(command);
+        self.commands.push_back(command);
     }
 
     /// Removes a command from the front of the queue.
@@ -60,21 +59,6 @@ impl<T: Send + Sync + 'static> CobwebCommandQueue<T>
         }
         self.buffers.push(new);
         self.remove()
-    }
-
-    /// Pushes a list of cobweb commands to the front of the command queue.
-    pub(crate) fn prepend(&mut self, mut new: VecDeque<T>)
-    {
-        if new.len() == 0
-        {
-            self.buffers.push(new);
-            return;
-        }
-
-        let mut inner = self.commands;
-        new.append(&mut inner);
-        let buffer = std::mem::replace(inner, new);
-        self.buffers.push(buffer);
     }
 }
 

@@ -1,8 +1,7 @@
 //local shortcuts
-use crate::*;
+use crate::prelude::*;
 
 //third-party shortcuts
-use bevy::prelude::*;
 use bevy::utils::all_tuples;
 
 //standard shortcuts
@@ -33,19 +32,6 @@ impl<R: ReactionTrigger> ReactionTriggerBundle for R
     {
         func(self.register(rcommands, sys_handle));
     }
-}
-
-impl ReactionTriggerBundle for ()
-{
-    fn len(&self) -> usize { 0 }
-
-    fn get_reactor_types(
-            self,
-            _ : &mut ReactCommands,
-            _ : &AutoDespawnSignal,
-            _ : &mut impl FnMut(Option<ReactorType>)
-        )
-    {}
 }
 
 //-------------------------------------------------------------------------------------------------------------------

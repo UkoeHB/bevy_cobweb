@@ -1,5 +1,5 @@
 //local shortcuts
-use crate::*;
+use crate::prelude::*;
 use bevy_kot_utils::Sender;
 
 //third-party shortcuts
@@ -172,7 +172,7 @@ impl<C: ReactComponent> ReactionTrigger for EntityInsertionTrigger<C>
                 syscall(world, (EntityReactionType::Insertion(comp_id), entity, sys_handle), register_entity_reactor)
             );
 
-        Some(ReactorType::EntityInsertionTrigger(entity, comp_id))
+        Some(ReactorType::EntityInsertion(entity, comp_id))
     }
 }
 
@@ -201,7 +201,7 @@ impl<C: ReactComponent> ReactionTrigger for EntityMutationTrigger<C>
                 syscall(world, (EntityReactionType::Mutation(comp_id), entity, sys_handle), register_entity_reactor)
             );
 
-        Some(ReactorType::EntityMutationTrigger(entity, comp_id))
+        Some(ReactorType::EntityMutation(entity, comp_id))
     }
 }
 
@@ -234,7 +234,7 @@ impl<C: ReactComponent> ReactionTrigger for EntityRemovalTrigger<C>
                 syscall(world, (EntityReactionType::Removal(comp_id), entity, sys_handle), register_entity_reactor)
             );
 
-        Some(ReactorType::EntityRemovalTrigger(entity, comp_id))
+        Some(ReactorType::EntityRemoval(entity, comp_id))
     }
 }
 
@@ -315,7 +315,7 @@ impl ReactionTrigger for DespawnTrigger
         let notifier = rcommands.cache.despawn_sender();
         rcommands.commands.add(move |world: &mut World| syscall(world, (self.0, notifier), add_despawn_tracker));
 
-        Some(rcommands.cache.register_despawn_reactor(sys_handle))
+        Some(rcommands.cache.register_despawn_reactor(self.0, sys_handle))
     }
 }
 

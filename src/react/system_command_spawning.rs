@@ -1,11 +1,11 @@
 //local shortcuts
-use crate::*;
+use crate::prelude::*;
 
 //third-party shortcuts
 use bevy::prelude::*;
 
 //standard shortcuts
-use std::hash::Hash;
+
 
 //-------------------------------------------------------------------------------------------------------------------
 
@@ -46,13 +46,13 @@ impl SystemCommandCleanup
 //todo: wrap the callback in a trait that lets you reassign the injected callback if it is the same type
 pub struct SystemCommandCallback
 {
-    inner: Box<dyn FnMut(&mut World, SystemCommandCleanup) + Send + Sync 'static>,
+    inner: Box<dyn FnMut(&mut World, SystemCommandCleanup) + Send + Sync + 'static>,
 }
 
 impl SystemCommandCallback
 {
     /// Makes a new system command callback.
-    pub fn new(callback: impl FnMut(&mut World, SystemCommandCleanup) + Send + Sync 'static) -> Self
+    pub fn new(callback: impl FnMut(&mut World, SystemCommandCleanup) + Send + Sync + 'static) -> Self
     {
         Self{ inner: Box::new(callback) }
     }
@@ -109,7 +109,7 @@ where
     let mut callback = CallbackSystem::new(system);
     let command = move |world: &mut World, cleanup: SystemCommandCleanup|
     {
-        callback.run_with_cleanup(world, (), |world: &mut World| cleanup.run(world));
+        callback.run_with_cleanup(world, (), move |world: &mut World| cleanup.run(world));
     };
 
     spawn_system_command_from(world, SystemCommandCallback::new(command))
@@ -120,7 +120,7 @@ where
 /// Spawns a [`SystemCommand`] from a pre-defined callback.
 pub fn spawn_system_command_from(world: &mut World, callback: SystemCommandCallback) -> SystemCommand
 {
-    SystemCommand::new(SysId::new(world.spawn(SystemCommandStorage::new(callback)).id()))
+    SystemCommand(world.spawn(SystemCommandStorage::new(callback)).id())
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -141,7 +141,7 @@ where
     S: IntoSystem<(), (), Marker> + Send + Sync + 'static,
 {
     let system_command = spawn_system_command(world, system);
-    world.resource::<AutoDespawner>().prepare(system_command.entity())
+    world.resource::<AutoDespawner>().prepare(*system_command)
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -154,7 +154,7 @@ where
 pub fn spawn_rc_system_command_from(world: &mut World, callback: SystemCommandCallback) -> AutoDespawnSignal
 {
     let system_command = spawn_system_command_from(world, callback);
-    world.resource::<AutoDespawner>().prepare(system_command.entity())
+    world.resource::<AutoDespawner>().prepare(*system_command)
 }
 
 //-------------------------------------------------------------------------------------------------------------------

@@ -97,7 +97,7 @@ impl Clone for AutoDespawnSignal
 
 //-------------------------------------------------------------------------------------------------------------------
 
-#[derive(SystemSet)]
+#[derive(SystemSet, Debug, Default, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct AutoDespawnSet;
 
 //-------------------------------------------------------------------------------------------------------------------

@@ -1,8 +1,7 @@
 //local shortcuts
-use crate::*;
+use crate::prelude::*;
 
 //third-party shortcuts
-use bevy::ecs::system::Command;
 use bevy::prelude::*;
 
 //standard shortcuts
@@ -61,13 +60,13 @@ impl Default for EntityReactors
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub enum ReactorType
 {
-    EntityInsertion(Entity, ComponentId),
-    EntityMutation(Entity, ComponentId),
-    EntityRemoval(Entity, ComponentId),
-    ComponentInsertion(ComponentId),
-    ComponentMutation(ComponentId),
-    ComponentRemoval(ComponentId),
-    ResourceMutation(ComponentId),
+    EntityInsertion(Entity, TypeId),
+    EntityMutation(Entity, TypeId),
+    EntityRemoval(Entity, TypeId),
+    ComponentInsertion(TypeId),
+    ComponentMutation(TypeId),
+    ComponentRemoval(TypeId),
+    ResourceMutation(TypeId),
     Event(TypeId),
     EntityEvent(Entity, TypeId),
     Despawn(Entity),
