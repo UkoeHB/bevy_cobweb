@@ -62,3 +62,6 @@ mod revoking_tokens;
 // Reaction data is only despawned after the last reader has run.
 
 // If a system event, entity event, or broadcast event is sent, it should be cleaned up if no systems/reactors run.
+
+// Reactors registered for only despawns should automatically be dropped after the last despawn.
+// - Reactors should not be cleaned up if registered for one despawn and a non-despawn trigger.
