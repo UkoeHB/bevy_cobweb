@@ -147,10 +147,10 @@ impl<'w, 's, T: Send + Sync + 'static> BroadcastEvent<'w, 's, T>
     /// Reads broadcast event data if it exists.
     ///
     /// This will return at most one unique `T` each time a system runs.
-    pub fn read(&mut self) -> Option<&T>
+    pub fn read(&self) -> Option<&T>
     {
         if !self.tracker.is_reacting() { return None; }
-        let Ok(data) = self.data.get_mut(self.tracker.data_entity()) else { return None; };
+        let Ok(data) = self.data.get(self.tracker.data_entity()) else { return None; };
 
         Some(data.read())
     }
@@ -178,7 +178,7 @@ fn example(mut rcommands: ReactCommands)
         }
     );
 
-    rcommands.send_entity_event(entity, ());
+    rcommands.entity_event(entity, ());
 }
 ```
 */
@@ -194,10 +194,10 @@ impl<'w, 's, T: Send + Sync + 'static> EntityEvent<'w, 's, T>
     /// Reads entity event data if it exists.
     ///
     /// This will return at most one unique `T` each time a system runs.
-    pub fn read(&mut self) -> Option<&(Entity, T)>
+    pub fn read(&self) -> Option<&(Entity, T)>
     {
         if !self.tracker.is_reacting() { return None; }
-        let Ok(data) = self.data.get_mut(self.tracker.data_entity()) else { return None; };
+        let Ok(data) = self.data.get(self.tracker.data_entity()) else { return None; };
 
         Some(data.read())
     }

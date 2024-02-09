@@ -233,7 +233,7 @@ Entity events can be considered 'scoped broadcasts'. You can send events to syst
 
 Send an entity event:
 ```rust
-rcommands.send_entity_event(entity, 0u32);
+rcommands.entity_event(entity, 0u32);
 ```
 
 React to the event, using the [`EntityEvent`](bevy_cobweb::EntityEvent) system parameter to access event data:

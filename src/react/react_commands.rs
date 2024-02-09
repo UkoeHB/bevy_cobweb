@@ -105,7 +105,7 @@ impl<'w, 's> ReactCommands<'w, 's>
     /// - Reactions are enacted after `apply_deferred` is invoked.
     /// - Reactors can listen for the event with the [`entity_event()`] trigger.
     /// - Reactors can read the event with the [`EntityEvent`] system parameter.
-    pub fn send_entity_event<E: Send + Sync + 'static>(&mut self, entity: Entity, event: E)
+    pub fn entity_event<E: Send + Sync + 'static>(&mut self, entity: Entity, event: E)
     {
         self.cache.schedule_entity_event_reaction::<E>(&mut self.commands, &mut self.react_queue, entity, event);
     }

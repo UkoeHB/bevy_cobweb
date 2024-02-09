@@ -86,9 +86,16 @@ pub fn update_test_recorder_with_resource(
 
 //-------------------------------------------------------------------------------------------------------------------
 
-pub fn update_test_recorder_with_broadcast(mut event: BroadcastEvent<IntEvent>, mut recorder: ResMut<TestReactRecorder>)
+pub fn update_test_recorder_with_broadcast(event: BroadcastEvent<IntEvent>, mut recorder: ResMut<TestReactRecorder>)
 {
     let Some(event) = event.read() else { return; };
+    recorder.0 = event.0;
+}
+//-------------------------------------------------------------------------------------------------------------------
+
+pub fn update_test_recorder_with_entity_event(event: EntityEvent<IntEvent>, mut recorder: ResMut<TestReactRecorder>)
+{
+    let Some((_, event)) = event.read() else { return; };
     recorder.0 = event.0;
 }
 
@@ -96,7 +103,7 @@ pub fn update_test_recorder_with_broadcast(mut event: BroadcastEvent<IntEvent>, 
 
 pub fn update_test_recorder_with_broadcast_and_recurse(
     mut rcommands : ReactCommands,
-    mut event     : BroadcastEvent<IntEvent>,
+    event         : BroadcastEvent<IntEvent>,
     mut recorder  : ResMut<TestReactRecorder>
 ){
     let Some(event) = event.read() else { return; };
@@ -110,7 +117,7 @@ pub fn update_test_recorder_with_broadcast_and_recurse(
 //-------------------------------------------------------------------------------------------------------------------
 
 pub fn update_test_recorder_with_broadcast_and_resource(
-    mut event    : BroadcastEvent<IntEvent>,
+    event        : BroadcastEvent<IntEvent>,
     mut recorder : ResMut<TestReactRecorder>,
     resource     : ReactRes<TestReactRes>,
 ){
@@ -166,6 +173,12 @@ pub fn update_react_res(
 pub fn send_broadcast(In(data): In<usize>, mut rcommands: ReactCommands)
 {
     rcommands.broadcast(IntEvent(data));
+}
+//-------------------------------------------------------------------------------------------------------------------
+
+pub fn send_entity_event(In((entity, data)): In<(Entity, usize)>, mut rcommands: ReactCommands)
+{
+    rcommands.entity_event(entity, IntEvent(data));
 }
 
 //-------------------------------------------------------------------------------------------------------------------
