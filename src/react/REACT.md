@@ -1,14 +1,9 @@
 # Reactivity Primitives
 
-In `bevy_cobweb`, reactivity revolves around the [`ReactCommands`](bevy_cobweb::ReactCommands) system parameter.
-
-We use custom reactivity instead of Bevy change detection in order to achieve precise, responsive, recursive reactions with an ergonomic API that correctly integrates with `bevy_cobweb`'s web toolkit. This means ECS reactivity is only implemented for [`ReactResource`](bevy_cobweb::ReactResource) resources and [`ReactComponent`](bevy_cobweb::ReactComponent) components, which are accessed with [`ReactRes`](bevy_cobweb::ReactRes)/[`ReactResMut`](bevy_cobweb::ReactResMut) system parameters and the [`React<C>`](bevy_cobweb::React) component wrapper respectively. When Bevy implements [observers](https://github.com/bevyengine/bevy/pull/10839), we expect those inconveniences to be eliminated.
-
-A reactor will run in the first `apply_deferred` after its reaction trigger is detected. If a reactor triggers other reactors, they will run immediately after the initial reactor in a telescoping fashion until the entire tree of reactions terminates. Recursive reactions are fully supported. For more details see [Scheduling](#scheduling).
+Reactivity is built on system commands, system events, a core reactivity API, and a custom scheduling algorithm.
 
 
-
-## System Commands API
+## System Commands
 
 ### Spawning Systems
 
@@ -34,11 +29,12 @@ commands.add(syscommand);
 ```
 
 
-### System Events
+
+## System Events
 
 You can send data directly to a system spawned as a [`SystemCommand`](bevy_cobweb::SystemCommand) by sending it a system event. Sending a system event will cause a reaction tree to run (see [Scheduling](#scheduling)).
 
-For example:
+For example, using the [`SystemEvent`](bevy_cobweb::SystemEvent) system parameter to consume the event data:
 ```rust
 let syscommand = commands.spawn_system_command(
     |mut data: SystemEvent<Vec<u32>>|
@@ -57,6 +53,13 @@ commands.send_system_event(syscommand, vec![0, 18, 42]);
 
 
 ## Reactivity API
+
+In `bevy_cobweb`, reactivity revolves around the [`ReactCommands`](bevy_cobweb::ReactCommands) system parameter.
+
+We use custom reactivity instead of Bevy change detection in order to achieve precise, responsive, recursive reactions with an ergonomic API that correctly integrates with `bevy_cobweb`'s web toolkit. This means ECS reactivity is only implemented for [`ReactResource`](bevy_cobweb::ReactResource) resources and [`ReactComponent`](bevy_cobweb::ReactComponent) components, which are accessed with [`ReactRes`](bevy_cobweb::ReactRes)/[`ReactResMut`](bevy_cobweb::ReactResMut) system parameters and the [`React<C>`](bevy_cobweb::React) component wrapper respectively. When Bevy implements [observers](https://github.com/bevyengine/bevy/pull/10839), we expect those inconveniences to be eliminated.
+
+A reactor will run in the first `apply_deferred` after its reaction trigger is detected. If a reactor triggers other reactors, they will run immediately after the initial reactor in a telescoping fashion until the entire tree of reactions terminates. Recursive reactions are fully supported. For more details see [Scheduling](#scheduling).
+
 
 ### Registering Reactors
 
