@@ -2,7 +2,7 @@
 
 The `bevy_cobweb` web toolkit allows building webs of stateful, reactive, interconnected systems.
 
-See [the reactive framework docs](../react/REACT.md) for details about the reactivity primitives that the web toolkit is built on. 
+See [here](../react/REACT.md) for details about the reactivity primitives that the web toolkit is built on. 
 
 
 

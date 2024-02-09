@@ -1,6 +1,6 @@
 # Bevy Cobweb
 
-**This crate is under development, however the documented API reflects the intended end state.**
+**This crate is under development.**
 
 Bevy Cobweb is a general-purpose reactivity framework for Bevy. It includes core reactivity primitives (invokable systems, system events, reaction triggers, reactive events, and reaction tree processing), and a toolkit for building webs of interconnected, stateful Bevy systems that react to ECS mutations.
 
@@ -36,9 +36,9 @@ Documentation for the web toolkit can be found [here](src/web/WEB.md).
 
 
 
-## Motivation
+## UI Implementations
 
-This crate was designed as a foundation for building UI in Bevy, with the following goals in mind.
+This crate is designed to be a foundation for building UI in Bevy, with the following goals in mind.
 
 - Build UI declaratively in a Bevy-native style using normal-looking Bevy systems.
 - Unify UI element construction and mutation, with change detection to avoid updating unless necessary.
@@ -46,6 +46,9 @@ This crate was designed as a foundation for building UI in Bevy, with the follow
 - Provide a powerful, unopinionated API for building ergonomic UI widgets.
 - Enable highly-responsive multi-widget structures that react to ECS mutations and automatically update when internal dependencies change.
 - No macros required, no third-party dependencies.
+
+UI libraries based on `bevy_cobweb` are:
+- `bevy_cobweb_ui`: TODO
 
 
 
