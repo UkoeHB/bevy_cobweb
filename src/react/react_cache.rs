@@ -99,8 +99,9 @@ fn schedule_entity_reaction_impl(
     let Some(callbacks) = callbacks else { return; };
 
     // queue callbacks
-    for sys_handle in callbacks
+    for sys_handle in callbacks.iter()
     {
+dbg!("reaction command");
         queue.push(
                 ReactionCommand::EntityReaction{
                     reaction_source,
@@ -120,6 +121,7 @@ fn schedule_entity_reaction(
     mut queue           : ResMut<CobwebCommandQueue<ReactionCommand>>,
     entity_reactors     : Query<&EntityReactors>,
 ){
+dbg!("scheduling", entity);
     // get this entity's entity reactors
     let Ok(entity_reactors) = entity_reactors.get(entity) else { return; };
 
@@ -397,6 +399,10 @@ impl ReactCache
                 syscall(world, (EntityReactionType::Insertion(TypeId::of::<C>()), entity), schedule_entity_reaction)
             );
 
+        // reaction tree
+        // - Must do this before early-outs.
+        commands.add(reaction_tree);
+
         // entity-agnostic component reactors
         let Some(handlers) = self.component_reactors.get(&TypeId::of::<C>()) else { return; };
         for sys_handle in handlers.insertion_callbacks.iter()
@@ -409,9 +415,6 @@ impl ReactCache
                     }
                 );
         }
-
-        // reaction tree
-        commands.add(reaction_tree);
     }
 
     /// Queues reactions to a component mutation on an entity.
@@ -427,6 +430,10 @@ impl ReactCache
                 syscall(world, (EntityReactionType::Mutation(TypeId::of::<C>()), entity), schedule_entity_reaction)
             );
 
+        // reaction tree
+        // - Must do this before early-outs.
+        commands.add(reaction_tree);
+
         // entity-agnostic component reactors
         let Some(handlers) = self.component_reactors.get(&TypeId::of::<C>()) else { return; };
         for sys_handle in handlers.mutation_callbacks.iter()
@@ -439,9 +446,6 @@ impl ReactCache
                     }
                 );
         }
-
-        // reaction tree
-        commands.add(reaction_tree);
     }
 
     /// Schedules component removal reactors.

@@ -1166,7 +1166,7 @@ fn main()
 
 ### Exit Confirmation Popup Example
 
-In this example the user can send an `ExitRequest` reactive event, which causes a popup to appear asking "Do you really want to quit?". If the user selects 'Quit' then `AppExit` is sent, otherwise the popup is closed.
+In this example the user can send an `ExitRequest` reactive broadcast, which causes a popup to appear asking "Do you really want to quit?". If the user selects 'Quit' then `AppExit` is sent, otherwise the popup is closed.
 
 ```rust
 use bevy::prelude::*;
@@ -1175,7 +1175,6 @@ use bevy_cobweb_ui::{
     Location, PrimaryWindowArea, RectDims, SimplePopup, TextNode, TextSize, TextWriter
 };
 
-#[derive(Default, Deref, DerefMut)]
 struct ExitRequest;
 
 struct Cancel;
@@ -1233,7 +1232,7 @@ fn exit_confirmation_popup_handler(mut web: Web) -> NodeResult<()>
             |
                 mut web   : Web,
                 mut popup : NodeState<Option<ExitPopupNode>>,
-                request   : ReactEvent<ExitRequest>,
+                request   : BroadcastEvent<ExitRequest>,
                 cancel    : NodeEvent<Cancel>
             | -> NodeResult<()>
             {
@@ -1263,7 +1262,7 @@ fn exit_confirmation_popup_handler(mut web: Web) -> NodeResult<()>
                 Ok(())
             }
         )
-        .triggers(event::<ExitRequest>())
+        .triggers(broadcast::<ExitRequest>())
         .reactor(&mut web)?;
 
     Ok(())
@@ -1274,7 +1273,6 @@ fn main()
     App::new()
         .add_plugins(DefaultPlugins::default())
         .add_plugins(CobwebPlugin::default())
-        .add_react_event::<ExitRequest>();
         //...
         .add_systems(Startup, exit_confirmation_popup_handler.webroot())
         //...
@@ -1282,6 +1280,109 @@ fn main()
 }
 ```
 
+
+### Button List Auto-Resize Example
+
+In this example, an array of buttons automatically adjust their widths to match the button with the longest text.
+
+The design if this example is translated from the 'functional logic' of a multi-pass resizing algorithm. The algorithm involves remaking buttons in a loop until they all have the same width, and goes like this (in pseudo-code):
+
+```rust
+fn spawn_button_array(button_data: [ButtonData]) -> Buttons
+{
+    let mut target = 0;
+    let mut buttons = Vec::default();
+
+    loop
+    {
+        buttons.clear();
+        let mut max_needed = 0;
+
+        for i in 0..button_data.len()
+        {
+            max_needed = std::cmp::max(max_needed, button_data[i].text_width());
+            let button_size = std::cmp::max(max_needed, target);
+            buttons.push(make_button(button_data[i], button_size));
+        }
+
+        if target == max_needed { break; }
+        target = max_needed;
+    }
+
+    buttons
+}
+```
+
+When translated to nodes:
+- The loop body becomes the 'button-array' parent node.
+- Re-looping is triggered by a child node that sends a node event to the parent when its inputs change.
+- The `max_needed` width is updated by passing it along from button to button, and finally to the child node at the end.
+- If the final `max_needed` value changes between rebuilds of the parent, then the final child node will send `max_needed` as an event to the parent, who will then rebuild again with an updated `target` width.
+
+```rust
+use bevy::prelude::*;
+use bevy_cobweb::prelude::*;
+use bevy_cobweb_ui::ButtonBuilder;
+
+/// Creates a vertical array of buttons that automatically resize to match the longest button text.
+fn button_array(mut web: Web, mut target: NodeState<f32>, mut event: NodeEvent<f32>) -> NodeResult<()>
+{
+    // Update the target width.
+    if let Some(new_target) = event.take()
+    {
+        *target = new_target;
+    }
+
+    // Build the button array.
+    let mut prev_child: Option<NodeHandle<f32>> = None;
+    for i in 0..5
+    {
+        button = ButtonBuilder::new()
+            // Use adaptive width.
+            // - let adaptive_width = max(prev child output, this button's minimum width)
+            // - set this node's width = max(target, adaptive_width)
+            .adaptive_width(*target, prev_child)
+            // Options to build the button contents.
+            // - ... (TBD)
+            // Output adaptive_width.
+            .output_adaptive_width()
+            .build(&mut web)?;
+        prev_child = Some(button);
+    }
+
+    // Tell the parent to update its width.
+    // - This only runs if the captured width changed from the last time it ran. If it remained the same then
+    //   we it must equal the target so all buttons will be the same width.
+    NodeBuilder::new_capture((web.node_id(), prev_child),
+            |(parent, max_needed)| move |mut web: Web| -> NodeResult<()>
+            {
+                let max_needed = max_needed.read(&web)?.unwrap_or_default();
+                web.send(parent, max_needed)?;
+                Ok(())
+            }
+        )
+        .build(&mut web)?;
+
+    Ok(())
+}
+
+fn spawn_button_array(mut web: Web) -> NodeResult<()>
+{
+    NodeBuilder::init(0., button_array).build(&mut web)?;
+    Ok(())
+}
+
+fn main()
+{
+    App::new()
+        .add_plugins(DefaultPlugins::default())
+        .add_plugins(CobwebPlugin::default())
+        //...
+        .add_systems(Startup, spawn_button_array.webroot())
+        //...
+        .run();
+}
+```
 
 
 ## `bevy` compatability

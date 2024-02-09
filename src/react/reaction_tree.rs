@@ -108,12 +108,15 @@ pub(crate) fn syscommand_runner(world: &mut World, command: SystemCommand, clean
 /// reaction tree.
 pub fn reaction_tree(world: &mut World)
 {
+dbg!("tree");
     // Set the reaction tree flag to prevent the reaction tree from being recursively scheduled.
     // - We return if we are already in a reaction tree.
     if !world.resource_mut::<ReactCache>().start_reaction_tree() { return; }
 
     let mut reaction_queue = world.resource_mut::<CobwebCommandQueue<ReactionCommand>>().remove();
     let mut event_queue = world.resource_mut::<CobwebCommandQueue<EventCommand>>().remove();
+
+dbg!(reaction_queue.len());
 
     // Schedule component removal and despawn reactors.
     // - We do this once at the beginning of the tree in case the scheduled command that triggered the tree
