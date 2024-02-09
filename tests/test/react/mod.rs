@@ -4,7 +4,6 @@ mod event_reactions;
 mod plugin;
 mod reactor_combination;
 mod resource_reactions;
-mod revoking_tokens;
 
 // TODO
 

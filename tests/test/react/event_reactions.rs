@@ -9,9 +9,23 @@ use bevy::prelude::*;
 
 
 //-------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------
+
+fn on_broadcast(mut rcommands: ReactCommands) -> RevokeToken
+{
+    rcommands.on(broadcast::<IntEvent>(), update_test_recorder_with_broadcast)
+}
+
+fn on_broadcast_recursive(mut rcommands: ReactCommands) -> RevokeToken
+{
+    rcommands.on(broadcast::<IntEvent>(), update_test_recorder_with_broadcast_and_recurse)
+}
+
+//-------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------
 
 #[test]
-fn broadcast()
+fn test_broadcast()
 {
     // prepare tracing
     /*
@@ -100,6 +114,33 @@ fn recursive_broadcasts()
     world.resource_mut::<TestReactRecorder>().0 = 0;
     syscall(&mut world, 2, send_broadcast);
     assert_eq!(world.resource::<TestReactRecorder>().0, 3);
+}
+
+//-------------------------------------------------------------------------------------------------------------------
+
+#[test]
+fn revoke_broadcast_reactor()
+{
+    // setup
+    let mut app = App::new();
+    app.add_plugins(ReactPlugin)
+        .init_resource::<TestReactRecorder>();
+    let mut world = &mut app.world;
+
+    // add reactor
+    let revoke_token = syscall(&mut world, (), on_broadcast);
+    assert_eq!(world.resource::<TestReactRecorder>().0, 0);
+
+    // send event (reaction)
+    syscall(&mut world, 222, send_broadcast);
+    assert_eq!(world.resource::<TestReactRecorder>().0, 222);
+
+    // revoke reactor
+    syscall(&mut world, revoke_token, revoke_reactor);
+
+    // send event (no reaction)
+    syscall(&mut world, 1, send_broadcast);
+    assert_eq!(world.resource::<TestReactRecorder>().0, 222);
 }
 
 //-------------------------------------------------------------------------------------------------------------------
