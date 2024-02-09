@@ -72,31 +72,31 @@ fn mutation_chain()
     app.add_plugins(ReactPlugin)
         .insert_react_resource(TestReactRes::default())
         .init_resource::<TestReactRecorder>();
-    let mut world = &mut app.world;
+    let world = &mut app.world;
 
     // entities
     let test_entity_a = world.spawn_empty().id();
     let test_entity_b = world.spawn_empty().id();
 
     // add reactors
-    syscall(&mut world, test_entity_a, on_entity_mutation_chain_to_res);
-    syscall(&mut world, (), on_resource_mutation);
+    world.syscall(test_entity_a, on_entity_mutation_chain_to_res);
+    world.syscall((), on_resource_mutation);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // insert (no reaction)
-    syscall(&mut world, (test_entity_a, TestComponent(1)), insert_on_test_entity);
+    world.syscall((test_entity_a, TestComponent(1)), insert_on_test_entity);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // insert other entity (no reaction)
-    syscall(&mut world, (test_entity_b, TestComponent(2)), insert_on_test_entity);
+    world.syscall((test_entity_b, TestComponent(2)), insert_on_test_entity);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // update (reaction chain)
-    syscall(&mut world, (test_entity_a, TestComponent(3)), update_test_entity);
+    world.syscall((test_entity_a, TestComponent(3)), update_test_entity);
     assert_eq!(world.resource::<TestReactRecorder>().0, 3);
 
     // update other entity (no reaction reaction)
-    syscall(&mut world, (test_entity_b, TestComponent(4)), update_test_entity);
+    world.syscall((test_entity_b, TestComponent(4)), update_test_entity);
     assert_eq!(world.resource::<TestReactRecorder>().0, 3);
 }
 
@@ -110,18 +110,18 @@ fn multiple_reactors()
     app.add_plugins(ReactPlugin)
         .insert_react_resource(TestReactRes::default())
         .init_resource::<TestReactRecorder>();
-    let mut world = &mut app.world;
+    let world = &mut app.world;
 
     // add reactor
-    syscall(&mut world, (), on_broadcast_or_resource);
+    world.syscall((), on_broadcast_or_resource);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // send event (reaction)
-    syscall(&mut world, 222, send_broadcast);
+    world.syscall(222, send_broadcast);
     assert_eq!(world.resource::<TestReactRecorder>().0, 222);
 
     // mutate resource (reaction)
-    syscall(&mut world, 1, update_react_res);
+    world.syscall(1, update_react_res);
     assert_eq!(world.resource::<TestReactRecorder>().0, 223);
 }
 
@@ -134,24 +134,29 @@ fn all_reactors()
     // setup
     let mut app = App::new();
     app.add_plugins(ReactPlugin);
-    let mut world = &mut app.world;
+    let world = &mut app.world;
 
     // add reactor
-    syscall(&mut world, (), register_all_reactors);
+    world.syscall((), register_all_reactors);
 }
+
+//-------------------------------------------------------------------------------------------------------------------
+
+// Reactions can be recursive.
+//TODO
 
 //-------------------------------------------------------------------------------------------------------------------
 
 // Reactions telescope properly.
 // - Reaction reader data won't be available to system command recursive invocations of the same reactor, nor to other
 //   reactors that can read the same reaction data.
-// - If a reaction of the same data type is triggered recursively, the reactors for that 'inner reaction' will read the
-//   inner data, and then when the pending output reactions run they will read the original data.
 //TODO
 
 //-------------------------------------------------------------------------------------------------------------------
 
-// Reactions can be recursive.
+// Reactions telescope properly.
+// - If a reaction of the same data type is triggered recursively, the reactors for that 'inner reaction' will read the
+//   inner data, and then when the pending output reactions run they will read the original data.
 //TODO
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -164,25 +169,25 @@ fn revoke_multiple_reactors()
     app.add_plugins(ReactPlugin)
         .insert_react_resource(TestReactRes::default())
         .init_resource::<TestReactRecorder>();
-    let mut world = &mut app.world;
+    let world = &mut app.world;
 
     // add reactor
-    let revoke_token = syscall(&mut world, (), on_broadcast_or_resource);
+    let revoke_token = world.syscall((), on_broadcast_or_resource);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // send event (reaction)
-    syscall(&mut world, 222, send_broadcast);
+    world.syscall(222, send_broadcast);
     assert_eq!(world.resource::<TestReactRecorder>().0, 222);
 
     // mutate resource (reaction)
-    syscall(&mut world, 1, update_react_res);
+    world.syscall(1, update_react_res);
     assert_eq!(world.resource::<TestReactRecorder>().0, 223);
 
     // revoke reactor
-    syscall(&mut world, revoke_token, revoke_reactor);
+    world.syscall(revoke_token, revoke_reactor);
 
     // mutate resource (no reaction)
-    syscall(&mut world, 1, update_react_res);
+    world.syscall(1, update_react_res);
     assert_eq!(world.resource::<TestReactRecorder>().0, 223);
 }
 

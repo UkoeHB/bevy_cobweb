@@ -291,26 +291,26 @@ fn test_entity_insertion()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .init_resource::<TestReactRecorder>();
-    let mut world = &mut app.world;
+    let world = &mut app.world;
 
     // entities
     let test_entity_a = world.spawn_empty().id();
     let test_entity_b = world.spawn_empty().id();
 
     // add reactor
-    syscall(&mut world, test_entity_a, on_entity_insertion);
+    world.syscall(test_entity_a, on_entity_insertion);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // insert (reaction)
-    syscall(&mut world, (test_entity_a, TestComponent(1)), insert_on_test_entity);
+    world.syscall((test_entity_a, TestComponent(1)), insert_on_test_entity);
     assert_eq!(world.resource::<TestReactRecorder>().0, 1);
 
     // insert (reaction)
-    syscall(&mut world, (test_entity_a, TestComponent(2)), insert_on_test_entity);
+    world.syscall((test_entity_a, TestComponent(2)), insert_on_test_entity);
     assert_eq!(world.resource::<TestReactRecorder>().0, 2);
 
     // insert other entity (no reaction)
-    syscall(&mut world, (test_entity_b, TestComponent(3)), insert_on_test_entity);
+    world.syscall((test_entity_b, TestComponent(3)), insert_on_test_entity);
     assert_eq!(world.resource::<TestReactRecorder>().0, 2);
 }
 
@@ -323,30 +323,30 @@ fn component_insertion()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .init_resource::<TestReactRecorder>();
-    let mut world = &mut app.world;
+    let world = &mut app.world;
 
     // entities
     let test_entity_a = world.spawn_empty().id();
     let test_entity_b = world.spawn_empty().id();
 
     // add reactor
-    syscall(&mut world, (), on_insertion);
+    world.syscall((), on_insertion);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // insert (reaction)
-    syscall(&mut world, (test_entity_a, TestComponent(1)), insert_on_test_entity);
+    world.syscall((test_entity_a, TestComponent(1)), insert_on_test_entity);
     assert_eq!(world.resource::<TestReactRecorder>().0, 1);
 
     // insert (reaction)
-    syscall(&mut world, (test_entity_b, TestComponent(2)), insert_on_test_entity);
+    world.syscall((test_entity_b, TestComponent(2)), insert_on_test_entity);
     assert_eq!(world.resource::<TestReactRecorder>().0, 2);
 
     // insert (reaction)
-    syscall(&mut world, (test_entity_a, TestComponent(3)), insert_on_test_entity);
+    world.syscall((test_entity_a, TestComponent(3)), insert_on_test_entity);
     assert_eq!(world.resource::<TestReactRecorder>().0, 3);
 
     // insert (reaction)
-    syscall(&mut world, (test_entity_a, TestComponent(4)), insert_on_test_entity);
+    world.syscall((test_entity_a, TestComponent(4)), insert_on_test_entity);
     assert_eq!(world.resource::<TestReactRecorder>().0, 4);
 }
 
@@ -359,34 +359,34 @@ fn test_entity_muation()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .init_resource::<TestReactRecorder>();
-    let mut world = &mut app.world;
+    let world = &mut app.world;
 
     // entities
     let test_entity_a = world.spawn_empty().id();
     let test_entity_b = world.spawn_empty().id();
 
     // add reactor
-    syscall(&mut world, test_entity_a, on_entity_mutation);
+    world.syscall(test_entity_a, on_entity_mutation);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // insert (no reaction)
-    syscall(&mut world, (test_entity_a, TestComponent(5)), insert_on_test_entity);
+    world.syscall((test_entity_a, TestComponent(5)), insert_on_test_entity);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // update (reaction)
-    syscall(&mut world, (test_entity_a, TestComponent(10)), update_test_entity);
+    world.syscall((test_entity_a, TestComponent(10)), update_test_entity);
     assert_eq!(world.resource::<TestReactRecorder>().0, 10);
 
     // update (reaction)
-    syscall(&mut world, (test_entity_a, TestComponent(1)), update_test_entity);
+    world.syscall((test_entity_a, TestComponent(1)), update_test_entity);
     assert_eq!(world.resource::<TestReactRecorder>().0, 1);
 
     // insert other entity (no reaction)
-    syscall(&mut world, (test_entity_b, TestComponent(100)), insert_on_test_entity);
+    world.syscall((test_entity_b, TestComponent(100)), insert_on_test_entity);
     assert_eq!(world.resource::<TestReactRecorder>().0, 1);
 
     // update other entity (no reaction)
-    syscall(&mut world, (test_entity_b, TestComponent(200)), update_test_entity);
+    world.syscall((test_entity_b, TestComponent(200)), update_test_entity);
     assert_eq!(world.resource::<TestReactRecorder>().0, 1);
 }
 
@@ -399,30 +399,30 @@ fn component_mutation()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .init_resource::<TestReactRecorder>();
-    let mut world = &mut app.world;
+    let world = &mut app.world;
 
     // entities
     let test_entity_a = world.spawn_empty().id();
     let test_entity_b = world.spawn_empty().id();
 
     // add reactor
-    syscall(&mut world, (), on_mutation);
+    world.syscall((), on_mutation);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // insert (no reaction)
-    syscall(&mut world, (test_entity_a, TestComponent(1)), insert_on_test_entity);
+    world.syscall((test_entity_a, TestComponent(1)), insert_on_test_entity);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // insert (no reaction)
-    syscall(&mut world, (test_entity_b, TestComponent(2)), insert_on_test_entity);
+    world.syscall((test_entity_b, TestComponent(2)), insert_on_test_entity);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // update (reaction)
-    syscall(&mut world, (test_entity_a, TestComponent(3)), update_test_entity);
+    world.syscall((test_entity_a, TestComponent(3)), update_test_entity);
     assert_eq!(world.resource::<TestReactRecorder>().0, 3);
 
     // update (reaction)
-    syscall(&mut world, (test_entity_b, TestComponent(4)), update_test_entity);
+    world.syscall((test_entity_b, TestComponent(4)), update_test_entity);
     assert_eq!(world.resource::<TestReactRecorder>().0, 4);
 }
 
@@ -435,26 +435,26 @@ fn test_entity_removal()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .init_resource::<TestReactRecorder>();
-    let mut world = &mut app.world;
+    let world = &mut app.world;
 
     // entities
     let test_entity_a = world.spawn_empty().id();
     let test_entity_b = world.spawn_empty().id();
 
     // add reactor
-    syscall(&mut world, test_entity_a, on_entity_removal);
+    world.syscall(test_entity_a, on_entity_removal);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // insert (no reaction)
-    syscall(&mut world, (test_entity_a, TestComponent(1)), insert_on_test_entity);
+    world.syscall((test_entity_a, TestComponent(1)), insert_on_test_entity);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // insert (no reaction)
-    syscall(&mut world, (test_entity_b, TestComponent(2)), insert_on_test_entity);
+    world.syscall((test_entity_b, TestComponent(2)), insert_on_test_entity);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // removal
-    syscall(&mut world, test_entity_a, remove_from_test_entity);
+    world.syscall(test_entity_a, remove_from_test_entity);
     // no immediate reaction
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
     // check for removals (reaction)
@@ -463,11 +463,11 @@ fn test_entity_removal()
 
     // removal of already removed (no reaction)
     *world.resource_mut::<TestReactRecorder>() = TestReactRecorder::default();
-    syscall(&mut world, test_entity_a, remove_from_test_entity);
+    world.syscall(test_entity_a, remove_from_test_entity);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // removal of other entity (no reaction)
-    syscall(&mut world, test_entity_b, remove_from_test_entity);
+    world.syscall(test_entity_b, remove_from_test_entity);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 }
 
@@ -480,26 +480,26 @@ fn component_removal()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .init_resource::<TestReactRecorder>();
-    let mut world = &mut app.world;
+    let world = &mut app.world;
 
     // entities
     let test_entity_a = world.spawn_empty().id();
     let test_entity_b = world.spawn_empty().id();
 
     // add reactor
-    syscall(&mut world, (), on_removal);
+    world.syscall((), on_removal);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // insert (no reaction)
-    syscall(&mut world, (test_entity_a, TestComponent(1)), insert_on_test_entity);
+    world.syscall((test_entity_a, TestComponent(1)), insert_on_test_entity);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // insert (no reaction)
-    syscall(&mut world, (test_entity_b, TestComponent(2)), insert_on_test_entity);
+    world.syscall((test_entity_b, TestComponent(2)), insert_on_test_entity);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // removal
-    syscall(&mut world, test_entity_a, remove_from_test_entity);
+    world.syscall(test_entity_a, remove_from_test_entity);
     // no immediate reaction
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
     // check for removals (reaction)
@@ -508,11 +508,11 @@ fn component_removal()
  
     // removal of already removed (no reaction)
     *world.resource_mut::<TestReactRecorder>() = TestReactRecorder::default();
-    syscall(&mut world, test_entity_a, remove_from_test_entity);
+    world.syscall(test_entity_a, remove_from_test_entity);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // removal of other entity
-    syscall(&mut world, test_entity_b, remove_from_test_entity);
+    world.syscall(test_entity_b, remove_from_test_entity);
     // no immediate reaction
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
     // check for removals (reaction)
@@ -529,22 +529,22 @@ fn entity_despawn()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .init_resource::<TestReactRecorder>();
-    let mut world = &mut app.world;
+    let world = &mut app.world;
 
     // entities
     let test_entity_a = world.spawn_empty().id();
     let test_entity_b = world.spawn_empty().id();
 
     // add reactor
-    syscall(&mut world, test_entity_a, on_despawn);
+    world.syscall(test_entity_a, on_despawn);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // insert (no reaction)
-    syscall(&mut world, (test_entity_a, TestComponent(1)), insert_on_test_entity);
+    world.syscall((test_entity_a, TestComponent(1)), insert_on_test_entity);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // insert (no reaction)
-    syscall(&mut world, (test_entity_b, TestComponent(2)), insert_on_test_entity);
+    world.syscall((test_entity_b, TestComponent(2)), insert_on_test_entity);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // check for despawns (no reaction before despawn)
@@ -574,26 +574,26 @@ fn entity_despawn_multiple_reactors()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .init_resource::<TestReactRecorder>();
-    let mut world = &mut app.world;
+    let world = &mut app.world;
 
     // entities
     let test_entity_a = world.spawn_empty().id();
     let test_entity_b = world.spawn_empty().id();
 
     // add reactor
-    syscall(&mut world, test_entity_a, on_despawn);
+    world.syscall(test_entity_a, on_despawn);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // add second reactor
-    syscall(&mut world, test_entity_a, on_despawn_div2);
+    world.syscall(test_entity_a, on_despawn_div2);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // insert (no reaction)
-    syscall(&mut world, (test_entity_a, TestComponent(1)), insert_on_test_entity);
+    world.syscall((test_entity_a, TestComponent(1)), insert_on_test_entity);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // insert (no reaction)
-    syscall(&mut world, (test_entity_b, TestComponent(2)), insert_on_test_entity);
+    world.syscall((test_entity_b, TestComponent(2)), insert_on_test_entity);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // check for despawns (no reaction before despawn)
@@ -624,27 +624,27 @@ fn entity_reaction_reader_exclusion()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .init_resource::<TestReactRecorder>();
-    let mut world = &mut app.world;
+    let world = &mut app.world;
 
     // entities
     let test_entity = world.spawn_empty().id();
 
     // add reactors
-    syscall(&mut world, test_entity, register_reader_for_insertion_event);
-    syscall(&mut world, test_entity, register_reader_for_mutation_event);
-    syscall(&mut world, test_entity, register_reader_for_removal_event);
-    syscall(&mut world, test_entity, register_reader_for_despawn_event);
+    world.syscall(test_entity, register_reader_for_insertion_event);
+    world.syscall(test_entity, register_reader_for_mutation_event);
+    world.syscall(test_entity, register_reader_for_removal_event);
+    world.syscall(test_entity, register_reader_for_despawn_event);
 
     // insert should not panic
-    syscall(&mut world, (test_entity, TestComponent(0)), insert_on_test_entity);
+    world.syscall((test_entity, TestComponent(0)), insert_on_test_entity);
     assert_eq!(world.resource::<TestReactRecorder>().0, 1);
 
     // mutation should not panic
-    syscall(&mut world, (test_entity, TestComponent(1)), update_test_entity);
+    world.syscall((test_entity, TestComponent(1)), update_test_entity);
     assert_eq!(world.resource::<TestReactRecorder>().0, 10);
 
     // removal should not panic
-    syscall(&mut world, test_entity, remove_from_test_entity);
+    world.syscall(test_entity, remove_from_test_entity);
     reaction_tree(world);
     assert_eq!(world.resource::<TestReactRecorder>().0, 100);
 
@@ -664,16 +664,16 @@ fn multiple_entity_reactions_noninterference()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .init_resource::<TestReactRecorder>();
-    let mut world = &mut app.world;
+    let world = &mut app.world;
 
     // entities
     let test_entity = world.spawn_empty().id();
 
     // add reactors
-    syscall(&mut world, test_entity, on_any_entity_mutation);
+    world.syscall(test_entity, on_any_entity_mutation);
 
     // perform all entity mutations
-    syscall(&mut world, test_entity, all_test_entity_mutations);
+    world.syscall(test_entity, all_test_entity_mutations);
     assert_eq!(world.resource::<TestReactRecorder>().0, 1111);
 }
 
@@ -686,14 +686,14 @@ fn despawn_reactor_cleanup()
     // setup
     let mut app = App::new();
     app.add_plugins(ReactPlugin);
-    let mut world = &mut app.world;
+    let world = &mut app.world;
 
     // entities
     let test_entity = world.spawn_empty().id();
     let proxy_entity = world.spawn_empty().id();
 
     // add reactors
-    syscall(&mut world, (test_entity, proxy_entity), despawn_other_on_drop);
+    world.syscall((test_entity, proxy_entity), despawn_other_on_drop);
 
     // despawn the test entity, which should cause the reactor to run and then be dropped, which will despawn the proxy
     world.despawn(test_entity);
@@ -711,14 +711,14 @@ fn despawn_reactor_no_cleanup()
     // setup
     let mut app = App::new();
     app.add_plugins(ReactPlugin);
-    let mut world = &mut app.world;
+    let world = &mut app.world;
 
     // entities
     let test_entity = world.spawn_empty().id();
     let proxy_entity = world.spawn_empty().id();
 
     // add reactors
-    syscall(&mut world, (test_entity, proxy_entity), dont_despawn_other_on_drop);
+    world.syscall((test_entity, proxy_entity), dont_despawn_other_on_drop);
 
     // despawn the test entity, which should cause the reactor to run and then be dropped, which will despawn the proxy
     world.despawn(test_entity);
@@ -736,28 +736,28 @@ fn revoke_entity_mutation_reactor()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .init_resource::<TestReactRecorder>();
-    let mut world = &mut app.world;
+    let world = &mut app.world;
 
     // entities
     let test_entity = world.spawn_empty().id();
 
     // add reactor
-    let token = syscall(&mut world, test_entity, on_entity_mutation);
+    let token = world.syscall(test_entity, on_entity_mutation);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // insert (no reaction)
-    syscall(&mut world, (test_entity, TestComponent(5)), insert_on_test_entity);
+    world.syscall((test_entity, TestComponent(5)), insert_on_test_entity);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // update (reaction)
-    syscall(&mut world, (test_entity, TestComponent(10)), update_test_entity);
+    world.syscall((test_entity, TestComponent(10)), update_test_entity);
     assert_eq!(world.resource::<TestReactRecorder>().0, 10);
 
     // revoke
-    syscall(&mut world, token, revoke_reactor);
+    world.syscall(token, revoke_reactor);
 
     // update (no reaction)
-    syscall(&mut world, (test_entity, TestComponent(1)), update_test_entity);
+    world.syscall((test_entity, TestComponent(1)), update_test_entity);
     assert_eq!(world.resource::<TestReactRecorder>().0, 10);
 }
 
@@ -770,28 +770,28 @@ fn revoke_component_mutation_reactor()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .init_resource::<TestReactRecorder>();
-    let mut world = &mut app.world;
+    let world = &mut app.world;
 
     // entities
     let test_entity = world.spawn_empty().id();
 
     // add reactor
-    let token = syscall(&mut world, (), on_mutation);
+    let token = world.syscall((), on_mutation);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // insert (no reaction)
-    syscall(&mut world, (test_entity, TestComponent(5)), insert_on_test_entity);
+    world.syscall((test_entity, TestComponent(5)), insert_on_test_entity);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // update (reaction)
-    syscall(&mut world, (test_entity, TestComponent(10)), update_test_entity);
+    world.syscall((test_entity, TestComponent(10)), update_test_entity);
     assert_eq!(world.resource::<TestReactRecorder>().0, 10);
 
     // revoke
-    syscall(&mut world, token, revoke_reactor);
+    world.syscall(token, revoke_reactor);
 
     // update (no reaction)
-    syscall(&mut world, (test_entity, TestComponent(1)), update_test_entity);
+    world.syscall((test_entity, TestComponent(1)), update_test_entity);
     assert_eq!(world.resource::<TestReactRecorder>().0, 10);
 }
 

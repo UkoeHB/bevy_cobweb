@@ -24,7 +24,7 @@ where
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
-/// Execute a system on some data then apply the system's deferred commands.
+/// Executes a system on some data then apply the system's deferred commands.
 ///
 /// # WARNING
 /// If a system is called recursively, the Local system parameters of all but the outer-most invocation will not
@@ -45,8 +45,8 @@ where
 /// 
 /// let mut world = World::new();
 /// 
-/// syscall(&mut world, 0u16, test_system);
-/// syscall(&mut world, 1u16, test_system);  //Local is preserved
+/// world.syscall(0u16, test_system);
+/// world.syscall(1u16, test_system);  //Local is preserved
 ///
 /// // function-like system: takes an input and returns an output
 /// fn test_function(In(input): In<u16>) -> u16
@@ -56,7 +56,7 @@ where
 /// 
 /// let mut world = World::new();
 /// 
-/// assert_eq!(syscall(&mut world, 1u16, test_function), 2u16);
+/// assert_eq!(world.syscall(1u16, test_function), 2u16);
 /// ```
 ///
 pub fn syscall<I, O, S, Marker>(world: &mut World, input: I, system: S) -> O
@@ -92,7 +92,7 @@ where
 
 //-------------------------------------------------------------------------------------------------------------------
 
-/// Wrap a `Fn` system in a system that consumes the system input.
+/// Wraps a `Fn` system in a system that consumes the system input.
 ///
 /// This is intended to wrap `Fn` systems. Do not use it if you have a `FnOnce` callback, for example when
 /// adding a one-off callback via `Command::add()`, because the input value and system will be unnecessarily cloned.
@@ -105,6 +105,31 @@ where
     O: Send + Sync + 'static,
 {
     move |world: &mut World| syscall(world, input.clone(), system.clone())
+}
+
+//-------------------------------------------------------------------------------------------------------------------
+
+/// Extends `World` with the [`syscall`] method.
+pub trait WorldSyscallExt
+{
+    /// See [`syscall`].
+    fn syscall<I, O, S, Marker>(&mut self, input: I, system: S) -> O
+    where
+        I: Send + Sync + 'static,
+        O: Send + Sync + 'static,
+        S: IntoSystem<I, O, Marker> + Send + Sync + 'static;
+}
+
+impl WorldSyscallExt for World
+{
+    fn syscall<I, O, S, Marker>(&mut self, input: I, system: S) -> O
+    where
+        I: Send + Sync + 'static,
+        O: Send + Sync + 'static,
+        S: IntoSystem<I, O, Marker> + Send + Sync + 'static
+    {
+        syscall(self, input, system)
+    }
 }
 
 //-------------------------------------------------------------------------------------------------------------------

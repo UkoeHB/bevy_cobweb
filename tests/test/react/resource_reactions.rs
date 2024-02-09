@@ -31,18 +31,18 @@ fn test_resource_mutation()
     app.add_plugins(ReactPlugin)
         .insert_react_resource(TestReactRes::default())
         .init_resource::<TestReactRecorder>();
-    let mut world = &mut app.world;
+    let world = &mut app.world;
 
     // add reactor
-    syscall(&mut world, (), on_resource_mutation);
+    world.syscall((), on_resource_mutation);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // update resource (reaction)
-    syscall(&mut world, 100, update_react_res);
+    world.syscall(100, update_react_res);
     assert_eq!(world.resource::<TestReactRecorder>().0, 100);
 
     // update resource (reaction)
-    syscall(&mut world, 1, update_react_res);
+    world.syscall(1, update_react_res);
     assert_eq!(world.resource::<TestReactRecorder>().0, 1);
 }
 
@@ -56,18 +56,18 @@ fn test_resource_mutation_once()
     app.add_plugins(ReactPlugin)
         .insert_react_resource(TestReactRes::default())
         .init_resource::<TestReactRecorder>();
-    let mut world = &mut app.world;
+    let world = &mut app.world;
 
     // add reactor
-    syscall(&mut world, (), on_resource_mutation_once);
+    world.syscall((), on_resource_mutation_once);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // update resource (reaction)
-    syscall(&mut world, 100, update_react_res);
+    world.syscall(100, update_react_res);
     assert_eq!(world.resource::<TestReactRecorder>().0, 100);
 
     // update resource (no reaction)
-    syscall(&mut world, 1, update_react_res);
+    world.syscall(1, update_react_res);
     assert_eq!(world.resource::<TestReactRecorder>().0, 100);
 }
 
@@ -81,17 +81,17 @@ fn revoke_once_reactor()
     app.add_plugins(ReactPlugin)
         .insert_react_resource(TestReactRes::default())
         .init_resource::<TestReactRecorder>();
-    let mut world = &mut app.world;
+    let world = &mut app.world;
 
     // add reactor
-    let revoke_token = syscall(&mut world, (), on_resource_mutation_once);
+    let revoke_token = world.syscall((), on_resource_mutation_once);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // revoke reactor
-    syscall(&mut world, revoke_token, revoke_reactor);
+    world.syscall(revoke_token, revoke_reactor);
 
     // mutate resource (no reaction)
-    syscall(&mut world, 1, update_react_res);
+    world.syscall(1, update_react_res);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 }
 

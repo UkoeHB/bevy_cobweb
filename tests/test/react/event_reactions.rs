@@ -196,18 +196,18 @@ fn test_broadcast()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .init_resource::<TestReactRecorder>();
-    let mut world = &mut app.world;
+    let world = &mut app.world;
 
     // add reactor
-    syscall(&mut world, (), on_broadcast);
+    world.syscall((), on_broadcast);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // send event (reaction)
-    syscall(&mut world, 222, send_broadcast);
+    world.syscall(222, send_broadcast);
     assert_eq!(world.resource::<TestReactRecorder>().0, 222);
 
     // send event (reaction)
-    syscall(&mut world, 1, send_broadcast);
+    world.syscall(1, send_broadcast);
     assert_eq!(world.resource::<TestReactRecorder>().0, 1);
 }
 
@@ -220,18 +220,18 @@ fn broadcast_out_of_order()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .init_resource::<TestReactRecorder>();
-    let mut world = &mut app.world;
+    let world = &mut app.world;
 
     // send event (no reaction)
-    syscall(&mut world, 222, send_broadcast);
+    world.syscall(222, send_broadcast);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // add reactor (no reaction to prior event)
-    syscall(&mut world, (), on_broadcast);
+    world.syscall((), on_broadcast);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // send event (reaction)
-    syscall(&mut world, 1, send_broadcast);
+    world.syscall(1, send_broadcast);
     assert_eq!(world.resource::<TestReactRecorder>().0, 1);
 }
 
@@ -252,24 +252,24 @@ fn recursive_broadcasts()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .init_resource::<TestReactRecorder>();
-    let mut world = &mut app.world;
+    let world = &mut app.world;
 
     // add recursive reactor (no reaction)
-    syscall(&mut world, (), on_broadcast_recursive);
+    world.syscall((), on_broadcast_recursive);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // send event (only one reaction)
-    syscall(&mut world, 0, send_broadcast);
+    world.syscall(0, send_broadcast);
     assert_eq!(world.resource::<TestReactRecorder>().0, 1);
 
     // send event recursively (two reactions)
     world.resource_mut::<TestReactRecorder>().0 = 0;
-    syscall(&mut world, 1, send_broadcast);
+    world.syscall(1, send_broadcast);
     assert_eq!(world.resource::<TestReactRecorder>().0, 2);
 
     // send event recursively (three reactions)
     world.resource_mut::<TestReactRecorder>().0 = 0;
-    syscall(&mut world, 2, send_broadcast);
+    world.syscall(2, send_broadcast);
     assert_eq!(world.resource::<TestReactRecorder>().0, 3);
 }
 
@@ -283,18 +283,18 @@ fn broadcast_scoping()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .init_resource::<TestReactRecorder>();
-    let mut world = &mut app.world;
+    let world = &mut app.world;
 
     // add reactors
-    syscall(&mut world, (), on_broadcast_unit);
-    syscall(&mut world, (), on_broadcast_int);
+    world.syscall((), on_broadcast_unit);
+    world.syscall((), on_broadcast_int);
 
     // send int broadcast
-    syscall(&mut world, (), send_broadcast_with);
+    world.syscall((), send_broadcast_with);
     assert_eq!(world.resource::<TestReactRecorder>().0, 1);
 
     // send event to b
-    syscall(&mut world, 10usize, send_broadcast_with);
+    world.syscall(10usize, send_broadcast_with);
     assert_eq!(world.resource::<TestReactRecorder>().0, 11);
 }
 
@@ -308,14 +308,14 @@ fn multiple_broadcast_noninterference()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .init_resource::<TestReactRecorder>();
-    let mut world = &mut app.world;
+    let world = &mut app.world;
 
     // add reactor
-    syscall(&mut world, (), on_broadcast_add);
+    world.syscall((), on_broadcast_add);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // send event (reaction)
-    syscall(&mut world, vec![1, 2, 3], send_multiple_broadcasts);
+    world.syscall(vec![1, 2, 3], send_multiple_broadcasts);
     assert_eq!(world.resource::<TestReactRecorder>().0, 6);
 }
 
@@ -328,18 +328,18 @@ fn broadcast_data_is_dropped()
     // setup
     let mut app = App::new();
     app.add_plugins(ReactPlugin);
-    let mut world = &mut app.world;
+    let world = &mut app.world;
 
     let proxy_entity = world.spawn_empty().id();
     let signal = world.resource::<AutoDespawner>().prepare(proxy_entity);
 
     // add reactors
-    syscall(&mut world, proxy_entity, on_broadcast_proxy);
-    syscall(&mut world, proxy_entity, on_broadcast_proxy);
+    world.syscall(proxy_entity, on_broadcast_proxy);
+    world.syscall(proxy_entity, on_broadcast_proxy);
 
     // send event (reaction)
     assert!(world.get_entity(proxy_entity).is_some());
-    syscall(&mut world, signal, broadcast_signal_proxy);
+    world.syscall(signal, broadcast_signal_proxy);
     assert!(world.get_entity(proxy_entity).is_none());
 }
 
@@ -353,20 +353,20 @@ fn test_entity_event()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .init_resource::<TestReactRecorder>();
-    let mut world = &mut app.world;
+    let world = &mut app.world;
 
     let test_entity = world.spawn_empty().id();
 
     // add reactor
-    syscall(&mut world, test_entity, on_entity_event);
+    world.syscall(test_entity, on_entity_event);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // send event (reaction)
-    syscall(&mut world, (test_entity, 222), send_entity_event);
+    world.syscall((test_entity, 222), send_entity_event);
     assert_eq!(world.resource::<TestReactRecorder>().0, 222);
 
     // send event (reaction)
-    syscall(&mut world, (test_entity, 1), send_entity_event);
+    world.syscall((test_entity, 1), send_entity_event);
     assert_eq!(world.resource::<TestReactRecorder>().0, 1);
 }
 
@@ -380,26 +380,26 @@ fn recursive_entity_events()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .init_resource::<TestReactRecorder>();
-    let mut world = &mut app.world;
+    let world = &mut app.world;
 
     let test_entity = world.spawn_empty().id();
 
     // add recursive reactor (no reaction)
-    syscall(&mut world, test_entity, on_entity_event_recursive);
+    world.syscall(test_entity, on_entity_event_recursive);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // send event (only one reaction)
-    syscall(&mut world, (test_entity, 0), send_entity_event);
+    world.syscall((test_entity, 0), send_entity_event);
     assert_eq!(world.resource::<TestReactRecorder>().0, 1);
 
     // send event recursively (two reactions)
     world.resource_mut::<TestReactRecorder>().0 = 0;
-    syscall(&mut world, (test_entity, 1), send_entity_event);
+    world.syscall((test_entity, 1), send_entity_event);
     assert_eq!(world.resource::<TestReactRecorder>().0, 2);
 
     // send event recursively (three reactions)
     world.resource_mut::<TestReactRecorder>().0 = 0;
-    syscall(&mut world, (test_entity, 2), send_entity_event);
+    world.syscall((test_entity, 2), send_entity_event);
     assert_eq!(world.resource::<TestReactRecorder>().0, 3);
 }
 
@@ -413,22 +413,22 @@ fn entity_event_scoping()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .init_resource::<TestReactRecorder>();
-    let mut world = &mut app.world;
+    let world = &mut app.world;
 
     let test_entity_a = world.spawn_empty().id();
     let test_entity_b = world.spawn_empty().id();
 
     // add reactors
-    syscall(&mut world, test_entity_a, on_entity_event_add);
-    syscall(&mut world, test_entity_b, on_entity_event_add);
+    world.syscall(test_entity_a, on_entity_event_add);
+    world.syscall(test_entity_b, on_entity_event_add);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // send event to a
-    syscall(&mut world, (test_entity_a, 1), send_entity_event);
+    world.syscall((test_entity_a, 1), send_entity_event);
     assert_eq!(world.resource::<TestReactRecorder>().0, 1);
 
     // send event to b
-    syscall(&mut world, (test_entity_b, 10), send_entity_event);
+    world.syscall((test_entity_b, 10), send_entity_event);
     assert_eq!(world.resource::<TestReactRecorder>().0, 11);
 }
 
@@ -442,16 +442,16 @@ fn multiple_entity_events_noninterference()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .init_resource::<TestReactRecorder>();
-    let mut world = &mut app.world;
+    let world = &mut app.world;
 
     let test_entity = world.spawn_empty().id();
 
     // add reactor
-    syscall(&mut world, test_entity, on_entity_event_add);
+    world.syscall(test_entity, on_entity_event_add);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // send event (reaction)
-    syscall(&mut world, (test_entity, vec![1, 2, 3]), send_multiple_entity_events);
+    world.syscall((test_entity, vec![1, 2, 3]), send_multiple_entity_events);
     assert_eq!(world.resource::<TestReactRecorder>().0, 6);
 }
 
@@ -464,19 +464,19 @@ fn entity_event_data_is_dropped()
     // setup
     let mut app = App::new();
     app.add_plugins(ReactPlugin);
-    let mut world = &mut app.world;
+    let world = &mut app.world;
 
     let test_entity = world.spawn_empty().id();
     let proxy_entity = world.spawn_empty().id();
     let signal = world.resource::<AutoDespawner>().prepare(proxy_entity);
 
     // add reactors
-    syscall(&mut world, (test_entity, proxy_entity), on_entity_event_proxy);
-    syscall(&mut world, (test_entity, proxy_entity), on_entity_event_proxy);
+    world.syscall((test_entity, proxy_entity), on_entity_event_proxy);
+    world.syscall((test_entity, proxy_entity), on_entity_event_proxy);
 
     // send event (reaction)
     assert!(world.get_entity(proxy_entity).is_some());
-    syscall(&mut world, (test_entity, signal), send_signal_proxy);
+    world.syscall((test_entity, signal), send_signal_proxy);
     assert!(world.get_entity(proxy_entity).is_none());
 }
 
@@ -489,21 +489,21 @@ fn revoke_broadcast_reactor()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .init_resource::<TestReactRecorder>();
-    let mut world = &mut app.world;
+    let world = &mut app.world;
 
     // add reactor
-    let revoke_token = syscall(&mut world, (), on_broadcast);
+    let revoke_token = world.syscall((), on_broadcast);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // send event (reaction)
-    syscall(&mut world, 222, send_broadcast);
+    world.syscall(222, send_broadcast);
     assert_eq!(world.resource::<TestReactRecorder>().0, 222);
 
     // revoke reactor
-    syscall(&mut world, revoke_token, revoke_reactor);
+    world.syscall(revoke_token, revoke_reactor);
 
     // send event (no reaction)
-    syscall(&mut world, 1, send_broadcast);
+    world.syscall(1, send_broadcast);
     assert_eq!(world.resource::<TestReactRecorder>().0, 222);
 }
 
@@ -516,23 +516,23 @@ fn revoke_entity_event_reactor()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .init_resource::<TestReactRecorder>();
-    let mut world = &mut app.world;
+    let world = &mut app.world;
 
     let test_entity = world.spawn_empty().id();
 
     // add reactor
-    let revoke_token = syscall(&mut world, test_entity, on_entity_event);
+    let revoke_token = world.syscall(test_entity, on_entity_event);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // send event (reaction)
-    syscall(&mut world, (test_entity, 222), send_entity_event);
+    world.syscall((test_entity, 222), send_entity_event);
     assert_eq!(world.resource::<TestReactRecorder>().0, 222);
 
     // revoke reactor
-    syscall(&mut world, revoke_token, revoke_reactor);
+    world.syscall(revoke_token, revoke_reactor);
 
     // send event (no reaction)
-    syscall(&mut world, (test_entity, 1), send_entity_event);
+    world.syscall((test_entity, 1), send_entity_event);
     assert_eq!(world.resource::<TestReactRecorder>().0, 222);
 }
 

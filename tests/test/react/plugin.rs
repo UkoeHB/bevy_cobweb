@@ -27,13 +27,13 @@ fn reactor_panic_without_plugin()
 {
     // setup
     let mut app = App::new();
-    let mut world = &mut app.world;
+    let world = &mut app.world;
 
     // entity
     let test_entity = world.spawn_empty().id();
 
     // add reactor (should panic)
-    syscall(&mut world, test_entity, on_entity_insertion);
+    world.syscall(test_entity, on_entity_insertion);
 }
 
 //-------------------------------------------------------------------------------------------------------------------
