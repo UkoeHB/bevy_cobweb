@@ -142,6 +142,20 @@ fn all_reactors()
 
 //-------------------------------------------------------------------------------------------------------------------
 
+// Reactions telescope properly.
+// - Reaction reader data won't be available to system command recursive invocations of the same reactor, nor to other
+//   reactors that can read the same reaction data.
+// - If a reaction of the same data type is triggered recursively, the reactors for that 'inner reaction' will read the
+//   inner data, and then when the pending output reactions run they will read the original data.
+//TODO
+
+//-------------------------------------------------------------------------------------------------------------------
+
+// Reactions can be recursive.
+//TODO
+
+//-------------------------------------------------------------------------------------------------------------------
+
 #[test]
 fn revoke_multiple_reactors()
 {

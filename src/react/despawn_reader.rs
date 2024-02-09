@@ -108,6 +108,14 @@ impl<'w> DespawnEvent<'w>
         if !self.tracker.is_reacting() { return None; }
         Some(self.tracker.source())
     }
+
+    /// Returns `true` if there is nothing to read.
+    ///
+    /// Equivalent to `event.read().is_none()`.
+    pub fn is_empty(&self) -> bool
+    {
+        self.read().is_none()
+    }
 }
 
 //-------------------------------------------------------------------------------------------------------------------

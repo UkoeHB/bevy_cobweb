@@ -158,7 +158,7 @@ fn setup(mut rcommands: ReactCommands)
 {
     // On any entity.
     rcommands.on(insertion::<Health>(),
-        |event: InsertionEvent, q: Query<&React<Health>>|
+        |event: InsertionEvent<Health>, q: Query<&React<Health>>|
         {
             let Some(entity) = event.read() else { return; };
             let health = q.get(entity).unwrap();
@@ -172,7 +172,7 @@ fn setup(mut rcommands: ReactCommands)
 
     // On a specific entity.
     rcommands.on(entity_mutation::<Health>(entity),
-        |event: InsertionEvent, q: Query<&React<Health>>|
+        |event: InsertionEvent<Health>, q: Query<&React<Health>>|
         {
             let Some(entity) = event.read() else { return; };
             let health = q.get(entity).unwrap();

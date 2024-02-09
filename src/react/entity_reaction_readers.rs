@@ -165,6 +165,14 @@ impl<'w, 's, T: ReactComponent> InsertionEvent<'w, 's, T>
 
         Some(self.tracker.source())
     }
+
+    /// Returns `true` if there is nothing to read.
+    ///
+    /// Equivalent to `event.read().is_none()`.
+    pub fn is_empty(&self) -> bool
+    {
+        self.read().is_none()
+    }
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -210,6 +218,14 @@ impl<'w, 's, T: ReactComponent> RemovalEvent<'w, 's, T>
         if component_id != self.component_id.id() { return None; }
 
         Some(self.tracker.source())
+    }
+
+    /// Returns `true` if there is nothing to read.
+    ///
+    /// Equivalent to `event.read().is_none()`.
+    pub fn is_empty(&self) -> bool
+    {
+        self.read().is_none()
     }
 }
 
@@ -258,6 +274,14 @@ impl<'w, 's, T: ReactComponent> MutationEvent<'w, 's, T>
         if component_id != self.component_id.id() { return None; }
 
         Some(self.tracker.source())
+    }
+
+    /// Returns `true` if there is nothing to read.
+    ///
+    /// Equivalent to `event.read().is_none()`.
+    pub fn is_empty(&self) -> bool
+    {
+        self.read().is_none()
     }
 }
 

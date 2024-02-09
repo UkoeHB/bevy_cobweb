@@ -118,6 +118,39 @@ fn recursive_broadcasts()
 
 //-------------------------------------------------------------------------------------------------------------------
 
+// Broadcast events are visible to registered systems only. The BroadcastEvent reader correctly returns the right data.
+//TODO
+
+//-------------------------------------------------------------------------------------------------------------------
+
+// Multiple broadcast events scheduled in a row do not interfere.
+//TODO
+
+//-------------------------------------------------------------------------------------------------------------------
+
+// Test entity events.
+//TODO
+
+//-------------------------------------------------------------------------------------------------------------------
+
+// Recursive entity events.
+//TODO
+
+//-------------------------------------------------------------------------------------------------------------------
+
+// Entity events are visible to registered systems only. The EntityEvent reader correctly returns the right entity and data.
+//TODO
+
+//-------------------------------------------------------------------------------------------------------------------
+
+// Multiple entity events scheduled in a row do not interfere.
+
+//-------------------------------------------------------------------------------------------------------------------
+
+// Reaction data is only despawned after the last reader has run.
+
+//-------------------------------------------------------------------------------------------------------------------
+
 #[test]
 fn revoke_broadcast_reactor()
 {
