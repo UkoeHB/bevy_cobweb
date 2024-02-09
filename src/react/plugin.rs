@@ -22,6 +22,7 @@ pub fn ReactPlugin(app: &mut App)
         .init_resource::<SystemEventAccessTracker>()
         .init_resource::<EntityReactionAccessTracker>()
         .init_resource::<EventAccessTracker>()
+        .init_resource::<DespawnAccessTracker>()
         .setup_auto_despawn()
         .add_systems(Last,
             (

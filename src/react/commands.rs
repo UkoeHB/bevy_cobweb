@@ -192,7 +192,6 @@ impl ReactionCommand
             }
             Self::EntityReaction{ reaction_source, reaction_type, reactor } =>
             {
-dbg!("executing");
                 world.resource_mut::<EntityReactionAccessTracker>().start(reaction_source, reaction_type);
                 syscommand_runner(world, reactor, SystemCommandCleanup::new(end_entity_reaction));
             }

@@ -101,7 +101,6 @@ fn schedule_entity_reaction_impl(
     // queue callbacks
     for sys_handle in callbacks.iter()
     {
-dbg!("reaction command");
         queue.push(
                 ReactionCommand::EntityReaction{
                     reaction_source,
@@ -121,7 +120,6 @@ fn schedule_entity_reaction(
     mut queue           : ResMut<CobwebCommandQueue<ReactionCommand>>,
     entity_reactors     : Query<&EntityReactors>,
 ){
-dbg!("scheduling", entity);
     // get this entity's entity reactors
     let Ok(entity_reactors) = entity_reactors.get(entity) else { return; };
 

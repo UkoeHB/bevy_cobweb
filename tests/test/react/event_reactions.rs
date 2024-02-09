@@ -92,10 +92,12 @@ fn react_recursive_events()
     assert_eq!(world.resource::<TestReactRecorder>().0, 1);
 
     // send event recursively (two reactions)
+    world.resource_mut::<TestReactRecorder>().0 = 0;
     syscall(&mut world, 1, send_event);
     assert_eq!(world.resource::<TestReactRecorder>().0, 2);
 
     // send event recursively (three reactions)
+    world.resource_mut::<TestReactRecorder>().0 = 0;
     syscall(&mut world, 2, send_event);
     assert_eq!(world.resource::<TestReactRecorder>().0, 3);
 }

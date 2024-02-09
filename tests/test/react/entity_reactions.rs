@@ -231,8 +231,9 @@ fn react_component_removal()
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
     // check for removals (reaction)
     schedule_removal_and_despawn_reactors(world);
+    reaction_tree(world);
     assert_eq!(world.resource::<TestReactRecorder>().0, usize::MAX);
-
+ 
     // removal of already removed (no reaction)
     *world.resource_mut::<TestReactRecorder>() = TestReactRecorder::default();
     syscall(&mut world, test_entity_a, remove_from_test_entity);
@@ -244,6 +245,7 @@ fn react_component_removal()
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
     // check for removals (reaction)
     schedule_removal_and_despawn_reactors(world);
+    reaction_tree(world);
     assert_eq!(world.resource::<TestReactRecorder>().0, usize::MAX);
 }
 
@@ -276,6 +278,7 @@ fn react_entity_despawn()
 
     // check for despawns (no reaction before despawn)
     schedule_removal_and_despawn_reactors(world);
+    reaction_tree(world);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // despawn (reaction)
@@ -284,6 +287,7 @@ fn react_entity_despawn()
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
     // check for despawns (reaction)
     schedule_removal_and_despawn_reactors(world);
+    reaction_tree(world);
     assert_eq!(world.resource::<TestReactRecorder>().0, usize::MAX);
 
     // despawn other entity (no reaction)
@@ -325,6 +329,7 @@ fn react_entity_despawn_multiple_reactors()
 
     // check for despawns (no reaction before despawn)
     schedule_removal_and_despawn_reactors(world);
+    reaction_tree(world);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // despawn (reaction)
@@ -333,6 +338,7 @@ fn react_entity_despawn_multiple_reactors()
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
     // check for despawns (reaction)
     schedule_removal_and_despawn_reactors(world);
+    reaction_tree(world);
     assert_eq!(world.resource::<TestReactRecorder>().0, usize::MAX / 2);
 
     // despawn other entity (no reaction)

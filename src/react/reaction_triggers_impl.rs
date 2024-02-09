@@ -65,7 +65,6 @@ fn register_entity_reactor(
     mut commands        : Commands,
     mut entity_reactors : Query<&mut EntityReactors>,
 ){
-dbg!("registering", entity);
     // callback adder
     let add_callback_fn =
         move |entity_reactors: &mut EntityReactors|

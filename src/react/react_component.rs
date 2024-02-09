@@ -31,7 +31,6 @@ impl<C: ReactComponent> React<C>
     /// Mutably access the component and trigger reactions.
     pub fn get_mut<'a>(&'a mut self, rcommands: &mut ReactCommands) -> &'a mut C
     {
-dbg!("triggering", self.entity);
         rcommands.cache.schedule_mutation_reaction::<C>(&mut rcommands.commands, &mut rcommands.react_queue, self.entity);
         &mut self.component
     }
