@@ -88,18 +88,18 @@ fn revoke_event_reactor()
     let mut world = &mut app.world;
 
     // add reactor
-    let revoke_token = syscall(&mut world, (), prep_on_event);
+    let revoke_token = syscall(&mut world, (), on_broadcast);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // send event (reaction)
-    syscall(&mut world, 222, send_event);
+    syscall(&mut world, 222, send_broadcast);
     assert_eq!(world.resource::<TestReactRecorder>().0, 222);
 
     // revoke reactor
     syscall(&mut world, revoke_token, revoke_reactor);
 
     // send event (no reaction)
-    syscall(&mut world, 1, send_event);
+    syscall(&mut world, 1, send_broadcast);
     assert_eq!(world.resource::<TestReactRecorder>().0, 222);
 }
 
@@ -116,11 +116,11 @@ fn revoke_multiple_reactors()
     let mut world = &mut app.world;
 
     // add reactor
-    let revoke_token = syscall(&mut world, (), prep_on_event_or_resource);
+    let revoke_token = syscall(&mut world, (), on_broadcast_or_resource);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // send event (reaction)
-    syscall(&mut world, 222, send_event);
+    syscall(&mut world, 222, send_broadcast);
     assert_eq!(world.resource::<TestReactRecorder>().0, 222);
 
     // mutate resource (reaction)

@@ -11,7 +11,7 @@ use bevy::prelude::*;
 //-------------------------------------------------------------------------------------------------------------------
 
 #[test]
-fn react_event()
+fn broadcast()
 {
     // prepare tracing
     /*
@@ -28,22 +28,22 @@ fn react_event()
     let mut world = &mut app.world;
 
     // add reactor
-    syscall(&mut world, (), prep_on_event);
+    syscall(&mut world, (), on_broadcast);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // send event (reaction)
-    syscall(&mut world, 222, send_event);
+    syscall(&mut world, 222, send_broadcast);
     assert_eq!(world.resource::<TestReactRecorder>().0, 222);
 
     // send event (reaction)
-    syscall(&mut world, 1, send_event);
+    syscall(&mut world, 1, send_broadcast);
     assert_eq!(world.resource::<TestReactRecorder>().0, 1);
 }
 
 //-------------------------------------------------------------------------------------------------------------------
 
 #[test]
-fn react_event_out_of_order()
+fn broadcast_out_of_order()
 {
     // setup
     let mut app = App::new();
@@ -52,22 +52,22 @@ fn react_event_out_of_order()
     let mut world = &mut app.world;
 
     // send event (no reaction)
-    syscall(&mut world, 222, send_event);
+    syscall(&mut world, 222, send_broadcast);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // add reactor (no reaction to prior event)
-    syscall(&mut world, (), prep_on_event);
+    syscall(&mut world, (), on_broadcast);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // send event (reaction)
-    syscall(&mut world, 1, send_event);
+    syscall(&mut world, 1, send_broadcast);
     assert_eq!(world.resource::<TestReactRecorder>().0, 1);
 }
 
 //-------------------------------------------------------------------------------------------------------------------
 
 #[test]
-fn react_recursive_events()
+fn recursive_broadcasts()
 {
     // prepare tracing
     /*
@@ -84,21 +84,21 @@ fn react_recursive_events()
     let mut world = &mut app.world;
 
     // add recursive reactor (no reaction)
-    syscall(&mut world, (), prep_on_event_recursive);
+    syscall(&mut world, (), on_broadcast_recursive);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // send event (only one reaction)
-    syscall(&mut world, 0, send_event);
+    syscall(&mut world, 0, send_broadcast);
     assert_eq!(world.resource::<TestReactRecorder>().0, 1);
 
     // send event recursively (two reactions)
     world.resource_mut::<TestReactRecorder>().0 = 0;
-    syscall(&mut world, 1, send_event);
+    syscall(&mut world, 1, send_broadcast);
     assert_eq!(world.resource::<TestReactRecorder>().0, 2);
 
     // send event recursively (three reactions)
     world.resource_mut::<TestReactRecorder>().0 = 0;
-    syscall(&mut world, 2, send_event);
+    syscall(&mut world, 2, send_broadcast);
     assert_eq!(world.resource::<TestReactRecorder>().0, 3);
 }
 

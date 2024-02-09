@@ -7,12 +7,36 @@ use bevy::prelude::*;
 
 //standard shortcuts
 
+//-------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------
 
+fn register_all_reactors(mut rcommands: ReactCommands)
+{
+    let entity = rcommands.commands().spawn_empty().id();
+
+    rcommands.on(
+            (
+                resource_mutation::<TestReactRes>(),
+                insertion::<TestComponent>(),
+                mutation::<TestComponent>(),
+                removal::<TestComponent>(),
+                entity_insertion::<TestComponent>(entity),
+                entity_mutation::<TestComponent>(entity),
+                entity_removal::<TestComponent>(entity),
+                despawn(entity),
+                broadcast::<()>(),
+                entity_event::<()>(entity),
+            ),
+            || {}
+        );
+}
+
+//-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
 //react chain: component mutation into resource mutation
 #[test]
-fn react_mutation_chain()
+fn mutation_chain()
 {
     // setup
     let mut app = App::new();
@@ -50,7 +74,7 @@ fn react_mutation_chain()
 //-------------------------------------------------------------------------------------------------------------------
 
 #[test]
-fn react_multiple_reactors()
+fn multiple_reactors()
 {
     // setup
     let mut app = App::new();
@@ -60,16 +84,31 @@ fn react_multiple_reactors()
     let mut world = &mut app.world;
 
     // add reactor
-    syscall(&mut world, (), prep_on_event_or_resource);
+    syscall(&mut world, (), on_broadcast_or_resource);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // send event (reaction)
-    syscall(&mut world, 222, send_event);
+    syscall(&mut world, 222, send_broadcast);
     assert_eq!(world.resource::<TestReactRecorder>().0, 222);
 
     // mutate resource (reaction)
     syscall(&mut world, 1, update_react_res);
     assert_eq!(world.resource::<TestReactRecorder>().0, 223);
+}
+
+//-------------------------------------------------------------------------------------------------------------------
+
+// All trigger types can be mixed together in one trigger bundle.
+#[test]
+fn all_reactors()
+{
+    // setup
+    let mut app = App::new();
+    app.add_plugins(ReactPlugin);
+    let mut world = &mut app.world;
+
+    // add reactor
+    syscall(&mut world, (), register_all_reactors);
 }
 
 //-------------------------------------------------------------------------------------------------------------------

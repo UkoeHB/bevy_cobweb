@@ -11,7 +11,7 @@ use bevy::prelude::*;
 //-------------------------------------------------------------------------------------------------------------------
 
 #[test]
-fn react_resource_mutation()
+fn resource_mutation()
 {
     // setup
     let mut app = App::new();
@@ -36,7 +36,7 @@ fn react_resource_mutation()
 //-------------------------------------------------------------------------------------------------------------------
 
 #[test]
-fn react_resource_mutation_once()
+fn resource_mutation_once()
 {
     // setup
     let mut app = App::new();

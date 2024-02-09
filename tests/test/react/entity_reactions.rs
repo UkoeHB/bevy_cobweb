@@ -11,7 +11,7 @@ use bevy::prelude::*;
 //-------------------------------------------------------------------------------------------------------------------
 
 #[test]
-fn react_entity_insertion()
+fn entity_insertion()
 {
     // setup
     let mut app = App::new();
@@ -43,7 +43,7 @@ fn react_entity_insertion()
 //-------------------------------------------------------------------------------------------------------------------
 
 #[test]
-fn react_component_insertion()
+fn component_insertion()
 {
     // setup
     let mut app = App::new();
@@ -79,7 +79,7 @@ fn react_component_insertion()
 //-------------------------------------------------------------------------------------------------------------------
 
 #[test]
-fn react_entity_muation()
+fn entity_muation()
 {
     // setup
     let mut app = App::new();
@@ -119,7 +119,7 @@ fn react_entity_muation()
 //-------------------------------------------------------------------------------------------------------------------
 
 #[test]
-fn react_component_mutation()
+fn component_mutation()
 {
     // setup
     let mut app = App::new();
@@ -155,7 +155,7 @@ fn react_component_mutation()
 //-------------------------------------------------------------------------------------------------------------------
 
 #[test]
-fn react_entity_removal()
+fn entity_removal()
 {
     // setup
     let mut app = App::new();
@@ -201,7 +201,7 @@ fn react_entity_removal()
 //-------------------------------------------------------------------------------------------------------------------
 
 #[test]
-fn react_component_removal()
+fn component_removal()
 {
     // setup
     let mut app = App::new();
@@ -252,7 +252,7 @@ fn react_component_removal()
 //-------------------------------------------------------------------------------------------------------------------
 
 #[test]
-fn react_entity_despawn()
+fn entity_despawn()
 {
     // setup
     let mut app = App::new();
@@ -299,7 +299,7 @@ fn react_entity_despawn()
 //-------------------------------------------------------------------------------------------------------------------
 
 #[test]
-fn react_entity_despawn_multiple_reactors()
+fn entity_despawn_multiple_reactors()
 {
     // setup
     let mut app = App::new();

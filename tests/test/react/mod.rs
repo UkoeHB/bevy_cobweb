@@ -8,8 +8,6 @@ mod revoking_tokens;
 
 // TODO
 
-// A system command correctly executes the target system.
-
 // System events correctly target the right system.
 
 // Entity reactions are correctly readable by only their reader: InsertionEvent, RemovalEvent, MutationEvent, DespawnEvent.
@@ -26,13 +24,7 @@ mod revoking_tokens;
 
 // Multiple broadcast events scheduled in a row do not interfere.
 
-// All trigger types can be mixed together in one trigger bundle.
-
 // A system command, system event, and reaction are all executed in that order even when scheduled out of order.
-
-// System commands telescope properly.
-
-// System commands telescope properly taking into account pre-existing commands.
 
 // System events telescope properly.
 // - If data is not taken, it won't be available to system command recursive invocations of the same system, nor to
@@ -52,8 +44,6 @@ mod revoking_tokens;
 
 // Entity reactions, reactive events, and system events should only be visible to the target systems even with
 // potential readers scheduled in commands (cleanup/apply_deferred ordering).
-
-// System commands can be recursive.
 
 // System events can be recursive.
 

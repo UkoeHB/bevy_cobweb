@@ -86,7 +86,7 @@ pub fn update_test_recorder_with_resource(
 
 //-------------------------------------------------------------------------------------------------------------------
 
-pub fn update_test_recorder_with_event(mut event: BroadcastEvent<IntEvent>, mut recorder: ResMut<TestReactRecorder>)
+pub fn update_test_recorder_with_broadcast(mut event: BroadcastEvent<IntEvent>, mut recorder: ResMut<TestReactRecorder>)
 {
     let Some(event) = event.read() else { return; };
     recorder.0 = event.0;
@@ -94,7 +94,7 @@ pub fn update_test_recorder_with_event(mut event: BroadcastEvent<IntEvent>, mut 
 
 //-------------------------------------------------------------------------------------------------------------------
 
-pub fn update_test_recorder_with_event_and_recurse(
+pub fn update_test_recorder_with_broadcast_and_recurse(
     mut rcommands : ReactCommands,
     mut event     : BroadcastEvent<IntEvent>,
     mut recorder  : ResMut<TestReactRecorder>
@@ -109,7 +109,7 @@ pub fn update_test_recorder_with_event_and_recurse(
 
 //-------------------------------------------------------------------------------------------------------------------
 
-pub fn update_test_recorder_with_event_and_resource(
+pub fn update_test_recorder_with_broadcast_and_resource(
     mut event    : BroadcastEvent<IntEvent>,
     mut recorder : ResMut<TestReactRecorder>,
     resource     : ReactRes<TestReactRes>,
@@ -180,19 +180,20 @@ pub fn on_resource_mutation_once(mut rcommands: ReactCommands) -> RevokeToken
     rcommands.once(resource_mutation::<TestReactRes>(), update_test_recorder_with_resource)
 }
 
-pub fn prep_on_event(mut rcommands: ReactCommands) -> RevokeToken
+pub fn on_broadcast(mut rcommands: ReactCommands) -> RevokeToken
 {
-    rcommands.on(broadcast::<IntEvent>(), update_test_recorder_with_event)
+    rcommands.on(broadcast::<IntEvent>(), update_test_recorder_with_broadcast)
 }
 
-pub fn prep_on_event_recursive(mut rcommands: ReactCommands) -> RevokeToken
+pub fn on_broadcast_recursive(mut rcommands: ReactCommands) -> RevokeToken
 {
-    rcommands.on(broadcast::<IntEvent>(), update_test_recorder_with_event_and_recurse)
+    rcommands.on(broadcast::<IntEvent>(), update_test_recorder_with_broadcast_and_recurse)
 }
 
-pub fn prep_on_event_or_resource(mut rcommands: ReactCommands) -> RevokeToken
+pub fn on_broadcast_or_resource(mut rcommands: ReactCommands) -> RevokeToken
 {
-    rcommands.on((broadcast::<IntEvent>(), resource_mutation::<TestReactRes>()), update_test_recorder_with_event_and_resource)
+    rcommands.on((broadcast::<IntEvent>(), resource_mutation::<TestReactRes>()),
+        update_test_recorder_with_broadcast_and_resource)
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -234,7 +235,7 @@ pub fn update_react_res(
 
 //-------------------------------------------------------------------------------------------------------------------
 
-pub fn send_event(In(data): In<usize>, mut rcommands: ReactCommands)
+pub fn send_broadcast(In(data): In<usize>, mut rcommands: ReactCommands)
 {
     rcommands.broadcast(IntEvent(data));
 }
