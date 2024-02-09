@@ -28,17 +28,31 @@ pub struct React<C: ReactComponent>
 
 impl<C: ReactComponent> React<C>
 {
-    /// Mutably access the component and trigger reactions.
+    /// Mutably accesses the component and trigger reactions.
     pub fn get_mut<'a>(&'a mut self, rcommands: &mut ReactCommands) -> &'a mut C
     {
         rcommands.cache.schedule_mutation_reaction::<C>(&mut rcommands.commands, &mut rcommands.react_queue, self.entity);
         &mut self.component
     }
 
-    /// Mutably access the component without triggering reactions.
+    /// Mutably accesses the component without triggering reactions.
     pub fn get_mut_noreact(&mut self) -> &mut C
     {
         &mut self.component
+    }
+
+    /// Sets the component value and triggers mutations only if the value will change.
+    ///
+    /// Returns the previous value if it changed.
+    pub fn set_if_not_eq(&mut self, rcommands: &mut ReactCommands, new: C) -> Option<C>
+    where
+        C: Eq
+    {
+        if new == self.component { return None; }
+
+        rcommands.cache.schedule_mutation_reaction::<C>(&mut rcommands.commands, &mut rcommands.react_queue, self.entity);
+        let old = std::mem::replace(&mut self.component, new);
+        Some(old)
     }
 
     /// Unwrap the `React`.

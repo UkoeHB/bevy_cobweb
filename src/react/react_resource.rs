@@ -30,26 +30,40 @@ struct ReactResInner<R: ReactResource>
 impl<R: ReactResource> ReactResInner<R>
 {
     /// New react resource.
-    pub fn new(resource: R) -> Self
+    fn new(resource: R) -> Self
     {
         Self{ resource }
     }
 
     /// Mutably access the resource and trigger reactions.
-    pub fn get_mut<'a>(&'a mut self, rcommands: &mut ReactCommands) -> &'a mut R
+    fn get_mut<'a>(&'a mut self, rcommands: &mut ReactCommands) -> &'a mut R
     {
         rcommands.trigger_resource_mutation::<R>();
         &mut self.resource
     }
 
     /// Mutably access the resource without triggering reactions.
-    pub fn get_mut_noreact(&mut self) -> &mut R
+    fn get_mut_noreact(&mut self) -> &mut R
     {
         &mut self.resource
     }
 
+    /// Sets the resource value and triggers mutations only if the value will change.
+    ///
+    /// Returns the previous value if it changed.
+    fn set_if_not_eq(&mut self, rcommands: &mut ReactCommands, new: R) -> Option<R>
+    where
+        R: Eq
+    {
+        if new == self.resource { return None; }
+
+        rcommands.trigger_resource_mutation::<R>();
+        let old = std::mem::replace(&mut self.resource, new);
+        Some(old)
+    }
+
     /// Unwrap the resource.
-    pub fn take(self) -> R
+    fn take(self) -> R
     {
         self.resource
     }
@@ -120,6 +134,16 @@ impl<'w, R: ReactResource> ReactResMut<'w, R>
     pub fn get_mut_noreact(&mut self) -> &mut R
     {
         self.inner.get_mut_noreact()
+    }
+
+    /// Sets the resource value and triggers mutations only if the value will change.
+    ///
+    /// Returns the previous value if it changed.
+    pub fn set_if_not_eq(&mut self, rcommands: &mut ReactCommands, new: R) -> Option<R>
+    where
+        R: Eq
+    {
+        self.inner.set_if_not_eq(rcommands, new)
     }
 }
 
