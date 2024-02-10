@@ -28,7 +28,7 @@ pub struct React<C: ReactComponent>
 
 impl<C: ReactComponent> React<C>
 {
-    /// Mutably accesses the component and trigger reactions.
+    /// Mutably accesses the component and triggers reactions.
     pub fn get_mut<'a>(&'a mut self, rcommands: &mut ReactCommands) -> &'a mut C
     {
         rcommands.cache.schedule_mutation_reaction::<C>(&mut rcommands.commands, &mut rcommands.react_queue, self.entity);

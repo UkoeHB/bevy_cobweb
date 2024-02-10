@@ -63,6 +63,46 @@ fn register_all_reactors(mut rcommands: ReactCommands)
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
+/// Here the reactor receives a broadcast event containing its own id, then schedules itself as a follow-up system
+/// command. The follow-up should not read the event data.
+fn reaction_telescoping_data_visibility_impl(mut rcommands: ReactCommands)
+{
+    let null_reader = rcommands.commands().spawn_system_command(
+            |event: BroadcastEvent<SystemCommand>|
+            {
+                assert!(event.is_empty());
+            }
+        );
+
+    let mut count = 0;
+    let broadcast_reader = rcommands.commands().spawn_system_command(
+            move |mut commands: Commands, event: BroadcastEvent<SystemCommand>|
+            {
+                match count
+                {
+                    0 =>
+                    {
+                        let command = event.read().unwrap();
+                        commands.add(*command);
+                        commands.add(null_reader);
+                        count += 1;
+                    }
+                    _ =>
+                    {
+                        assert!(event.is_empty());
+                        commands.add(null_reader);
+                    }
+                }
+            }
+        );
+
+    rcommands.with(broadcast::<SystemCommand>(), broadcast_reader);
+    rcommands.broadcast(broadcast_reader);
+}
+
+//-------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------
+
 //react chain: component mutation into resource mutation
 #[test]
 fn mutation_chain()
@@ -142,15 +182,19 @@ fn all_reactors()
 
 //-------------------------------------------------------------------------------------------------------------------
 
-// Reactions can be recursive.
-//TODO
-
-//-------------------------------------------------------------------------------------------------------------------
-
 // Reactions telescope properly.
 // - Reaction reader data won't be available to system command recursive invocations of the same reactor, nor to other
 //   reactors that can read the same reaction data.
-//TODO
+#[test]
+fn reaction_telescoping_data_visibility()
+{
+    // setup
+    let mut app = App::new();
+    app.add_plugins(ReactPlugin);
+    let world = &mut app.world;
+
+    world.syscall((), reaction_telescoping_data_visibility_impl);
+}
 
 //-------------------------------------------------------------------------------------------------------------------
 

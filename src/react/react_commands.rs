@@ -202,8 +202,35 @@ impl<'w, 's> ReactCommands<'w, 's>
     ) -> RevokeToken
     {
         let sys_id = self.commands.spawn_system_command(reactor);
-        let sys_handle = self.despawner.prepare(*sys_id);
+        self.with(triggers, sys_id)
+    }
 
+    /// Registers a reactor triggered by ECS changes with a pre-defined [`SystemCommand`].
+    ///
+    /// You can tie a reactor to multiple reaction triggers.
+    /// Duplicate triggers will be ignored.
+    ///
+    /// Reactions are not merged together. If you register a reactor for triggers
+    /// `(resource_mutation::<A>(), resource_mutation::<B>())`, then mutate `A` and `B` in succession, the reactor will
+    /// execute twice.
+    ///
+    /// Note that you can call this method multiple times for the same [`SystemCommand`] to increase the number
+    /// of triggers.
+    /// Revoking any of the associated revoke tokens will *despawn* the system command, and cause a *memory leak*
+    /// because the trigger entries for the other tokens won't be cleaned up (unless you also revoke those tokens).
+    ///
+    /// Example:
+    /// ```no_run
+    /// let command = rcommands.commands().spawn_system_command(my_reactor_system);
+    /// rcommands.with((resource_mutation::<MyRes>(), mutation::<MyComponent>()), command);
+    /// ```
+    pub fn with(
+        &mut self,
+        triggers : impl ReactionTriggerBundle,
+        sys_id   : SystemCommand,
+    ) -> RevokeToken
+    {
+        let sys_handle = self.despawner.prepare(*sys_id);
         reactor_registration(self, &sys_handle, triggers)
     }
 

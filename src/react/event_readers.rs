@@ -154,6 +154,14 @@ impl<'w, 's, T: Send + Sync + 'static> BroadcastEvent<'w, 's, T>
 
         Some(data.read())
     }
+
+    /// Returns `true` if there is nothing to read.
+    ///
+    /// Equivalent to `event.read().is_none()`.
+    pub fn is_empty(&self) -> bool
+    {
+        self.read().is_none()
+    }
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -200,6 +208,14 @@ impl<'w, 's, T: Send + Sync + 'static> EntityEvent<'w, 's, T>
         let Ok(data) = self.data.get(self.tracker.data_entity()) else { return None; };
 
         Some(data.read())
+    }
+
+    /// Returns `true` if there is nothing to read.
+    ///
+    /// Equivalent to `event.read().is_none()`.
+    pub fn is_empty(&self) -> bool
+    {
+        self.read().is_none()
     }
 }
 

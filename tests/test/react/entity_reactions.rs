@@ -104,6 +104,34 @@ fn on_any_entity_mutation(In(entity): In<Entity>, mut rcommands: ReactCommands) 
         )
 }
 
+fn on_mutation_recursive(mut rcommands: ReactCommands) -> RevokeToken
+{
+    rcommands.on((insertion::<TestComponent>(), mutation::<TestComponent>()),
+        move
+        |
+            mut rcommands     : ReactCommands,
+            insertion         : InsertionEvent<TestComponent>,
+            mutation          : MutationEvent<TestComponent>,
+            mut test_entities : Query<&mut React<TestComponent>>,
+            mut recorder      : ResMut<TestReactRecorder>
+        |
+        {
+            let entity = match (insertion.read(), mutation.read())
+            {
+                (Some(entity), None) => entity,
+                (None, Some(entity)) => entity,
+                _                    => unreachable!(),
+            };
+            recorder.0 += 1;
+
+            // recurse until the component is 0
+            let mut component = test_entities.get_mut(entity).unwrap();
+            if component.0 == 0 { return; }
+            component.get_mut(&mut rcommands).0 -= 1;
+        }
+    )
+}
+
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
@@ -725,6 +753,29 @@ fn despawn_reactor_no_cleanup()
     assert!(world.get_entity(proxy_entity).is_some());
     reaction_tree(world);
     assert!(world.get_entity(proxy_entity).is_some());
+}
+
+//-------------------------------------------------------------------------------------------------------------------
+
+// Recursive entity mutation.
+#[test]
+fn recursive_mutation()
+{
+    // setup
+    let mut app = App::new();
+    app.add_plugins(ReactPlugin)
+        .init_resource::<TestReactRecorder>();
+    let world = &mut app.world;
+
+    let test_entity = world.spawn_empty().id();
+
+    // add recursive reactor (no reaction)
+    world.syscall((), on_mutation_recursive);
+    assert_eq!(world.resource::<TestReactRecorder>().0, 0);
+
+    // trigger recursive mutation
+    world.syscall((test_entity, TestComponent(3)), insert_on_test_entity);
+    assert_eq!(world.resource::<TestReactRecorder>().0, 4);  //insert + -3
 }
 
 //-------------------------------------------------------------------------------------------------------------------
