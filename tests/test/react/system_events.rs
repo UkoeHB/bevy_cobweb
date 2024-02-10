@@ -29,13 +29,13 @@ fn basic_system_events_impl(mut commands: Commands) -> Vec<usize>
     let parent = commands.spawn_system_command(
         move |mut commands: Commands|
         {
-            commands.send_system_event(command1, 10usize);
-            commands.send_system_event(command2, 20usize);
+            commands.send_system_event(command1, 1usize);
+            commands.send_system_event(command2, 2usize);
         }
     );
     commands.add(parent);
 
-    vec![10, 20]
+    vec![1, 2]
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -176,6 +176,16 @@ fn send_proxy_entity_system_event_and_ignore(In(signal): In<AutoDespawnSignal>, 
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
+fn send_proxy_entity_system_event_to_nonexistent(In(signal): In<AutoDespawnSignal>, mut commands: Commands)
+{
+    let command1 = commands.spawn_system_command(|| { });
+    commands.add(bevy::ecs::system::Despawn{ entity: *command1 });
+    commands.send_system_event(command1, signal);
+}
+
+//-------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------
+
 // System events correctly target the right system.
 #[test]
 fn basic_system_events()
@@ -279,4 +289,25 @@ fn system_event_data_is_dropped_on_ignore()
     world.syscall(signal, send_proxy_entity_system_event_and_ignore);
     assert!(world.get_entity(proxy_entity).is_none());
 }
+
+//-------------------------------------------------------------------------------------------------------------------
+
+// If a system event is sent, it should be cleaned up if no systems/reactors run
+// because the target system doesn't exist.
+#[test]
+fn system_event_cleanup_on_no_run()
+{
+    // setup
+    let mut app = App::new();
+    app.add_plugins(ReactPlugin);
+    let world = &mut app.world;
+
+    let proxy_entity = world.spawn_empty().id();
+    let signal = world.resource::<AutoDespawner>().prepare(proxy_entity);
+
+    // send signal via system event
+    world.syscall(signal, send_proxy_entity_system_event_to_nonexistent);
+    assert!(world.get_entity(proxy_entity).is_none());
+}
+
 //-------------------------------------------------------------------------------------------------------------------

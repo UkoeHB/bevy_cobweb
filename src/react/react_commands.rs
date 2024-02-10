@@ -98,7 +98,7 @@ impl<'w, 's> ReactCommands<'w, 's>
     /// - Reactors can read the event with the [`BroadcastEvent`] system parameter.
     pub fn broadcast<E: Send + Sync + 'static>(&mut self, event: E)
     {
-        self.cache.schedule_event_reaction::<E>(&mut self.commands, &mut self.react_queue, event);
+        self.cache.schedule_broadcast_reaction::<E>(&mut self.commands, &mut self.react_queue, event);
     }
 
     /// Sends an entity-targeted event.

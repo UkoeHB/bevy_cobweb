@@ -345,6 +345,28 @@ fn broadcast_data_is_dropped()
 
 //-------------------------------------------------------------------------------------------------------------------
 
+// If a broadcast event is sent, it should be cleaned up if no systems/reactors run
+// because the target system doesn't exist.
+#[test]
+fn broadcast_event_cleanup_on_no_run()
+{
+    // setup
+    let mut app = App::new();
+    app.add_plugins(ReactPlugin);
+    let world = &mut app.world;
+
+    let proxy_entity = world.spawn_empty().id();
+    let signal = world.resource::<AutoDespawner>().prepare(proxy_entity);
+
+    // send event without any listeners
+    assert!(world.get_entity(proxy_entity).is_some());
+    world.syscall(signal, broadcast_signal_proxy);
+    reaction_tree(world);  //garbabe collect the entity
+    assert!(world.get_entity(proxy_entity).is_none());
+}
+
+//-------------------------------------------------------------------------------------------------------------------
+
 // Test entity events.
 #[test]
 fn test_entity_event()
@@ -477,6 +499,29 @@ fn entity_event_data_is_dropped()
     // send event (reaction)
     assert!(world.get_entity(proxy_entity).is_some());
     world.syscall((test_entity, signal), send_signal_proxy);
+    assert!(world.get_entity(proxy_entity).is_none());
+}
+
+//-------------------------------------------------------------------------------------------------------------------
+
+// If an entity event is sent, it should be cleaned up if no systems/reactors run
+// because the target system doesn't exist.
+#[test]
+fn entity_event_cleanup_on_no_run()
+{
+    // setup
+    let mut app = App::new();
+    app.add_plugins(ReactPlugin);
+    let world = &mut app.world;
+
+    let test_entity = world.spawn_empty().id();
+    let proxy_entity = world.spawn_empty().id();
+    let signal = world.resource::<AutoDespawner>().prepare(proxy_entity);
+
+    // send event
+    assert!(world.get_entity(proxy_entity).is_some());
+    world.syscall((test_entity, signal), send_signal_proxy);
+    reaction_tree(world);  //garbabe collect the entity
     assert!(world.get_entity(proxy_entity).is_none());
 }
 

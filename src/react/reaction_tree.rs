@@ -31,25 +31,33 @@ pub(crate) fn syscommand_runner(world: &mut World, command: SystemCommand, clean
     // cleanup
     garbage_collect_entities(world);
 
+    // On abort we perform garbage collection in case the cleanup auto-despawns entities.
+    let cleanup_on_abort = |world: &mut World|
+    {
+        cleanup.run(world);
+        garbage_collect_entities(world);
+        schedule_removal_and_despawn_reactors(world);
+    };
+
     // extract the callback
     let Some(mut entity_mut) = world.get_entity_mut(*command)
     else
     {
-        cleanup.run(world);
+        (cleanup_on_abort)(world);
         return;
     };
     let Some(mut system_command) = entity_mut.get_mut::<SystemCommandStorage>()
     else
     {
         tracing::error!(?command, "system command component is missing");
-        cleanup.run(world);
+        (cleanup_on_abort)(world);
         return;
     };
     let Some(mut callback) = system_command.take()
     else
     {
         tracing::warn!(?command, "system command missing");
-        cleanup.run(world);
+        (cleanup_on_abort)(world);
         return;
     };
 

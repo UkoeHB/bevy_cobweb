@@ -546,7 +546,7 @@ impl ReactCache
     }
 
     /// Queues reactions to a broadcasted event.
-    pub(crate) fn schedule_event_reaction<E: Send + Sync + 'static>(
+    pub(crate) fn schedule_broadcast_reaction<E: Send + Sync + 'static>(
         &mut self,
         commands : &mut Commands,
         queue    : &mut CobwebCommandQueue<ReactionCommand>,
@@ -554,8 +554,11 @@ impl ReactCache
     ){
         let Some(handlers) = self.broadcast_reactors.get(&TypeId::of::<E>()) else { return; };
 
-        let data_entity = commands.spawn(BroadcastEventData::new(event)).id();
+        // if there are no handlers, just drop the event data
         let num = handlers.len();
+        if num == 0 { return; }
+
+        let data_entity = commands.spawn(BroadcastEventData::new(event)).id();
 
         for (idx, sys_handle) in handlers.iter().enumerate()
         {
@@ -582,8 +585,11 @@ impl ReactCache
     ){
         let Some(handlers) = self.entity_event_reactors.get(&(target, TypeId::of::<E>())) else { return; };
 
-        let data_entity = commands.spawn(EntityEventData::new(target, event)).id();
+        // if there are no handlers, just drop the event data
         let num = handlers.len();
+        if num == 0 { return; }
+
+        let data_entity = commands.spawn(EntityEventData::new(target, event)).id();
 
         for (idx, sys_handle) in handlers.iter().enumerate()
         {
