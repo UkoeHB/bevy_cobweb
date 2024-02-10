@@ -160,7 +160,7 @@ pub(crate) struct ReactCache
     resource_reactors: HashMap<TypeId, Vec<AutoDespawnSignal>>,
 
     /// Broadcast event reactors
-    event_reactors: HashMap<TypeId, Vec<AutoDespawnSignal>>,
+    broadcast_reactors: HashMap<TypeId, Vec<AutoDespawnSignal>>,
     /// Entity event reactors
     entity_event_reactors: HashMap<(Entity, TypeId), Vec<AutoDespawnSignal>>,
 }
@@ -242,14 +242,14 @@ impl ReactCache
         ReactorType::ResourceMutation(TypeId::of::<R>())
     }
 
-    pub(crate) fn register_event_reactor<E: 'static>(&mut self, sys_handle: &AutoDespawnSignal) -> ReactorType
+    pub(crate) fn register_broadcast_reactor<E: 'static>(&mut self, sys_handle: &AutoDespawnSignal) -> ReactorType
     {
-        self.event_reactors
+        self.broadcast_reactors
             .entry(TypeId::of::<E>())
             .or_default()
             .push(sys_handle.clone());
 
-        ReactorType::Event(TypeId::of::<E>())
+        ReactorType::Broadcast(TypeId::of::<E>())
     }
 
     pub(crate) fn register_entity_event_reactor<E: 'static>(
@@ -328,10 +328,10 @@ impl ReactCache
     }
 
     /// Revokes an event reactor.
-    pub(crate) fn revoke_event_reactor(&mut self, event_id: TypeId, reactor_id: u64)
+    pub(crate) fn revoke_broadcast_reactor(&mut self, event_id: TypeId, reactor_id: u64)
     {
         // get callbacks
-        let Some(callbacks) = self.event_reactors.get_mut(&event_id) else { return; };
+        let Some(callbacks) = self.broadcast_reactors.get_mut(&event_id) else { return; };
 
         // revoke reactor
         for (idx, sys_handle) in callbacks.iter().enumerate()
@@ -343,7 +343,7 @@ impl ReactCache
 
         // cleanup empty hashmap entries
         if callbacks.len() > 0 { return; }
-        let _ = self.event_reactors.remove(&event_id);
+        let _ = self.broadcast_reactors.remove(&event_id);
     }
 
     /// Revokes an entity event reactor.
@@ -362,7 +362,7 @@ impl ReactCache
 
         // cleanup empty hashmap entries
         if callbacks.len() > 0 { return; }
-        let _ = self.event_reactors.remove(&event_id);
+        let _ = self.broadcast_reactors.remove(&event_id);
     }
 
     /// Revokes a despawn reactor.
@@ -552,7 +552,7 @@ impl ReactCache
         queue    : &mut CobwebCommandQueue<ReactionCommand>,
         event    : E,
     ){
-        let Some(handlers) = self.event_reactors.get(&TypeId::of::<E>()) else { return; };
+        let Some(handlers) = self.broadcast_reactors.get(&TypeId::of::<E>()) else { return; };
 
         let data_entity = commands.spawn(BroadcastEventData::new(event)).id();
         let num = handlers.len();
@@ -619,7 +619,7 @@ impl Default for ReactCache
             despawn_sender,
             despawn_receiver,
             resource_reactors     : HashMap::new(),
-            event_reactors        : HashMap::new(),
+            broadcast_reactors    : HashMap::new(),
             entity_event_reactors : HashMap::new(),
         }
     }

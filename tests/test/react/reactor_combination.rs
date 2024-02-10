@@ -103,6 +103,41 @@ fn reaction_telescoping_data_visibility_impl(mut rcommands: ReactCommands)
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
+#[derive(Resource, Default, Deref, DerefMut)]
+struct TelescopeHistory(Vec<usize>);
+
+/// Here there are two reactors to broadcasts of `usize`. The first reactor will broadcast a new event recursively
+/// until the event data reaches zero. The second reactor should be telescoped 'outside' the first reactor.
+///
+/// Returns the expected event history after the reaction tree is processed.
+fn reaction_telescoping_inner_reactions_impl(mut rcommands: ReactCommands) -> Vec<usize>
+{
+    rcommands.on(broadcast::<usize>(),
+            move |mut rcommands: ReactCommands, event: BroadcastEvent<usize>, mut history: ResMut<TelescopeHistory>|
+            {
+                let data = *event.read().unwrap();
+                history.push(data);
+
+                if data == 0 { return; }
+                rcommands.broadcast(data - 1);
+            }
+        );
+    rcommands.on(broadcast::<usize>(),
+            move |event: BroadcastEvent<usize>, mut history: ResMut<TelescopeHistory>|
+            {
+                let data = *event.read().unwrap();
+                history.push(data);
+            }
+        );
+
+    rcommands.broadcast(3usize);
+
+    vec![3, 2, 1, 0, 0, 1, 2, 3]
+}
+
+//-------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------
+
 //react chain: component mutation into resource mutation
 #[test]
 fn mutation_chain()
@@ -201,7 +236,18 @@ fn reaction_telescoping_data_visibility()
 // Reactions telescope properly.
 // - If a reaction of the same data type is triggered recursively, the reactors for that 'inner reaction' will read the
 //   inner data, and then when the pending output reactions run they will read the original data.
-//TODO
+#[test]
+fn reaction_telescoping_inner_reactions()
+{
+    // setup
+    let mut app = App::new();
+    app.add_plugins(ReactPlugin)
+        .init_resource::<TelescopeHistory>();
+    let world = &mut app.world;
+
+    let expected = world.syscall((), reaction_telescoping_inner_reactions_impl);
+    assert_eq!(expected, **world.resource::<TelescopeHistory>());
+}
 
 //-------------------------------------------------------------------------------------------------------------------
 

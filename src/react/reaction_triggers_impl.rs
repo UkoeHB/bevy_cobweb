@@ -272,7 +272,7 @@ impl<E: Send + Sync + 'static> ReactionTrigger for BroadcastEventTrigger<E>
 {
     fn register(self, rcommands: &mut ReactCommands, sys_handle: &AutoDespawnSignal) -> Option<ReactorType>
     {
-        Some(rcommands.cache.register_event_reactor::<E>(sys_handle))
+        Some(rcommands.cache.register_broadcast_reactor::<E>(sys_handle))
     }
 }
 

@@ -166,9 +166,9 @@ impl<'w, 's> ReactCommands<'w, 's>
                 {
                     self.cache.revoke_resource_mutation_reactor(res_id, id);
                 }
-                ReactorType::Event(event_id) =>
+                ReactorType::Broadcast(event_id) =>
                 {
-                    self.cache.revoke_event_reactor(event_id, id);
+                    self.cache.revoke_broadcast_reactor(event_id, id);
                 }
                 ReactorType::EntityEvent(entity, event_id) =>
                 {

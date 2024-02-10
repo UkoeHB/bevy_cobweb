@@ -67,7 +67,7 @@ pub enum ReactorType
     ComponentMutation(TypeId),
     ComponentRemoval(TypeId),
     ResourceMutation(TypeId),
-    Event(TypeId),
+    Broadcast(TypeId),
     EntityEvent(Entity, TypeId),
     Despawn(Entity),
 }
