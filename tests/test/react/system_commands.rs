@@ -67,9 +67,6 @@ fn system_command_telescoping_impl(mut commands: Commands) -> Vec<usize>
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
-#[derive(Resource, Deref, DerefMut)]
-struct SavedSystemCommand(Option<SystemCommand>);
-
 fn system_command_recursion_impl(mut commands: Commands) -> Vec<usize>
 {
     let command1 = commands.spawn_system_command(
@@ -94,7 +91,7 @@ fn system_command_recursion_impl(mut commands: Commands) -> Vec<usize>
         move |mut commands: Commands, mut history: ResMut<TelescopeHistory>, mut saved: ResMut<SavedSystemCommand>|
         {
             history.push(0);
-            saved.0 = Some(command1);
+            **saved = Some(command1);
             commands.add(command1);
         }
     );
