@@ -29,6 +29,11 @@ pub struct TestReactRecorder(pub usize);
 
 //-------------------------------------------------------------------------------------------------------------------
 
+#[derive(Resource, Default, Deref, DerefMut)]
+pub struct TelescopeHistory(Vec<usize>);
+
+//-------------------------------------------------------------------------------------------------------------------
+
 pub fn infinitize_test_recorder(mut recorder: ResMut<TestReactRecorder>)
 {
     recorder.0 = usize::MAX;

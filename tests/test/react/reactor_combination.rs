@@ -103,9 +103,6 @@ fn reaction_telescoping_data_visibility_impl(mut rcommands: ReactCommands)
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
-#[derive(Resource, Default, Deref, DerefMut)]
-struct TelescopeHistory(Vec<usize>);
-
 /// Here there are two reactors to broadcasts of `usize`. The first reactor will broadcast a new event recursively
 /// until the event data reaches zero. The second reactor should be telescoped 'outside' the first reactor.
 ///
