@@ -1,8 +1,9 @@
 # Changelog
 
-## [WIP]
+## [0.0.2]
 
-- Initial release.
+- Add reactivity primitives.
+
 
 ## 0.0.1
 
