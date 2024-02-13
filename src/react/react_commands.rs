@@ -68,10 +68,9 @@ fn revoke_entity_reactor(
 #[derive(SystemParam)]
 pub struct ReactCommands<'w, 's>
 {
-    pub(crate) commands    : Commands<'w, 's>,
-    pub(crate) react_queue : ResMut<'w, CobwebCommandQueue<ReactionCommand>>,
-    pub(crate) cache       : ResMut<'w, ReactCache>,
-    pub(crate) despawner   : Res<'w, AutoDespawner>,
+    pub(crate) commands  : Commands<'w, 's>,
+    pub(crate) cache     : ResMut<'w, ReactCache>,
+    pub(crate) despawner : Res<'w, AutoDespawner>,
 }
 
 impl<'w, 's> ReactCommands<'w, 's>
@@ -89,7 +88,7 @@ impl<'w, 's> ReactCommands<'w, 's>
     {
         let Some(mut entity_commands) = self.commands.get_entity(entity) else { return; };
         entity_commands.try_insert( React{ entity, component } );
-        self.cache.schedule_insertion_reaction::<C>(&mut self.commands, &mut self.react_queue, entity);
+        self.cache.schedule_insertion_reaction::<C>(&mut self.commands, entity);
     }
 
     /// Sends a broadcasted event.
@@ -98,7 +97,7 @@ impl<'w, 's> ReactCommands<'w, 's>
     /// - Reactors can read the event with the [`BroadcastEvent`] system parameter.
     pub fn broadcast<E: Send + Sync + 'static>(&mut self, event: E)
     {
-        self.cache.schedule_broadcast_reaction::<E>(&mut self.commands, &mut self.react_queue, event);
+        self.cache.schedule_broadcast_reaction::<E>(&mut self.commands, event);
     }
 
     /// Sends an entity-targeted event.
@@ -107,7 +106,7 @@ impl<'w, 's> ReactCommands<'w, 's>
     /// - Reactors can read the event with the [`EntityEvent`] system parameter.
     pub fn entity_event<E: Send + Sync + 'static>(&mut self, entity: Entity, event: E)
     {
-        self.cache.schedule_entity_event_reaction::<E>(&mut self.commands, &mut self.react_queue, entity, event);
+        self.cache.schedule_entity_event_reaction::<E>(&mut self.commands, entity, event);
     }
 
     /// Triggers resource mutation reactions.
@@ -115,7 +114,7 @@ impl<'w, 's> ReactCommands<'w, 's>
     /// Useful for initializing state after a reactor is registered.
     pub fn trigger_resource_mutation<R: ReactResource + Send + Sync + 'static>(&mut self)
     {
-        self.cache.schedule_resource_mutation_reaction::<R>(&mut self.commands, &mut self.react_queue);
+        self.cache.schedule_resource_mutation_reaction::<R>(&mut self.commands);
     }
 
     /// Revokes a reactor.

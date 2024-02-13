@@ -388,7 +388,6 @@ impl ReactCache
     pub(crate) fn schedule_insertion_reaction<C: ReactComponent>(
         &mut self,
         commands : &mut Commands,
-        queue    : &mut CobwebCommandQueue<ReactionCommand>,
         entity   : Entity
     ){
         // entity-specific component reactors
@@ -405,7 +404,7 @@ impl ReactCache
         let Some(handlers) = self.component_reactors.get(&TypeId::of::<C>()) else { return; };
         for sys_handle in handlers.insertion_callbacks.iter()
         {
-            queue.push(
+            commands.add(
                     ReactionCommand::EntityReaction{
                         reaction_source : entity,
                         reaction_type   : EntityReactionType::Insertion(TypeId::of::<C>()),
@@ -419,7 +418,6 @@ impl ReactCache
     pub(crate) fn schedule_mutation_reaction<C: ReactComponent>(
         &mut self,
         commands : &mut Commands,
-        queue    : &mut CobwebCommandQueue<ReactionCommand>,
         entity   : Entity
     ){
         // entity-specific component reactors
@@ -436,7 +434,7 @@ impl ReactCache
         let Some(handlers) = self.component_reactors.get(&TypeId::of::<C>()) else { return; };
         for sys_handle in handlers.mutation_callbacks.iter()
         {
-            queue.push(
+            commands.add(
                     ReactionCommand::EntityReaction{
                         reaction_source : entity,
                         reaction_type   : EntityReactionType::Mutation(TypeId::of::<C>()),
@@ -529,27 +527,22 @@ impl ReactCache
     pub(crate) fn schedule_resource_mutation_reaction<R: ReactResource>(
         &mut self,
         commands : &mut Commands,
-        queue    : &mut CobwebCommandQueue<ReactionCommand>
     ){
         let Some(handlers) = self.resource_reactors.get(&TypeId::of::<R>()) else { return; };
         for sys_handle in handlers.iter()
         {
-            queue.push(
+            commands.add(
                 ReactionCommand::Resource{
                     reactor: SystemCommand(sys_handle.entity()),
                 }
             );
         }
-
-        // reaction tree
-        commands.add(reaction_tree);
     }
 
     /// Queues reactions to a broadcasted event.
     pub(crate) fn schedule_broadcast_reaction<E: Send + Sync + 'static>(
         &mut self,
         commands : &mut Commands,
-        queue    : &mut CobwebCommandQueue<ReactionCommand>,
         event    : E,
     ){
         let Some(handlers) = self.broadcast_reactors.get(&TypeId::of::<E>()) else { return; };
@@ -562,7 +555,7 @@ impl ReactCache
 
         for (idx, sys_handle) in handlers.iter().enumerate()
         {
-            queue.push(
+            commands.add(
                 ReactionCommand::Event{
                     data_entity,
                     reactor     : SystemCommand(sys_handle.entity()),
@@ -570,16 +563,12 @@ impl ReactCache
                 }
             );
         }
-
-        // reaction tree
-        commands.add(reaction_tree);
     }
 
     /// Queues reactions to an entity event.
     pub(crate) fn schedule_entity_event_reaction<E: Send + Sync + 'static>(
         &mut self,
         commands : &mut Commands,
-        queue    : &mut CobwebCommandQueue<ReactionCommand>,
         target   : Entity,
         event    : E,
     ){
@@ -593,7 +582,7 @@ impl ReactCache
 
         for (idx, sys_handle) in handlers.iter().enumerate()
         {
-            queue.push(
+            commands.add(
                 ReactionCommand::Event{
                     data_entity,
                     reactor     : SystemCommand(sys_handle.entity()),
@@ -601,9 +590,6 @@ impl ReactCache
                 }
             );
         }
-
-        // reaction tree
-        commands.add(reaction_tree);
     }
 }
 
