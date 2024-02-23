@@ -57,7 +57,7 @@ fn end_event_with_cleanup(world: &mut World)
 /// A system command.
 ///
 /// System commands are stored on entities and must be manually scheduled with
-/// [`commands.apply()`](bevy::prelude::Commands::apply) or
+/// [`command.apply()`](bevy::ecs::system::Command::apply) or
 /// [`commands.send_system_event()`](super::ReactCommandsExt::send_system_event).
 ///
 /// You can spawn your own system command with

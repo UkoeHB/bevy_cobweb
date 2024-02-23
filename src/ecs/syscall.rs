@@ -33,7 +33,7 @@ where
 /// # Examples
 ///
 /// ```
-/// use bevy_kot::ecs::*;
+/// use bevy_cobweb::prelude::*;
 /// use bevy::prelude::*;
 /// 
 /// // normal system: takes an input and sets a local

@@ -86,7 +86,7 @@ where
 ///
 /// Returns a cleanup handle. The system will be dropped when the last copy of the handle is dropped.
 ///
-/// Panics if [`setup_auto_despawn()`] was not added to your app.
+/// Panics if [`setup_auto_despawn()`](AutoDespawnAppExt::setup_auto_despawn) was not added to your app.
 pub fn spawn_rc_system<I, O, S, Marker>(world: &mut World, system: S) -> AutoDespawnSignal
 where
     I: Send + Sync + 'static,
@@ -100,7 +100,7 @@ where
 ///
 /// Returns a cleanup handle. The system will be dropped when the last copy of the handle is dropped.
 ///
-/// Panics if [`setup_auto_despawn()`] was not added to your app.
+/// Panics if [`setup_auto_despawn()`](AutoDespawnAppExt::setup_auto_despawn) was not added to your app.
 pub fn spawn_rc_system_from<I, O>(world: &mut World, system: CallbackSystem<I, O>) -> AutoDespawnSignal
 where
     I: Send + Sync + 'static,
@@ -119,7 +119,7 @@ where
 /// # Example
 ///
 /// ```
-/// use bevy_kot_ecs::*;
+/// use bevy_cobweb::prelude::*;
 /// use bevy::prelude::*;
 /// 
 /// fn test_system(In(input): In<u16>, mut local: Local<u16>) -> u16

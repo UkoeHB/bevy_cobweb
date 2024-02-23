@@ -135,7 +135,7 @@ pub fn spawn_system_command_from(world: &mut World, callback: SystemCommandCallb
 ///
 /// Returns a cleanup handle. The system will be dropped when the last copy of the handle is dropped.
 ///
-/// Panics if [`setup_auto_despawn()`] was not added to your app.
+/// Panics if [`setup_auto_despawn()`](AutoDespawnAppExt::setup_auto_despawn) was not added to your app.
 pub fn spawn_rc_system_command<S, Marker>(world: &mut World, system: S) -> AutoDespawnSignal
 where
     S: IntoSystem<(), (), Marker> + Send + Sync + 'static,
@@ -150,7 +150,7 @@ where
 ///
 /// Returns a cleanup handle. The system will be dropped when the last copy of the handle is dropped.
 ///
-/// Panics if [`setup_auto_despawn()`] was not added to your app.
+/// Panics if [`setup_auto_despawn()`](AutoDespawnAppExt::setup_auto_despawn) was not added to your app.
 pub fn spawn_rc_system_command_from(world: &mut World, callback: SystemCommandCallback) -> AutoDespawnSignal
 {
     let system_command = spawn_system_command_from(world, callback);

@@ -93,7 +93,7 @@ impl<'w, 's> ReactCommands<'w, 's>
 
     /// Sends a broadcasted event.
     /// - Reactions are enacted after `apply_deferred` is invoked.
-    /// - Reactors can listen for the event with the [`event()`] trigger.
+    /// - Reactors can listen for the event with the [`broadcast()`] trigger.
     /// - Reactors can read the event with the [`BroadcastEvent`] system parameter.
     pub fn broadcast<E: Send + Sync + 'static>(&mut self, event: E)
     {

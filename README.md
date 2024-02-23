@@ -8,7 +8,7 @@ Bevy Cobweb is a general-purpose reactivity framework for Bevy. It includes core
 
 ## Reactivity Features
 
-- Register systems as [`SystemCommands`](bevy_cobweb::SystemCommand) that are stored on entities.
+- Register systems as [`SystemCommands`](bevy_cobweb::prelude::SystemCommand) that are stored on entities.
 - System commands can be scheduled manually at any time.
 - System commands can react to ECS mutations: resource mutations, component insertions/mutations/removals, entity despawns.
 - System commands can react to events: broadcasted events and entity-targeted events.

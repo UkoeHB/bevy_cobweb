@@ -24,14 +24,7 @@ pub fn ReactPlugin(app: &mut App)
         .init_resource::<EventAccessTracker>()
         .init_resource::<DespawnAccessTracker>()
         .setup_auto_despawn()
-        .add_systems(Last,
-            (
-                schedule_removal_and_despawn_reactors,
-                reaction_tree,
-            )
-                .chain()
-                .after(AutoDespawnSet)
-        );
+        .add_systems(Last, reaction_tree.after(AutoDespawnSet));
 }
 
 //-------------------------------------------------------------------------------------------------------------------

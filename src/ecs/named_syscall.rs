@@ -24,7 +24,7 @@ use std::hash::{Hash, Hasher};
 /// # Examples
 ///
 /// ```
-/// use bevy_kot::ecs::*;
+/// use bevy_cobweb::prelude::*;
 /// use bevy::prelude::*;
 /// 
 /// fn test_system(In(input): In<u16>, mut local: Local<u16>) -> u16
