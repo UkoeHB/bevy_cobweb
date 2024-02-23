@@ -1,9 +1,9 @@
 //local shortcuts
 use crate::prelude::*;
-use bevy_kot_utils::Sender;
 
 //third-party shortcuts
 use bevy::prelude::*;
+use crossbeam::channel::Sender;
 
 //standard shortcuts
 use core::any::TypeId;

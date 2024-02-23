@@ -56,4 +56,5 @@ UI libraries based on `bevy_cobweb` are:
 
 | `bevy` | `bevy_cobweb` |
 |-------|----------------|
-| 0.12  | 0.1 - master   |
+| 0.13  | 0.0.4 - master |
+| 0.12  | 0.0.1 - 0.0.3  |

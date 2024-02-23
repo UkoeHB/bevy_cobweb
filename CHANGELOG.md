@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.0.4]
+
+### Changed
+
+- Update to Bevy v0.13
+
 ## [0.0.3]
 
 ### Fixed

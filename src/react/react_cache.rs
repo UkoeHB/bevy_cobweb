@@ -1,10 +1,10 @@
 //local shortcuts
 use crate::prelude::*;
-use bevy_kot_utils::*;
 
 //third-party shortcuts
 use bevy::prelude::*;
 use bevy::utils::{HashMap, HashSet};
+use crossbeam::channel::{Receiver, Sender};
 
 //standard shortcuts
 use core::any::TypeId;
@@ -502,7 +502,7 @@ impl ReactCache
     /// Queues reactions to tracked despawns.
     pub(crate) fn schedule_despawn_reactions(&mut self, world: &mut World)
     {
-        while let Some(despawned_entity) = self.despawn_receiver.try_recv()
+        while let Ok(despawned_entity) = self.despawn_receiver.try_recv()
         {
             let Some(mut despawn_reactors) = self.despawn_reactors.remove(&despawned_entity) else { continue; };
 
@@ -598,7 +598,7 @@ impl Default for ReactCache
     fn default() -> Self
     {
         // prep despawn channel
-        let (despawn_sender, despawn_receiver) = new_channel::<Entity>();
+        let (despawn_sender, despawn_receiver) = crossbeam::channel::unbounded();
 
         Self{
             in_reaction_tree      : false,

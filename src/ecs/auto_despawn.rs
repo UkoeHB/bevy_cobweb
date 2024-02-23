@@ -1,8 +1,8 @@
 //local shortcuts
-use bevy_kot_utils::*;
 
 //third-party shortcuts
 use bevy::prelude::*;
+use crossbeam::channel::{Receiver, Sender};
 
 //standard shortcuts
 use std::sync::Arc;
@@ -51,7 +51,7 @@ impl AutoDespawner
 {
     fn new() -> Self
     {
-        let (sender, receiver) = new_channel();
+        let (sender, receiver) = crossbeam::channel::unbounded();
         Self{ sender, receiver }
     }
 
@@ -66,7 +66,7 @@ impl AutoDespawner
     /// Removes one pending despawned entity.
     pub(crate) fn try_recv(&self) -> Option<Entity>
     {
-         self.receiver.try_recv()
+         self.receiver.try_recv().ok()
     }
 }
 

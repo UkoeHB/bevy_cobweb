@@ -166,7 +166,7 @@ fn setup(mut rcommands: ReactCommands)
         }
     );
 
-    // The insertion reactor will only be triggered if the reactor is already registered.
+    // Trigger the any-entity insertion reactor.
     let entity = rcommands.commands().spawn_empty().id();
     rcommands.insert(entity, Health(0u16));
 
@@ -285,7 +285,7 @@ Each tier expands in a telescoping fashion. When one `Command` is done running, 
 ### Innovations
 
 There are two important innovations that the `bevy_cobweb` command-resolver algorithm introduces.
-- **Rearranged `apply_deferred`**: It is a fact that any Bevy system can have internally deferred logic that is saved in system parameters. After a system runs, that deferred logic can be applied by calling `system.apply_deferred(&mut world)`. The problem with this is if the deferred logic includes triggers to run the same system again (e.g. because of reactivity), an error will occur because the system is currently in use. To solve this, `bevy_cobweb` only uses `apply_deferred` to apply the first command tier. Everything else is executed after the system has been returned to the world.
+- **Rearranged `apply_deferred`**: Any Bevy system can have internally deferred logic that is saved in system parameters. After a system runs, that deferred logic can be applied by calling `system.apply_deferred(&mut world)`. The problem with this is if the deferred logic includes triggers to run the same system again (e.g. because of reactivity), an error will occur because the system is currently in use. To solve this, `bevy_cobweb` only uses `apply_deferred` to apply the first command tier. Everything else is executed after the system has been returned to the world.
 - **Injected cleanup**: In `bevy_cobweb` you access reactive event data with the [`InsertionEvent`](bevy_cobweb::InsertionEvent), [`MutationEvent`](bevy_cobweb::MutationEvent), [`RemovalEvent`](bevy_cobweb::RemovalEvent), [`DespawnEvent`](bevy_cobweb::DespawnEvent), [`BroadcastEvent`](bevy_cobweb::BroadcastEvent), [`EntityEvent`](bevy_cobweb::EntityEvent), and [`SystemEvent`](bevy_cobweb::SystemEvent) system parameters. In order to properly set the underlying data of these parameters such that future system calls won't accidentally have access to that data, our strategy is to insert the data to custom resources and entities immediately before running node systems and then remove that data immediately after the system has run but before calling `apply_deferred`. We do this with an injected cleanup callback in the system runner.
 
 
