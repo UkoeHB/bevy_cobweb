@@ -1,3 +1,8 @@
+//documentation
+#![doc = include_str!("REACT.md")]
+#[allow(unused_imports)]
+use crate as bevy_cobweb;
+
 //module tree
 mod command_queue;
 mod commands;
