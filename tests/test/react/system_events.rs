@@ -179,7 +179,7 @@ fn send_proxy_entity_system_event_and_ignore(In(signal): In<AutoDespawnSignal>, 
 fn send_proxy_entity_system_event_to_nonexistent(In(signal): In<AutoDespawnSignal>, mut commands: Commands)
 {
     let command1 = commands.spawn_system_command(|| { });
-    commands.add(bevy::ecs::system::Despawn{ entity: *command1 });
+    commands.add(move |world: &mut World| { world.despawn(*command1); });
     commands.send_system_event(command1, signal);
 }
 
