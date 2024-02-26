@@ -200,8 +200,8 @@ impl<'w, 's> ReactCommands<'w, 's>
         reactor  : impl IntoSystem<(), (), M> + Send + Sync + 'static
     ) -> RevokeToken
     {
-        let sys_id = self.commands.spawn_system_command(reactor);
-        self.with(triggers, sys_id)
+        let sys_command = self.commands.spawn_system_command(reactor);
+        self.with(triggers, sys_command)
     }
 
     /// Registers a reactor triggered by ECS changes with a pre-defined [`SystemCommand`].
@@ -225,12 +225,36 @@ impl<'w, 's> ReactCommands<'w, 's>
     /// ```
     pub fn with(
         &mut self,
-        triggers : impl ReactionTriggerBundle,
-        sys_id   : SystemCommand,
+        triggers    : impl ReactionTriggerBundle,
+        sys_command : SystemCommand,
     ) -> RevokeToken
     {
-        let sys_handle = self.despawner.prepare(*sys_id);
+        let sys_handle = self.despawner.prepare(*sys_command);
         reactor_registration(self, &sys_handle, triggers)
+    }
+
+    /// Registers a reactor triggered by ECS changes and runs it immediately once.
+    ///
+    /// See [`ReactCommands::on`] for details.
+    ///
+    /// This is useful if you need to initialize data that is updated by a reactor.
+    ///
+    /// Equivalent to:
+    /// ```no_run
+    /// let sys_command = rcommands.commands().spawn_system_command(my_reactor_system);
+    /// rcommands.with(resource_mutation::<MyRes>(), sys_command);
+    /// rcommands.commands().add(sys_command);
+    /// ```
+    pub fn register_and_run_once<M>(
+        &mut self,
+        triggers : impl ReactionTriggerBundle,
+        reactor  : impl IntoSystem<(), (), M> + Send + Sync + 'static
+    ) -> RevokeToken
+    {
+        let sys_command = self.commands.spawn_system_command(reactor);
+        let token = self.with(triggers, sys_command);
+        self.commands.add(sys_command);
+        token
     }
 
     /// Registers a one-off reactor triggered by ECS changes.

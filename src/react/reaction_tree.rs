@@ -49,7 +49,7 @@ pub(crate) fn syscommand_runner(world: &mut World, command: SystemCommand, clean
     let Some(mut system_command) = entity_mut.get_mut::<SystemCommandStorage>()
     else
     {
-        tracing::error!(?command, "system command component is missing");
+        tracing::error!(?command, "system command component is missing on extract");
         (cleanup_on_abort)(world);
         return;
     };
@@ -81,7 +81,7 @@ pub(crate) fn syscommand_runner(world: &mut World, command: SystemCommand, clean
         else
         {
             std::mem::drop(callback);
-            tracing::error!(?command, "system command component is missing");
+            tracing::error!(?command, "system command component is missing on insert");
         }
     }
     else
