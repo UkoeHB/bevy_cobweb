@@ -164,14 +164,14 @@ where
 
 //-------------------------------------------------------------------------------------------------------------------
 
-pub trait SystemCallerCommandsExt
+pub trait SpawnedSyscallCommandsExt
 {
     /// Schedule a system to be spawned.
     ///
     /// Systems are not initialized until they are first run.
     ///
     /// Returns the system id that will eventually reference the spawned system. It can be used to invoke the system with
-    /// [`spawned_syscall()`] or [`SystemCallerCommandsExt::spawned_syscall()`].
+    /// [`spawned_syscall()`] or [`SpawnedSyscallCommandsExt::spawned_syscall()`].
     fn spawn_system<I, O, S, Marker>(&mut self, system: S) -> SysId
     where
         I: Send + Sync + 'static,
@@ -181,7 +181,7 @@ pub trait SystemCallerCommandsExt
     /// Schedule a system to be spawned.
     ///
     /// Returns the system id that will eventually reference the spawned system. It can be used to invoke the system with
-    /// [`spawned_syscall()`] or [`SystemCallerCommandsExt::spawned_syscall()`].
+    /// [`spawned_syscall()`] or [`SpawnedSyscallCommandsExt::spawned_syscall()`].
     fn spawn_system_from<I, O>(&mut self, system: CallbackSystem<I, O>) -> SysId
     where
         I: Send + Sync + 'static,
@@ -199,14 +199,6 @@ pub trait SystemCallerCommandsExt
         O: Send + Sync + 'static,
         S: IntoSystem<I, O, Marker> + Send + Sync + 'static;
 
-    /// Schedule a system call.
-    ///
-    /// Syntax sugar for [`syscall()`].
-    fn syscall<I, S, Marker>(&mut self, input: I, system: S)
-    where
-        I: Send + Sync + 'static,
-        S: IntoSystem<I, (), Marker> + Send + Sync + 'static;
-
     /// Schedule a spawned system call.
     ///
     /// It is the responsibility of the caller to correctly match the system entity with the target system signature.
@@ -219,7 +211,7 @@ pub trait SystemCallerCommandsExt
         I: Send + Sync + 'static;
 }
 
-impl<'w, 's> SystemCallerCommandsExt for Commands<'w, 's>
+impl<'w, 's> SpawnedSyscallCommandsExt for Commands<'w, 's>
 {
     fn spawn_system<I, O, S, Marker>(&mut self, system: S) -> SysId
     where
@@ -248,14 +240,6 @@ impl<'w, 's> SystemCallerCommandsExt for Commands<'w, 's>
         entity.insert(SpawnedSystem::new(CallbackSystem::new(system)));
 
         Ok(())
-    }
-
-    fn syscall<I, S, Marker>(&mut self, input: I, system: S)
-    where
-        I: Send + Sync + 'static,
-        S: IntoSystem<I, (), Marker> + Send + Sync + 'static,
-    {
-        self.add(move |world: &mut World| syscall(world, input, system));
     }
 
     fn spawned_syscall<I>(&mut self, sys_id: SysId, input: I)

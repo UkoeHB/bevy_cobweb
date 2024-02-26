@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.6]
+
+### Fixed
+
+- Remove `syscall` from `SpawnedSyscallCommandsExt`.
+
+
 ## [0.0.5]
 
 ### Added
