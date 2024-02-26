@@ -2,7 +2,7 @@
 
 **This crate is under development.**
 
-Bevy Cobweb is a general-purpose reactivity framework for Bevy. It includes core reactivity primitives (system events, reaction triggers, reactive events, and reaction tree processing), and a toolkit for building webs of interconnected, stateful Bevy systems that react to ECS mutations.
+Bevy Cobweb is a general-purpose reactivity framework for Bevy. It includes general ECS utilities and core reactivity primitives (system events, reaction triggers, reactive events, and reaction tree processing).
 
 
 

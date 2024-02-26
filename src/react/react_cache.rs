@@ -196,84 +196,63 @@ impl ReactCache
         self.removal_checkers.push(RemovalChecker::new::<C>());
     }
 
-    pub(crate) fn register_insertion_reactor<C: ReactComponent>(&mut self, sys_handle: &AutoDespawnSignal) -> ReactorType
+    pub(crate) fn register_insertion_reactor<C: ReactComponent>(&mut self, sys_handle: AutoDespawnSignal)
     {
         self.component_reactors
             .entry(TypeId::of::<C>())
             .or_default()
             .insertion_callbacks
-            .push(sys_handle.clone());
-
-        ReactorType::ComponentInsertion(TypeId::of::<C>())
+            .push(sys_handle);
     }
 
-    pub(crate) fn register_mutation_reactor<C: ReactComponent>(&mut self, sys_handle: &AutoDespawnSignal) -> ReactorType
+    pub(crate) fn register_mutation_reactor<C: ReactComponent>(&mut self, sys_handle: AutoDespawnSignal)
     {
         self.component_reactors
             .entry(TypeId::of::<C>())
             .or_default()
             .mutation_callbacks
-            .push(sys_handle.clone());
-
-        ReactorType::ComponentMutation(TypeId::of::<C>())
+            .push(sys_handle);
     }
 
-    pub(crate) fn register_removal_reactor<C: ReactComponent>(&mut self, sys_handle: &AutoDespawnSignal) -> ReactorType
+    pub(crate) fn register_removal_reactor<C: ReactComponent>(&mut self, sys_handle: AutoDespawnSignal)
     {
         self.component_reactors
             .entry(TypeId::of::<C>())
             .or_default()
             .removal_callbacks
-            .push(sys_handle.clone());
-
-        ReactorType::ComponentRemoval(TypeId::of::<C>())
+            .push(sys_handle);
     }
 
-    pub(crate) fn register_resource_mutation_reactor<R: ReactResource>(
-        &mut self,
-        sys_handle: &AutoDespawnSignal,
-    ) -> ReactorType
+    pub(crate) fn register_resource_mutation_reactor<R: ReactResource>(&mut self, sys_handle: AutoDespawnSignal)
     {
         self.resource_reactors
             .entry(TypeId::of::<R>())
             .or_default()
-            .push(sys_handle.clone());
-
-        ReactorType::ResourceMutation(TypeId::of::<R>())
+            .push(sys_handle);
     }
 
-    pub(crate) fn register_broadcast_reactor<E: 'static>(&mut self, sys_handle: &AutoDespawnSignal) -> ReactorType
+    pub(crate) fn register_broadcast_reactor<E: 'static>(&mut self, sys_handle: AutoDespawnSignal)
     {
         self.broadcast_reactors
             .entry(TypeId::of::<E>())
             .or_default()
-            .push(sys_handle.clone());
-
-        ReactorType::Broadcast(TypeId::of::<E>())
+            .push(sys_handle);
     }
 
-    pub(crate) fn register_entity_event_reactor<E: 'static>(
-        &mut self,
-        target     : Entity,
-        sys_handle : &AutoDespawnSignal
-    ) -> ReactorType
+    pub(crate) fn register_entity_event_reactor<E: 'static>(&mut self, target: Entity, sys_handle: AutoDespawnSignal)
     {
         self.entity_event_reactors
             .entry((target, TypeId::of::<E>()))
             .or_default()
-            .push(sys_handle.clone());
-
-        ReactorType::EntityEvent(target, TypeId::of::<E>())
+            .push(sys_handle);
     }
 
-    pub(crate) fn register_despawn_reactor(&mut self, entity: Entity, sys_handle: &AutoDespawnSignal) -> ReactorType
+    pub(crate) fn register_despawn_reactor(&mut self, entity: Entity, sys_handle: AutoDespawnSignal)
     {
         self.despawn_reactors
             .entry(entity)
             .or_default()
-            .push(sys_handle.clone());
-
-        ReactorType::Despawn(entity)
+            .push(sys_handle);
     }
 
     /// Revokes a component insertion reactor.
@@ -386,22 +365,19 @@ impl ReactCache
 
     /// Queues reactions to a component insertion on an entity.
     pub(crate) fn schedule_insertion_reaction<C: ReactComponent>(
-        &mut self,
-        commands : &mut Commands,
-        entity   : Entity
+        In(entity)   : In<Entity>,
+        cache        : Res<ReactCache>,
+        mut commands : Commands
     ){
         // entity-specific component reactors
-        commands.add(
-                move |world: &mut World|
-                syscall(world, (EntityReactionType::Insertion(TypeId::of::<C>()), entity), schedule_entity_reaction)
-            );
+        commands.syscall((EntityReactionType::Insertion(TypeId::of::<C>()), entity), schedule_entity_reaction);
 
         // reaction tree
         // - Must do this before early-outs.
         commands.add(reaction_tree);
 
         // entity-agnostic component reactors
-        let Some(handlers) = self.component_reactors.get(&TypeId::of::<C>()) else { return; };
+        let Some(handlers) = cache.component_reactors.get(&TypeId::of::<C>()) else { return; };
         for sys_handle in handlers.insertion_callbacks.iter()
         {
             commands.add(
@@ -416,22 +392,19 @@ impl ReactCache
 
     /// Queues reactions to a component mutation on an entity.
     pub(crate) fn schedule_mutation_reaction<C: ReactComponent>(
-        &mut self,
-        commands : &mut Commands,
-        entity   : Entity
+        In(entity)   : In<Entity>,
+        cache        : Res<ReactCache>,
+        mut commands : Commands
     ){
         // entity-specific component reactors
-        commands.add(
-                move |world: &mut World|
-                syscall(world, (EntityReactionType::Mutation(TypeId::of::<C>()), entity), schedule_entity_reaction)
-            );
+        commands.syscall((EntityReactionType::Mutation(TypeId::of::<C>()), entity), schedule_entity_reaction);
 
         // reaction tree
         // - Must do this before early-outs.
         commands.add(reaction_tree);
 
         // entity-agnostic component reactors
-        let Some(handlers) = self.component_reactors.get(&TypeId::of::<C>()) else { return; };
+        let Some(handlers) = cache.component_reactors.get(&TypeId::of::<C>()) else { return; };
         for sys_handle in handlers.mutation_callbacks.iter()
         {
             commands.add(
@@ -502,6 +475,7 @@ impl ReactCache
     /// Queues reactions to tracked despawns.
     pub(crate) fn schedule_despawn_reactions(&mut self, world: &mut World)
     {
+        let mut queue = world.resource_mut::<CobwebCommandQueue<ReactionCommand>>();
         while let Ok(despawned_entity) = self.despawn_receiver.try_recv()
         {
             let Some(mut despawn_reactors) = self.despawn_reactors.remove(&despawned_entity) else { continue; };
@@ -510,7 +484,7 @@ impl ReactCache
             for sys_handle in despawn_reactors.drain(..)
             {
                 let system_entity = sys_handle.entity();
-                world.resource_mut::<CobwebCommandQueue<ReactionCommand>>().push(
+                queue.push(
                         ReactionCommand::Despawn{
                             reaction_source : despawned_entity,
                             reactor         : SystemCommand(system_entity),
@@ -525,10 +499,10 @@ impl ReactCache
 
     /// Queues reactions to a resource mutation.
     pub(crate) fn schedule_resource_mutation_reaction<R: ReactResource>(
-        &mut self,
-        commands : &mut Commands,
+        cache        : Res<ReactCache>,
+        mut commands : Commands
     ){
-        let Some(handlers) = self.resource_reactors.get(&TypeId::of::<R>()) else { return; };
+        let Some(handlers) = cache.resource_reactors.get(&TypeId::of::<R>()) else { return; };
         for sys_handle in handlers.iter()
         {
             commands.add(
@@ -541,11 +515,11 @@ impl ReactCache
 
     /// Queues reactions to a broadcasted event.
     pub(crate) fn schedule_broadcast_reaction<E: Send + Sync + 'static>(
-        &mut self,
-        commands : &mut Commands,
-        event    : E,
+        In(event)    : In<E>,
+        cache        : Res<ReactCache>,
+        mut commands : Commands
     ){
-        let Some(handlers) = self.broadcast_reactors.get(&TypeId::of::<E>()) else { return; };
+        let Some(handlers) = cache.broadcast_reactors.get(&TypeId::of::<E>()) else { return; };
 
         // if there are no handlers, just drop the event data
         let num = handlers.len();
@@ -567,12 +541,11 @@ impl ReactCache
 
     /// Queues reactions to an entity event.
     pub(crate) fn schedule_entity_event_reaction<E: Send + Sync + 'static>(
-        &mut self,
-        commands : &mut Commands,
-        target   : Entity,
-        event    : E,
+        In((target, event)) : In<(Entity, E)>,
+        cache               : Res<ReactCache>,
+        mut commands        : Commands
     ){
-        let Some(handlers) = self.entity_event_reactors.get(&(target, TypeId::of::<E>())) else { return; };
+        let Some(handlers) = cache.entity_event_reactors.get(&(target, TypeId::of::<E>())) else { return; };
 
         // if there are no handlers, just drop the event data
         let num = handlers.len();

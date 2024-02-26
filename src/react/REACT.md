@@ -9,7 +9,7 @@ Reactivity is built on system commands, system events, a core reactivity API, an
 
 Systems can be spawned as [`SystemCommands`](bevy_cobweb::prelude::SystemCommand) with [`Commands::spawn_system_command`](bevy_cobweb::prelude::ReactCommandsExt::spawn_system_command). System commands are similar to Bevy one-shot systems, however the actual system is wrapped in a closure that takes `World` and a [`SystemCommandCleanup`](bevy_cobweb::prelude::SystemCommandCleanup) as input. See [Scheduling](#scheduling) for more details.
 
-An example:
+Example:
 ```rust
 let syscommand = commands.spawn_system_command(
     |weebles: Res<Weebles>|
@@ -22,7 +22,7 @@ let syscommand = commands.spawn_system_command(
 
 ### Running System Commands
 
-A [`SystemCommand`](bevy_cobweb::prelude::SystemCommand) can be manually run by scheduling it as a simple Bevy `Command`. Scheduling a system command will cause a reaction tree to run (see [Scheduling](#scheduling)).
+A [`SystemCommand`](bevy_cobweb::prelude::SystemCommand) can be manually run by scheduling it as a Bevy `Command`. Scheduling a system command will cause a reaction tree to run (see [Scheduling](#scheduling)).
 
 ```rust
 commands.add(syscommand);
@@ -56,7 +56,7 @@ commands.send_system_event(syscommand, vec![0, 18, 42]);
 
 In `bevy_cobweb`, reactivity revolves around the [`ReactCommands`](bevy_cobweb::prelude::ReactCommands) system parameter.
 
-We use custom reactivity instead of Bevy change detection in order to achieve precise, responsive, recursive reactions with an ergonomic API that correctly integrates with `bevy_cobweb`'s web toolkit. This means ECS reactivity is only implemented for [`ReactResource`](bevy_cobweb::prelude::ReactResource) resources and [`ReactComponent`](bevy_cobweb::prelude::ReactComponent) components, which are accessed with [`ReactRes`](bevy_cobweb::prelude::ReactRes)/[`ReactResMut`](bevy_cobweb::prelude::ReactResMut) system parameters and the [`React<C>`](bevy_cobweb::prelude::React) component wrapper respectively. When Bevy implements [observers](https://github.com/bevyengine/bevy/pull/10839), we expect those inconveniences to be eliminated.
+We use custom reactivity instead of Bevy change detection in order to achieve precise, responsive, recursive reactions with an ergonomic API. This means ECS reactivity is only implemented for [`ReactResource`](bevy_cobweb::prelude::ReactResource) resources and [`ReactComponent`](bevy_cobweb::prelude::ReactComponent) components, which are accessed with [`ReactRes`](bevy_cobweb::prelude::ReactRes)/[`ReactResMut`](bevy_cobweb::prelude::ReactResMut) system parameters and the [`React<C>`](bevy_cobweb::prelude::React) component wrapper respectively. When Bevy implements [observers](https://github.com/bevyengine/bevy/pull/10839), we expect those inconveniences to be eliminated.
 
 A reactor will run in the first `apply_deferred` after its reaction trigger is detected. If a reactor triggers other reactors, they will run immediately after the initial reactor in a telescoping fashion until the entire tree of reactions terminates. Recursive reactions are fully supported. For more details see [Scheduling](#scheduling).
 
@@ -276,7 +276,7 @@ Conceptually, the four tiers are as follows:
 
 1. Inner-system commands: single-system ECS mutations and system-specific deferred logic. These use Bevy `Commands`.
 1. System commands: execution of a single system. One [`SystemCommand`](bevy_cobweb::prelude::SystemCommand) can schedule further system commands, which can be considered 'extensions' of their parent in a functional-programming sense.
-1. System events: sending data to a system which triggers it to run. In the context of the web toolkit, system events may trigger a cascade of system commands that all together constitute a 'web transaction'. System events scheduled by other system events are then considered follow-up transactions, rather than extensions of the originating event.
+1. System events: sending data to a system which triggers it to run. System events scheduled by other system events are then considered follow-up transactions, rather than extensions of the originating event.
 1. Reactions: ECS mutations or reactive events that trigger a system to run. A single reaction may result in a single system running, a cascade of system commands, or a cascade of system commands followed by a series of system events. Reactions may also trigger other reactions, which will run after the previous reaction has fully resolved itself (after all system commands and events have been recursively processed).
 
 Each tier expands in a telescoping fashion. When one `Command` is done running, all commands queued by that `Command` are immediately executed before any previous commands, and so on for the other tiers.

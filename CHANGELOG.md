@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.0.7]
+
+### Added
+
+- `ReactCommands::register_and_run_once`
+
+### Fixed
+
+- All `ReactCommands` actions are now deferred to ensure there is no partial mutation of the react state when a given command is applied.
+
+
 ## [0.0.6]
 
 ### Fixed

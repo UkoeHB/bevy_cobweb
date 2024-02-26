@@ -17,14 +17,15 @@ use std::sync::Arc;
 /// normal systems that don't trigger other reactions.
 pub fn schedule_removal_and_despawn_reactors(world: &mut World)
 {
-    let mut react_cache = world.remove_resource::<ReactCache>().unwrap();
-    react_cache.schedule_removal_reactions(world);
-    react_cache.schedule_despawn_reactions(world);
-    world.insert_resource(react_cache);
+    let mut cache = world.remove_resource::<ReactCache>().unwrap();
+    cache.schedule_removal_reactions(world);
+    cache.schedule_despawn_reactions(world);
+    world.insert_resource(cache);
 }
 
 //-------------------------------------------------------------------------------------------------------------------
 
+/// Component that stores reactor handles that target a specific entity.
 #[derive(Component)]
 pub(crate) struct EntityReactors
 {

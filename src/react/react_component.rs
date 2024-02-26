@@ -31,7 +31,7 @@ impl<C: ReactComponent> React<C>
     /// Mutably accesses the component and triggers reactions.
     pub fn get_mut<'a>(&'a mut self, rcommands: &mut ReactCommands) -> &'a mut C
     {
-        rcommands.cache.schedule_mutation_reaction::<C>(&mut rcommands.commands, self.entity);
+        rcommands.commands.syscall(self.entity, ReactCache::schedule_mutation_reaction::<C>);
         &mut self.component
     }
 
@@ -50,7 +50,7 @@ impl<C: ReactComponent> React<C>
     {
         if new == self.component { return None; }
 
-        rcommands.cache.schedule_mutation_reaction::<C>(&mut rcommands.commands, self.entity);
+        rcommands.commands.syscall(self.entity, ReactCache::schedule_mutation_reaction::<C>);
         let old = std::mem::replace(&mut self.component, new);
         Some(old)
     }

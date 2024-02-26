@@ -11,25 +11,15 @@ use bevy::prelude::*;
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
-fn revoke_reactor_triggers(In(revoke_token): In<RevokeToken>, mut rcommands: ReactCommands)
-{
-    rcommands.revoke(revoke_token);
-}
-
-//-------------------------------------------------------------------------------------------------------------------
-//-------------------------------------------------------------------------------------------------------------------
-
 fn revoke_entity_reactor(
-    In((
-        entity,
-        rtype,
-        reactor_id
-    ))                  : In<(Entity, EntityReactionType, u64)>,
-    mut commands        : Commands,
-    mut entity_reactors : Query<&mut EntityReactors>,
+    entity     : Entity,
+    rtype      : EntityReactionType,
+    reactor_id : u64,
+    commands   : &mut Commands,
+    reactors   : &mut Query<&mut EntityReactors>,
 ){
     // get this entity's entity reactors
-    let Ok(mut entity_reactors) = entity_reactors.get_mut(entity) else { return; };
+    let Ok(mut entity_reactors) = reactors.get_mut(entity) else { return; };
 
     // get cached callbacks
     let (comp_id, callbacks_map) = match rtype
@@ -59,17 +49,85 @@ fn revoke_entity_reactor(
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
+fn revoke_reactor(
+    In(token)    : In<RevokeToken>,
+    mut commands : Commands,
+    mut cache    : ResMut<ReactCache>,
+    mut reactors : Query<&mut EntityReactors>,
+){
+    let id = token.id;
+
+    for reactor_type in token.reactors.iter()
+    {
+        match *reactor_type
+        {
+            ReactorType::EntityInsertion(entity, comp_id) =>
+            {
+                revoke_entity_reactor(entity, EntityReactionType::Insertion(comp_id), id, &mut commands, &mut reactors);
+            }
+            ReactorType::EntityMutation(entity, comp_id) =>
+            {
+                revoke_entity_reactor(entity, EntityReactionType::Mutation(comp_id), id, &mut commands, &mut reactors);
+            }
+            ReactorType::EntityRemoval(entity, comp_id) =>
+            {
+                revoke_entity_reactor(entity, EntityReactionType::Removal(comp_id), id, &mut commands, &mut reactors);
+            }
+            ReactorType::ComponentInsertion(comp_id) =>
+            {
+                cache.revoke_component_reactor(EntityReactionType::Insertion(comp_id), id);
+            }
+            ReactorType::ComponentMutation(comp_id) =>
+            {
+                cache.revoke_component_reactor(EntityReactionType::Mutation(comp_id), id);
+            }
+            ReactorType::ComponentRemoval(comp_id) =>
+            {
+                cache.revoke_component_reactor(EntityReactionType::Removal(comp_id), id);
+            }
+            ReactorType::ResourceMutation(res_id) =>
+            {
+                cache.revoke_resource_mutation_reactor(res_id, id);
+            }
+            ReactorType::Broadcast(event_id) =>
+            {
+                cache.revoke_broadcast_reactor(event_id, id);
+            }
+            ReactorType::EntityEvent(entity, event_id) =>
+            {
+                cache.revoke_entity_event_reactor(entity, event_id, id);
+            }
+            ReactorType::Despawn(entity) =>
+            {
+                cache.revoke_despawn_reactor(entity, id);
+            }
+        }
+    }
+}
+
+//-------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------
+
+fn revoke_reactor_triggers(In(revoke_token): In<RevokeToken>, mut rcommands: ReactCommands)
+{
+    rcommands.revoke(revoke_token);
+}
+
+//-------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------
+
 /// System paramter that drives reactivity.
 ///
 /// Requires [`ReactPlugin`].
 ///
 /// Note that each time you register a reactor, it is assigned a unique system state (including unique `Local`s). To avoid
 /// leaking memory, be sure to revoke reactors when you are done with them.
+///
+/// All react command operations are deferred.
 #[derive(SystemParam)]
 pub struct ReactCommands<'w, 's>
 {
     pub(crate) commands  : Commands<'w, 's>,
-    pub(crate) cache     : ResMut<'w, ReactCache>,
     pub(crate) despawner : Res<'w, AutoDespawner>,
 }
 
@@ -82,31 +140,28 @@ impl<'w, 's> ReactCommands<'w, 's>
     }
 
     /// Inserts a [`ReactComponent`] to the specified entity. It can be queried with [`React<C>`].
-    /// - Insertion reactions are enacted after `apply_deferred` is invoked.
     /// - Does nothing if the entity does not exist.
     pub fn insert<C: ReactComponent>(&mut self, entity: Entity, component: C)
     {
         let Some(mut entity_commands) = self.commands.get_entity(entity) else { return; };
         entity_commands.try_insert( React{ entity, component } );
-        self.cache.schedule_insertion_reaction::<C>(&mut self.commands, entity);
+        self.commands.syscall(entity, ReactCache::schedule_insertion_reaction::<C>);
     }
 
     /// Sends a broadcasted event.
-    /// - Reactions are enacted after `apply_deferred` is invoked.
     /// - Reactors can listen for the event with the [`broadcast()`] trigger.
     /// - Reactors can read the event with the [`BroadcastEvent`] system parameter.
     pub fn broadcast<E: Send + Sync + 'static>(&mut self, event: E)
     {
-        self.cache.schedule_broadcast_reaction::<E>(&mut self.commands, event);
+        self.commands.syscall(event, ReactCache::schedule_broadcast_reaction::<E>);
     }
 
     /// Sends an entity-targeted event.
-    /// - Reactions are enacted after `apply_deferred` is invoked.
     /// - Reactors can listen for the event with the [`entity_event()`] trigger.
     /// - Reactors can read the event with the [`EntityEvent`] system parameter.
     pub fn entity_event<E: Send + Sync + 'static>(&mut self, entity: Entity, event: E)
     {
-        self.cache.schedule_entity_event_reaction::<E>(&mut self.commands, entity, event);
+        self.commands.syscall((entity, event), ReactCache::schedule_entity_event_reaction::<E>);
     }
 
     /// Triggers resource mutation reactions.
@@ -114,71 +169,13 @@ impl<'w, 's> ReactCommands<'w, 's>
     /// Useful for initializing state after a reactor is registered.
     pub fn trigger_resource_mutation<R: ReactResource + Send + Sync + 'static>(&mut self)
     {
-        self.cache.schedule_resource_mutation_reaction::<R>(&mut self.commands);
+        self.commands.syscall((), ReactCache::schedule_resource_mutation_reaction::<R>);
     }
 
     /// Revokes a reactor.
-    /// - Entity reactors: revoked after `apply_deferred` is invoked.
-    /// - Component, despawn, resource, event reactors: revoked immediately.
     pub fn revoke(&mut self, token: RevokeToken)
     {
-        let id = token.id;
-
-        for reactor_type in token.reactors.iter()
-        {
-            match *reactor_type
-            {
-                ReactorType::EntityInsertion(entity, comp_id) =>
-                {
-                    self.commands.add(
-                            move |world: &mut World|
-                            syscall(world, (entity, EntityReactionType::Insertion(comp_id), id), revoke_entity_reactor)
-                        );
-                }
-                ReactorType::EntityMutation(entity, comp_id) =>
-                {
-                    self.commands.add(
-                            move |world: &mut World|
-                            syscall(world, (entity, EntityReactionType::Mutation(comp_id), id), revoke_entity_reactor)
-                        );
-                }
-                ReactorType::EntityRemoval(entity, comp_id) =>
-                {
-                    self.commands.add(
-                            move |world: &mut World|
-                            syscall(world, (entity, EntityReactionType::Removal(comp_id), id), revoke_entity_reactor)
-                        );
-                }
-                ReactorType::ComponentInsertion(comp_id) =>
-                {
-                    self.cache.revoke_component_reactor(EntityReactionType::Insertion(comp_id), id);
-                }
-                ReactorType::ComponentMutation(comp_id) =>
-                {
-                    self.cache.revoke_component_reactor(EntityReactionType::Mutation(comp_id), id);
-                }
-                ReactorType::ComponentRemoval(comp_id) =>
-                {
-                    self.cache.revoke_component_reactor(EntityReactionType::Removal(comp_id), id);
-                }
-                ReactorType::ResourceMutation(res_id) =>
-                {
-                    self.cache.revoke_resource_mutation_reactor(res_id, id);
-                }
-                ReactorType::Broadcast(event_id) =>
-                {
-                    self.cache.revoke_broadcast_reactor(event_id, id);
-                }
-                ReactorType::EntityEvent(entity, event_id) =>
-                {
-                    self.cache.revoke_entity_event_reactor(entity, event_id, id);
-                }
-                ReactorType::Despawn(entity) =>
-                {
-                    self.cache.revoke_despawn_reactor(entity, id);
-                }
-            }
-        }
+        self.commands.syscall(token, revoke_reactor);
     }
 
     /// Registers a reactor triggered by ECS changes.
@@ -230,7 +227,7 @@ impl<'w, 's> ReactCommands<'w, 's>
     ) -> RevokeToken
     {
         let sys_handle = self.despawner.prepare(*sys_command);
-        reactor_registration(self, &sys_handle, triggers)
+        reactor_registration(&mut self.commands, &sys_handle, triggers)
     }
 
     /// Registers a reactor triggered by ECS changes and runs it immediately once.
@@ -277,7 +274,7 @@ impl<'w, 's> ReactCommands<'w, 's>
         // register reactors
         let entity = self.commands.spawn_empty().id();
         let sys_handle = self.despawner.prepare(entity);
-        let revoke_token = reactor_registration(self, &sys_handle, triggers);
+        let revoke_token = reactor_registration(&mut self.commands, &sys_handle, triggers);
 
         // wrap reactor in a system that will be called once, then clean itself up
         let revoke_token_clone = revoke_token.clone();

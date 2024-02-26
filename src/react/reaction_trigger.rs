@@ -2,6 +2,7 @@
 use crate::prelude::*;
 
 //third-party shortcuts
+use bevy::ecs::system::Commands;
 use bevy::utils::all_tuples;
 
 //standard shortcuts
@@ -14,7 +15,7 @@ pub trait ReactionTrigger
 {
     /// Register a trigger with [`ReactCommands`].
     fn register(self,
-        rcommands  : &mut ReactCommands,
+        commands   : &mut Commands,
         sys_handle : &AutoDespawnSignal,
     ) -> Option<ReactorType>;
 }
@@ -25,12 +26,12 @@ impl<R: ReactionTrigger> ReactionTriggerBundle for R
 
     fn get_reactor_types(
             self,
-            rcommands  : &mut ReactCommands,
+            commands   : &mut Commands,
             sys_handle : &AutoDespawnSignal,
             func       : &mut impl FnMut(Option<ReactorType>)
         )
     {
-        func(self.register(rcommands, sys_handle));
+        func(self.register(commands, sys_handle));
     }
 }
 
@@ -48,7 +49,7 @@ pub trait ReactionTriggerBundle
     /// Register reactors and pass the reactor types to the injected function.
     fn get_reactor_types(
             self,
-            rcommands  : &mut ReactCommands,
+            commands   : &mut Commands,
             sys_handle : &AutoDespawnSignal,
             func       : &mut impl FnMut(Option<ReactorType>)
         );
@@ -57,7 +58,7 @@ pub trait ReactionTriggerBundle
 //-------------------------------------------------------------------------------------------------------------------
 
 pub fn reactor_registration(
-    rcommands  : &mut ReactCommands,
+    commands   : &mut Commands,
     sys_handle : &AutoDespawnSignal,
     triggers   : impl ReactionTriggerBundle,
 ) -> RevokeToken
@@ -69,7 +70,7 @@ pub fn reactor_registration(
             let Some(reactor_type) = reactor_type else { return; };
             reactors.push(reactor_type);
         };
-    triggers.get_reactor_types(rcommands, sys_handle, &mut func);
+    triggers.get_reactor_types(commands, sys_handle, &mut func);
 
     RevokeToken{ reactors: reactors.into(), id: sys_handle.entity().to_bits() }
 }
@@ -101,14 +102,14 @@ macro_rules! tuple_impl
             #[inline(always)]
             fn get_reactor_types(
                 self,
-                rcommands  : &mut ReactCommands,
+                commands   : &mut Commands,
                 sys_handle : &AutoDespawnSignal,
                 func       : &mut impl FnMut(Option<ReactorType>)
             ){
                 #[allow(non_snake_case)]
                 let ($(mut $name,)*) = self;
                 $(
-                    $name.get_reactor_types(rcommands, sys_handle, &mut *func);
+                    $name.get_reactor_types(commands, sys_handle, &mut *func);
                 )*
             }
         }
