@@ -133,3 +133,26 @@ impl WorldSyscallExt for World
 }
 
 //-------------------------------------------------------------------------------------------------------------------
+
+/// Extends `Commands` with the [`syscall`] method.
+pub trait CommandsSyscallExt
+{
+    /// See [`syscall`].
+    fn syscall<I, S, Marker>(&mut self, input: I, system: S)
+    where
+        I: Send + Sync + 'static,
+        S: IntoSystem<I, (), Marker> + Send + Sync + 'static;
+}
+
+impl CommandsSyscallExt for Commands<'_, '_>
+{
+    fn syscall<I, S, Marker>(&mut self, input: I, system: S)
+    where
+        I: Send + Sync + 'static,
+        S: IntoSystem<I, (), Marker> + Send + Sync + 'static
+    {
+        self.add(move |world: &mut World| { world.syscall(input, system); });
+    }
+}
+
+//-------------------------------------------------------------------------------------------------------------------
