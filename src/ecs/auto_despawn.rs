@@ -31,8 +31,8 @@ fn auto_despawn(mut commands: Commands, despawner: Res<AutoDespawner>)
 {
     while let Some(entity) = despawner.try_recv()
     {
-        let Some(mut entity_commands) = commands.get_entity(entity) else { continue; };
-        entity_commands.despawn();
+        let Some(entity_commands) = commands.get_entity(entity) else { continue; };
+        entity_commands.despawn_recursive();
     }
 }
 
