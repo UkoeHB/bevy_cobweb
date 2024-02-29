@@ -6,6 +6,7 @@
 
 - `AutoDespawner` now uses `despawn_recursive`.
 - Optimized entity-specific reactors.
+- Moved entity event reactor handles so they are stored on entities, ensuring they are cleaned up automatically when entities despawn.
 
 
 ## [0.0.7]

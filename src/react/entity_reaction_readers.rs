@@ -45,22 +45,7 @@ impl<T: ReactComponent> FromWorld for ReactComponentId<T>
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
-/// The type of an entity reaction.
-//todo: switch to ComponentId when observers are integrated
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub(crate) enum EntityReactionType
-{
-    /// A component was inserted.
-    Insertion(TypeId),
-    /// A component was removed.
-    Removal(TypeId),
-    /// A component was mutated.
-    Mutation(TypeId),
-}
-
-//-------------------------------------------------------------------------------------------------------------------
-
-/// Tracks metadata for accessing entity reactions.
+/// Tracks metadata for accessing entity reactions (entity events use [`EventAccessTracker`] instead).
 #[derive(Resource)]
 pub(crate) struct EntityReactionAccessTracker
 {

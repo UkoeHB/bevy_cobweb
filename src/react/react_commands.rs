@@ -47,6 +47,10 @@ fn revoke_reactor(
             {
                 revoke_entity_reactor(entity, EntityReactionType::Removal(comp_id), id, &mut reactors);
             }
+            ReactorType::EntityEvent(entity, event_id) =>
+            {
+                revoke_entity_reactor(entity, EntityReactionType::Event(event_id), id, &mut reactors);
+            }
             ReactorType::ComponentInsertion(comp_id) =>
             {
                 cache.revoke_component_reactor(EntityReactionType::Insertion(comp_id), id);
@@ -66,10 +70,6 @@ fn revoke_reactor(
             ReactorType::Broadcast(event_id) =>
             {
                 cache.revoke_broadcast_reactor(event_id, id);
-            }
-            ReactorType::EntityEvent(entity, event_id) =>
-            {
-                cache.revoke_entity_event_reactor(entity, event_id, id);
             }
             ReactorType::Despawn(entity) =>
             {

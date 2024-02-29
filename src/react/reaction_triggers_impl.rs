@@ -80,16 +80,6 @@ fn register_broadcast_reactor<E: Send + Sync + 'static>(In(signal): In<AutoDespa
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
-fn register_entity_event_reactor<E: Send + Sync + 'static>(
-    In((target, signal)) : In<(Entity, AutoDespawnSignal)>,
-    mut cache            : ResMut<ReactCache>
-){
-    cache.register_entity_event_reactor::<E>(target, signal);
-}
-
-//-------------------------------------------------------------------------------------------------------------------
-//-------------------------------------------------------------------------------------------------------------------
-
 fn register_despawn_reactor(
     In((entity, signal)) : In<(Entity, AutoDespawnSignal)>,
     world                : &mut World,
@@ -285,6 +275,31 @@ pub fn entity_removal<C: ReactComponent>(entity: Entity) -> EntityRemovalTrigger
 
 //-------------------------------------------------------------------------------------------------------------------
 
+/// Reaction trigger for entity events.
+/// - Reactions only occur for events sent via [`ReactCommands::<E>::entity_event()`].
+pub struct EntityEventTrigger<E: Send + Sync + 'static>(Entity, PhantomData<E>);
+
+impl<E: Send + Sync + 'static> ReactionTrigger for EntityEventTrigger<E>
+{
+    fn register(self, commands: &mut Commands, sys_handle: &AutoDespawnSignal) -> Option<ReactorType>
+    {
+        let event_id = TypeId::of::<E>();
+        let entity = self.0;
+        let sys_handle = sys_handle.clone();
+
+        commands.syscall((EntityReactionType::Event(event_id), entity, sys_handle), register_entity_reactor);
+        Some(ReactorType::EntityEvent(entity, event_id))
+    }
+}
+
+/// Returns an [`EntityEventTrigger`] reaction trigger.
+pub fn entity_event<E: Send + Sync + 'static>(target: Entity) -> EntityEventTrigger<E>
+{
+    EntityEventTrigger(target, PhantomData::default())
+}
+
+//-------------------------------------------------------------------------------------------------------------------
+
 /// Reaction trigger for [`ReactResource`] mutations.
 pub struct ResourceMutationTrigger<R: ReactResource>(PhantomData<R>);
 impl<R: ReactResource> Default for ResourceMutationTrigger<R> { fn default() -> Self { Self(PhantomData::default()) } }
@@ -319,27 +334,6 @@ impl<E: Send + Sync + 'static> ReactionTrigger for BroadcastEventTrigger<E>
 
 /// Returns a [`BroadcastEventTrigger`] reaction trigger.
 pub fn broadcast<E: Send + Sync + 'static>() -> BroadcastEventTrigger<E> { BroadcastEventTrigger::default() }
-
-//-------------------------------------------------------------------------------------------------------------------
-
-/// Reaction trigger for entity events.
-/// - Reactions only occur for events sent via [`ReactCommands::<E>::entity_event()`].
-pub struct EntityEventTrigger<E: Send + Sync + 'static>(Entity, PhantomData<E>);
-
-impl<E: Send + Sync + 'static> ReactionTrigger for EntityEventTrigger<E>
-{
-    fn register(self, commands: &mut Commands, sys_handle: &AutoDespawnSignal) -> Option<ReactorType>
-    {
-        commands.syscall((self.0, sys_handle.clone()), register_entity_event_reactor::<E>);
-        Some(ReactorType::EntityEvent(self.0, TypeId::of::<E>()))
-    }
-}
-
-/// Returns an [`EntityEventTrigger`] reaction trigger.
-pub fn entity_event<E: Send + Sync + 'static>(target: Entity) -> EntityEventTrigger<E>
-{
-    EntityEventTrigger(target, PhantomData::default())
-}
 
 //-------------------------------------------------------------------------------------------------------------------
 

@@ -31,6 +31,23 @@ pub fn schedule_removal_and_despawn_reactors(world: &mut World)
 
 //-------------------------------------------------------------------------------------------------------------------
 
+/// The type of an entity reaction.
+//todo: switch to ComponentId when observers are integrated
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub(crate) enum EntityReactionType
+{
+    /// A component was inserted.
+    Insertion(TypeId),
+    /// A component was mutated.
+    Mutation(TypeId),
+    /// A component was removed.
+    Removal(TypeId),
+    /// An event was sent to this entity.
+    Event(TypeId),
+}
+
+//-------------------------------------------------------------------------------------------------------------------
+
 /// Component that stores reactor handles that target a specific entity.
 #[derive(Component)]
 pub(crate) struct EntityReactors
@@ -55,6 +72,11 @@ impl EntityReactors
                     true
                 }
             );
+    }
+
+    pub(crate) fn count(&self, rtype: EntityReactionType) -> usize
+    {
+        self.iter_rtype(rtype).count()
     }
 
     pub(crate) fn iter_rtype(&self, rtype: EntityReactionType) -> impl Iterator<Item = SystemCommand> + '_
@@ -89,12 +111,12 @@ pub enum ReactorType
     EntityInsertion(Entity, TypeId),
     EntityMutation(Entity, TypeId),
     EntityRemoval(Entity, TypeId),
+    EntityEvent(Entity, TypeId),
     ComponentInsertion(TypeId),
     ComponentMutation(TypeId),
     ComponentRemoval(TypeId),
     ResourceMutation(TypeId),
     Broadcast(TypeId),
-    EntityEvent(Entity, TypeId),
     Despawn(Entity),
 }
 
