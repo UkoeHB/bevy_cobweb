@@ -5,6 +5,7 @@
 ### Changed
 
 - `AutoDespawner` now uses `despawn_recursive`.
+- Optimized entity-specific reactors.
 
 
 ## [0.0.7]

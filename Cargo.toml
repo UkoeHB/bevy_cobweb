@@ -33,7 +33,8 @@ bevy           = { version = "0.13", default-features = false }
 bevy_fn_plugin = { version = "0.1" }
 crossbeam      = { version = "0.8" }
 fxhash         = { version = "0.2" }
-tracing        = { version = "0.1" }
+smallvec       = { version = "1.13", features = ["drain_filter"] }
+tracing        = { version = "0.1.27" }
 
 bevy_cobweb_derive = { path = "bevy_cobweb_derive", version = "0.1.0" }
 

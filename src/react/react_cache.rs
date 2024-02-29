@@ -82,30 +82,20 @@ impl RemovalChecker
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
-/// Schedules a reaction to an entity mutation.
+/// Schedules reactions to an entity mutation.
 fn schedule_entity_reaction_impl(
     queue           : &mut CobwebCommandQueue<ReactionCommand>,
     reaction_source : Entity,
     reaction_type   : EntityReactionType,
     entity_reactors : &EntityReactors
 ){
-    // get cached callbacks
-    let callbacks = match reaction_type
-    {
-        EntityReactionType::Insertion(id) => entity_reactors.insertion_callbacks.get(&id),
-        EntityReactionType::Mutation(id)  => entity_reactors.mutation_callbacks.get(&id),
-        EntityReactionType::Removal(id)   => entity_reactors.removal_callbacks.get(&id),
-    };
-    let Some(callbacks) = callbacks else { return; };
-
-    // queue callbacks
-    for sys_handle in callbacks.iter()
+    for reactor in entity_reactors.iter_rtype(reaction_type)
     {
         queue.push(
                 ReactionCommand::EntityReaction{
                     reaction_source,
                     reaction_type,
-                    reactor: SystemCommand(sys_handle.entity()),
+                    reactor,
                 }
             );
     }

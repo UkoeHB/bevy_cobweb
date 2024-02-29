@@ -123,28 +123,15 @@ fn register_entity_reactor(
     In((
         rtype,
         entity,
-        sys_handle
+        signal
     ))                  : In<(EntityReactionType, Entity, AutoDespawnSignal)>,
     mut commands        : Commands,
     mut entity_reactors : Query<&mut EntityReactors>,
 ){
-    // callback adder
-    let add_callback_fn =
-        move |entity_reactors: &mut EntityReactors|
-        {
-            let callbacks = match rtype
-            {
-                EntityReactionType::Insertion(comp_id) => entity_reactors.insertion_callbacks.entry(comp_id).or_default(),
-                EntityReactionType::Mutation(comp_id)  => entity_reactors.mutation_callbacks.entry(comp_id).or_default(),
-                EntityReactionType::Removal(comp_id)   => entity_reactors.removal_callbacks.entry(comp_id).or_default(),
-            };
-            callbacks.push(sys_handle);
-        };
-
     // add callback to entity
     match entity_reactors.get_mut(entity)
     {
-        Ok(mut entity_reactors) => add_callback_fn(&mut entity_reactors),
+        Ok(mut entity_reactors) => entity_reactors.insert(rtype, signal),
         _ =>
         {
             let Some(mut entity_commands) = commands.get_entity(entity) else { return; };
@@ -153,7 +140,7 @@ fn register_entity_reactor(
             let mut entity_reactors = EntityReactors::default();
 
             // add callback and insert to entity
-            add_callback_fn(&mut entity_reactors);
+            entity_reactors.insert(rtype, signal);
             entity_commands.insert(entity_reactors);
         }
     }

@@ -3,12 +3,18 @@ use crate::prelude::*;
 
 //third-party shortcuts
 use bevy::prelude::*;
+use smallvec::SmallVec;
 
 //standard shortcuts
 use core::any::TypeId;
-use std::collections::HashMap;
 use std::sync::Arc;
 
+//-------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------
+
+const ENTITY_REACTORS_STATIC_SIZE: usize = 4;
+
+//-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
 /// Queues removal and despawn reactors.
@@ -29,18 +35,39 @@ pub fn schedule_removal_and_despawn_reactors(world: &mut World)
 #[derive(Component)]
 pub(crate) struct EntityReactors
 {
-    pub(crate) insertion_callbacks : HashMap<TypeId, Vec<AutoDespawnSignal>>,
-    pub(crate) mutation_callbacks  : HashMap<TypeId, Vec<AutoDespawnSignal>>,
-    pub(crate) removal_callbacks   : HashMap<TypeId, Vec<AutoDespawnSignal>>,
+    reactors: SmallVec<[(EntityReactionType, AutoDespawnSignal); ENTITY_REACTORS_STATIC_SIZE]>,
 }
 
 impl EntityReactors
 {
-    pub(crate) fn is_empty(&self) -> bool
+    pub(crate) fn insert(&mut self, rtype: EntityReactionType, signal: AutoDespawnSignal)
     {
-        self.insertion_callbacks.is_empty() &&
-        self.mutation_callbacks.is_empty()  &&
-        self.removal_callbacks.is_empty()  
+        self.reactors.push((rtype, signal));
+    }
+
+    pub(crate) fn remove(&mut self, rtype: EntityReactionType, reactor_id : u64)
+    {
+        self.reactors.drain_filter(
+                |(reaction_type, signal)|
+                {
+                    if *reaction_type != rtype { return false; }
+                    if signal.entity().to_bits() != reactor_id { return false; }
+                    true
+                }
+            );
+    }
+
+    pub(crate) fn iter_rtype(&self, rtype: EntityReactionType) -> impl Iterator<Item = SystemCommand> + '_
+    {
+        self.reactors
+            .iter()
+            .filter_map(
+                move |(reaction_type, signal)|
+                {
+                    if *reaction_type != rtype { return None; }
+                    Some(SystemCommand(signal.entity()))
+                }
+            )
     }
 }
 
@@ -49,9 +76,7 @@ impl Default for EntityReactors
     fn default() -> Self
     {
         Self{
-            insertion_callbacks : HashMap::new(),
-            mutation_callbacks  : HashMap::new(),
-            removal_callbacks   : HashMap::new(),
+            reactors : SmallVec::default(),
         }
     }
 }
@@ -72,6 +97,8 @@ pub enum ReactorType
     EntityEvent(Entity, TypeId),
     Despawn(Entity),
 }
+
+//-------------------------------------------------------------------------------------------------------------------
 
 /// Token for revoking reactors.
 ///

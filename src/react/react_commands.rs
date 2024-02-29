@@ -15,35 +15,10 @@ fn revoke_entity_reactor(
     entity     : Entity,
     rtype      : EntityReactionType,
     reactor_id : u64,
-    commands   : &mut Commands,
     reactors   : &mut Query<&mut EntityReactors>,
 ){
-    // get this entity's entity reactors
     let Ok(mut entity_reactors) = reactors.get_mut(entity) else { return; };
-
-    // get cached callbacks
-    let (comp_id, callbacks_map) = match rtype
-    {
-        EntityReactionType::Insertion(comp_id) => (comp_id, &mut entity_reactors.insertion_callbacks),
-        EntityReactionType::Mutation(comp_id)  => (comp_id, &mut entity_reactors.mutation_callbacks),
-        EntityReactionType::Removal(comp_id)   => (comp_id, &mut entity_reactors.removal_callbacks),
-    };
-    let Some(callbacks) = callbacks_map.get_mut(&comp_id) else { return; };
-
-    // revoke reactor
-    for (idx, signal) in callbacks.iter().enumerate()
-    {
-        if signal.entity().to_bits() != reactor_id { continue; }
-        let _ = callbacks.remove(idx);
-        break;
-    }
-
-    // clean up if entity has no reactors
-    if !(callbacks.len() == 0) { return; }
-    let _ = callbacks_map.remove(&comp_id);
-
-    if !entity_reactors.is_empty() { return; }
-    commands.get_entity(entity).unwrap().remove::<EntityReactors>();
+    entity_reactors.remove(rtype, reactor_id);
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -51,7 +26,6 @@ fn revoke_entity_reactor(
 
 fn revoke_reactor(
     In(token)    : In<RevokeToken>,
-    mut commands : Commands,
     mut cache    : ResMut<ReactCache>,
     mut reactors : Query<&mut EntityReactors>,
 ){
@@ -63,15 +37,15 @@ fn revoke_reactor(
         {
             ReactorType::EntityInsertion(entity, comp_id) =>
             {
-                revoke_entity_reactor(entity, EntityReactionType::Insertion(comp_id), id, &mut commands, &mut reactors);
+                revoke_entity_reactor(entity, EntityReactionType::Insertion(comp_id), id, &mut reactors);
             }
             ReactorType::EntityMutation(entity, comp_id) =>
             {
-                revoke_entity_reactor(entity, EntityReactionType::Mutation(comp_id), id, &mut commands, &mut reactors);
+                revoke_entity_reactor(entity, EntityReactionType::Mutation(comp_id), id, &mut reactors);
             }
             ReactorType::EntityRemoval(entity, comp_id) =>
             {
-                revoke_entity_reactor(entity, EntityReactionType::Removal(comp_id), id, &mut commands, &mut reactors);
+                revoke_entity_reactor(entity, EntityReactionType::Removal(comp_id), id, &mut reactors);
             }
             ReactorType::ComponentInsertion(comp_id) =>
             {

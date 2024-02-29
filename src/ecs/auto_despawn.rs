@@ -74,7 +74,8 @@ impl AutoDespawner
 
 /// RAII handle to a despawn signal.
 ///
-/// The signal can be cloned. When the last copy is dropped, the entity will be despawned in the `Last` schedule.
+/// The signal can be cloned. When the last copy is dropped, the entity will be despawned in the `Last` schedule or the
+/// next time a reaction tree runs.
 pub struct AutoDespawnSignal(Arc<AutoDespawnSignalInner>);
 
 impl AutoDespawnSignal
