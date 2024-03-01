@@ -1,6 +1,6 @@
 //local shortcuts
 use bevy_cobweb::prelude::*;
-//use crate::*;
+use crate::*;
 
 //third-party shortcuts
 use bevy::prelude::*;
@@ -30,6 +30,8 @@ fn persistent_reactor_lives_without_triggers()
     assert!(world.get_entity(*sys_command).is_some());
     reaction_tree(world);
     assert!(world.get_entity(*sys_command).is_some());
+    reaction_tree(world);
+    assert!(world.get_entity(*sys_command).is_some());
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -56,6 +58,8 @@ fn persistent_reactor_lives_with_despawn_triggers_finished()
 
     // reactor should not be garbage collected
     assert!(world.get_entity(*sys_command).is_some());
+    reaction_tree(world);
+    assert!(world.get_entity(*sys_command).is_some());
     world.despawn(target);
     reaction_tree(world);
     assert!(world.get_entity(*sys_command).is_some());
@@ -64,6 +68,33 @@ fn persistent_reactor_lives_with_despawn_triggers_finished()
 //-------------------------------------------------------------------------------------------------------------------
 
 // persistent: reactor not despawned when entity-specific reactors dropped after entity is despawned
+#[test]
+fn persistent_reactor_lives_with_entity_triggers_despawned()
+{
+    // setup
+    let mut app = App::new();
+    app.add_plugins(ReactPlugin);
+    let world = &mut app.world;
+
+    // prep target entity
+    let target = world.spawn_empty().id();
+
+    // register reactor
+    let sys_command = world.syscall((),
+        move |mut rc: ReactCommands|
+        {
+            rc.on_persistent(entity_mutation::<TestComponent>(target), ||{})
+        }
+    );
+
+    // reactor should not be garbage collected
+    assert!(world.get_entity(*sys_command).is_some());
+    reaction_tree(world);
+    assert!(world.get_entity(*sys_command).is_some());
+    world.despawn(target);
+    reaction_tree(world);
+    assert!(world.get_entity(*sys_command).is_some());
+}
 
 //-------------------------------------------------------------------------------------------------------------------
 
@@ -122,6 +153,8 @@ fn cleanup_reactor_dies_with_despawn_triggers_finished()
 
     // reactor should be garbage collected
     assert!(world.get_entity(*sys_command).is_some());
+    reaction_tree(world);
+    assert!(world.get_entity(*sys_command).is_some());
     world.despawn(target);
     reaction_tree(world);
     assert!(world.get_entity(*sys_command).is_none());
@@ -130,6 +163,35 @@ fn cleanup_reactor_dies_with_despawn_triggers_finished()
 //-------------------------------------------------------------------------------------------------------------------
 
 // cleanup: reactor despawned when entity-specific reactors dropped after entity is despawned
+#[test]
+fn cleanup_reactor_dies_with_entity_triggers_despawned()
+{
+    // setup
+    let mut app = App::new();
+    app.add_plugins(ReactPlugin);
+    let world = &mut app.world;
+
+    // prep target entity
+    let target = world.spawn_empty().id();
+
+    // register reactor
+    let sys_command = world.syscall((),
+        move |mut rc: ReactCommands|
+        {
+            let sys_command = rc.commands().spawn_system_command(||{});
+            rc.with(entity_mutation::<TestComponent>(target), sys_command, ReactorMode::Cleanup);
+            sys_command
+        }
+    );
+
+    // reactor should be garbage collected
+    assert!(world.get_entity(*sys_command).is_some());
+    reaction_tree(world);
+    assert!(world.get_entity(*sys_command).is_some());
+    world.despawn(target);
+    reaction_tree(world);
+    assert!(world.get_entity(*sys_command).is_none());
+}
 
 //-------------------------------------------------------------------------------------------------------------------
 
@@ -180,6 +242,8 @@ fn revokable_reactor_dies_with_despawn_triggers_finished()
 
     // reactor should be garbage collected
     assert!(world.get_entity(*SystemCommand::from(token.clone())).is_some());
+    reaction_tree(world);
+    assert!(world.get_entity(*SystemCommand::from(token.clone())).is_some());
     world.despawn(target);
     reaction_tree(world);
     assert!(world.get_entity(*SystemCommand::from(token)).is_none());
@@ -188,6 +252,33 @@ fn revokable_reactor_dies_with_despawn_triggers_finished()
 //-------------------------------------------------------------------------------------------------------------------
 
 // revokable: reactor despawned when entity-specific reactors dropped after entity is despawned
+#[test]
+fn revokable_reactor_dies_with_entity_triggers_despawned()
+{
+    // setup
+    let mut app = App::new();
+    app.add_plugins(ReactPlugin);
+    let world = &mut app.world;
+
+    // prep target entity
+    let target = world.spawn_empty().id();
+
+    // register reactor
+    let token = world.syscall((),
+        move |mut rc: ReactCommands|
+        {
+            rc.on_revokable(entity_mutation::<TestComponent>(target), ||{})
+        }
+    );
+
+    // reactor should be garbage collected
+    assert!(world.get_entity(*SystemCommand::from(token.clone())).is_some());
+    reaction_tree(world);
+    assert!(world.get_entity(*SystemCommand::from(token.clone())).is_some());
+    world.despawn(target);
+    reaction_tree(world);
+    assert!(world.get_entity(*SystemCommand::from(token)).is_none());
+}
 
 //-------------------------------------------------------------------------------------------------------------------
 
