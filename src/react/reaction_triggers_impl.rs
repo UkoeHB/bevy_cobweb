@@ -143,13 +143,20 @@ fn register_entity_reactor(
 /// - For reactors that take the entity the component was inserted to.
 pub struct InsertionTrigger<C: ReactComponent>(PhantomData<C>);
 impl<C: ReactComponent> Default for InsertionTrigger<C> { fn default() -> Self { Self(PhantomData::default()) } }
+impl<C: ReactComponent> Clone for InsertionTrigger<C> { fn clone(&self) -> Self { *self } }
+impl<C: ReactComponent> Copy for InsertionTrigger<C> {}
 
 impl<C: ReactComponent> ReactionTrigger for InsertionTrigger<C>
 {
-    fn register(self, commands: &mut Commands, handle: &ReactorHandle) -> Option<ReactorType>
+    fn reactor_type(&self) -> ReactorType
+    {
+        ReactorType::ComponentInsertion(TypeId::of::<C>())
+    }
+
+    fn register(&self, commands: &mut Commands, handle: &ReactorHandle) -> bool
     {
         commands.syscall(handle.clone(), register_insertion_reactor::<C>);
-        Some(ReactorType::ComponentInsertion(TypeId::of::<C>()))
+        true
     }
 }
 
@@ -162,13 +169,20 @@ pub fn insertion<C: ReactComponent>() -> InsertionTrigger<C> { InsertionTrigger:
 /// - For reactors that take the entity the component was mutated on.
 pub struct MutationTrigger<C: ReactComponent>(PhantomData<C>);
 impl<C: ReactComponent> Default for MutationTrigger<C> { fn default() -> Self { Self(PhantomData::default()) } }
+impl<C: ReactComponent> Clone for MutationTrigger<C> { fn clone(&self) -> Self { *self } }
+impl<C: ReactComponent> Copy for MutationTrigger<C> {}
 
 impl<C: ReactComponent> ReactionTrigger for MutationTrigger<C>
 {
-    fn register(self, commands: &mut Commands, handle: &ReactorHandle) -> Option<ReactorType>
+    fn reactor_type(&self) -> ReactorType
+    {
+        ReactorType::ComponentMutation(TypeId::of::<C>())
+    }
+
+    fn register(&self, commands: &mut Commands, handle: &ReactorHandle) -> bool
     {
         commands.syscall(handle.clone(), register_mutation_reactor::<C>);
-        Some(ReactorType::ComponentMutation(TypeId::of::<C>()))
+        true
     }
 }
 
@@ -181,13 +195,20 @@ pub fn mutation<C: ReactComponent>() -> MutationTrigger<C> { MutationTrigger::de
 /// - Reactions are not triggered if the entity was despawned.
 pub struct RemovalTrigger<C: ReactComponent>(PhantomData<C>);
 impl<C: ReactComponent> Default for RemovalTrigger<C> { fn default() -> Self { Self(PhantomData::default()) } }
+impl<C: ReactComponent> Clone for RemovalTrigger<C> { fn clone(&self) -> Self { *self } }
+impl<C: ReactComponent> Copy for RemovalTrigger<C> {}
 
 impl<C: ReactComponent> ReactionTrigger for RemovalTrigger<C>
 {
-    fn register(self, commands: &mut Commands, handle: &ReactorHandle) -> Option<ReactorType>
+    fn reactor_type(&self) -> ReactorType
+    {
+        ReactorType::ComponentRemoval(TypeId::of::<C>())
+    }
+
+    fn register(&self, commands: &mut Commands, handle: &ReactorHandle) -> bool
     {
         commands.syscall(handle.clone(), register_removal_reactor::<C>);
-        Some(ReactorType::ComponentRemoval(TypeId::of::<C>()))
+        true
     }
 }
 
@@ -199,17 +220,21 @@ pub fn removal<C: ReactComponent>() -> RemovalTrigger<C> { RemovalTrigger::defau
 /// Reaction trigger for [`ReactComponent`] insertions on a specific entity.
 /// - Registration does nothing if the entity does not exist.
 pub struct EntityInsertionTrigger<C: ReactComponent>(Entity, PhantomData<C>);
+impl<C: ReactComponent> Clone for EntityInsertionTrigger<C> { fn clone(&self) -> Self { *self } }
+impl<C: ReactComponent> Copy for EntityInsertionTrigger<C> {}
 
 impl<C: ReactComponent> ReactionTrigger for EntityInsertionTrigger<C>
 {
-    fn register(self, commands: &mut Commands, handle: &ReactorHandle) -> Option<ReactorType>
+    fn reactor_type(&self) -> ReactorType
     {
-        let comp_id = TypeId::of::<C>();
-        let entity = self.0;
-        let handle = handle.clone();
+        ReactorType::EntityInsertion(self.0, TypeId::of::<C>())
+    }
 
-        commands.syscall((EntityReactionType::Insertion(comp_id), entity, handle), register_entity_reactor);
-        Some(ReactorType::EntityInsertion(entity, comp_id))
+    fn register(&self, commands: &mut Commands, handle: &ReactorHandle) -> bool
+    {
+        let handle = handle.clone();
+        commands.syscall((EntityReactionType::Insertion(TypeId::of::<C>()), self.0, handle), register_entity_reactor);
+        true
     }
 }
 
@@ -224,17 +249,21 @@ pub fn entity_insertion<C: ReactComponent>(entity: Entity) -> EntityInsertionTri
 /// Reaction trigger for [`ReactComponent`] mutations on a specific entity.
 /// - Registration does nothing if the entity does not exist.
 pub struct EntityMutationTrigger<C: ReactComponent>(Entity, PhantomData<C>);
+impl<C: ReactComponent> Clone for EntityMutationTrigger<C> { fn clone(&self) -> Self { *self } }
+impl<C: ReactComponent> Copy for EntityMutationTrigger<C> {}
 
 impl<C: ReactComponent> ReactionTrigger for EntityMutationTrigger<C>
 {
-    fn register(self, commands: &mut Commands, handle: &ReactorHandle) -> Option<ReactorType>
+    fn reactor_type(&self) -> ReactorType
     {
-        let comp_id = TypeId::of::<C>();
-        let entity = self.0;
-        let handle = handle.clone();
+        ReactorType::EntityMutation(self.0, TypeId::of::<C>())
+    }
 
-        commands.syscall((EntityReactionType::Mutation(comp_id), entity, handle), register_entity_reactor);
-        Some(ReactorType::EntityMutation(entity, comp_id))
+    fn register(&self, commands: &mut Commands, handle: &ReactorHandle) -> bool
+    {
+        let handle = handle.clone();
+        commands.syscall((EntityReactionType::Mutation(TypeId::of::<C>()), self.0, handle), register_entity_reactor);
+        true
     }
 }
 
@@ -249,18 +278,22 @@ pub fn entity_mutation<C: ReactComponent>(entity: Entity) -> EntityMutationTrigg
 /// Reaction trigger for [`ReactComponent`] removals from a specific entity.
 /// - Registration does nothing if the entity does not exist.
 pub struct EntityRemovalTrigger<C: ReactComponent>(Entity, PhantomData<C>);
+impl<C: ReactComponent> Clone for EntityRemovalTrigger<C> { fn clone(&self) -> Self { *self } }
+impl<C: ReactComponent> Copy for EntityRemovalTrigger<C> {}
 
 impl<C: ReactComponent> ReactionTrigger for EntityRemovalTrigger<C>
 {
-    fn register(self, commands: &mut Commands, handle: &ReactorHandle) -> Option<ReactorType>
+    fn reactor_type(&self) -> ReactorType
     {
-        let comp_id = TypeId::of::<C>();
-        let entity = self.0;
-        let handle = handle.clone();
+        ReactorType::EntityRemoval(self.0, TypeId::of::<C>())
+    }
 
+    fn register(&self, commands: &mut Commands, handle: &ReactorHandle) -> bool
+    {
+        let handle = handle.clone();
         commands.syscall((), track_removals::<C>);
-        commands.syscall((EntityReactionType::Removal(comp_id), entity, handle), register_entity_reactor);
-        Some(ReactorType::EntityRemoval(entity, comp_id))
+        commands.syscall((EntityReactionType::Removal(TypeId::of::<C>()), self.0, handle), register_entity_reactor);
+        true
     }
 }
 
@@ -275,17 +308,21 @@ pub fn entity_removal<C: ReactComponent>(entity: Entity) -> EntityRemovalTrigger
 /// Reaction trigger for entity events.
 /// - Reactions only occur for events sent via [`ReactCommands::<E>::entity_event()`].
 pub struct EntityEventTrigger<E: Send + Sync + 'static>(Entity, PhantomData<E>);
+impl<E: Send + Sync + 'static> Clone for EntityEventTrigger<E> { fn clone(&self) -> Self { *self } }
+impl<E: Send + Sync + 'static> Copy for EntityEventTrigger<E> {}
 
 impl<E: Send + Sync + 'static> ReactionTrigger for EntityEventTrigger<E>
 {
-    fn register(self, commands: &mut Commands, handle: &ReactorHandle) -> Option<ReactorType>
+    fn reactor_type(&self) -> ReactorType
     {
-        let event_id = TypeId::of::<E>();
-        let entity = self.0;
-        let handle = handle.clone();
+        ReactorType::EntityEvent(self.0, TypeId::of::<E>())
+    }
 
-        commands.syscall((EntityReactionType::Event(event_id), entity, handle), register_entity_reactor);
-        Some(ReactorType::EntityEvent(entity, event_id))
+    fn register(&self, commands: &mut Commands, handle: &ReactorHandle) -> bool
+    {
+        let handle = handle.clone();
+        commands.syscall((EntityReactionType::Event(TypeId::of::<E>()), self.0, handle), register_entity_reactor);
+        true
     }
 }
 
@@ -300,13 +337,20 @@ pub fn entity_event<E: Send + Sync + 'static>(target: Entity) -> EntityEventTrig
 /// Reaction trigger for [`ReactResource`] mutations.
 pub struct ResourceMutationTrigger<R: ReactResource>(PhantomData<R>);
 impl<R: ReactResource> Default for ResourceMutationTrigger<R> { fn default() -> Self { Self(PhantomData::default()) } }
+impl<R: ReactResource> Clone for ResourceMutationTrigger<R> { fn clone(&self) -> Self { *self } }
+impl<R: ReactResource> Copy for ResourceMutationTrigger<R> {}
 
 impl<R: ReactResource> ReactionTrigger for ResourceMutationTrigger<R>
 {
-    fn register(self, commands: &mut Commands, handle: &ReactorHandle) -> Option<ReactorType>
+    fn reactor_type(&self) -> ReactorType
+    {
+        ReactorType::ResourceMutation(TypeId::of::<R>())
+    }
+
+    fn register(&self, commands: &mut Commands, handle: &ReactorHandle) -> bool
     {
         commands.syscall(handle.clone(), register_resource_mutation_reactor::<R>);
-        Some(ReactorType::ResourceMutation(TypeId::of::<R>()))
+        true
     }
 }
 
@@ -319,13 +363,20 @@ pub fn resource_mutation<R: ReactResource>() -> ResourceMutationTrigger<R> { Res
 /// - Reactions only occur for events sent via [`ReactCommands::<E>::broadcast()`].
 pub struct BroadcastEventTrigger<E: Send + Sync + 'static>(PhantomData<E>);
 impl<E: Send + Sync + 'static> Default for BroadcastEventTrigger<E> { fn default() -> Self { Self(PhantomData::default()) } }
+impl<E: Send + Sync + 'static> Clone for BroadcastEventTrigger<E> { fn clone(&self) -> Self { *self } }
+impl<E: Send + Sync + 'static> Copy for BroadcastEventTrigger<E> {}
 
 impl<E: Send + Sync + 'static> ReactionTrigger for BroadcastEventTrigger<E>
 {
-    fn register(self, commands: &mut Commands, handle: &ReactorHandle) -> Option<ReactorType>
+    fn reactor_type(&self) -> ReactorType
+    {
+        ReactorType::Broadcast(TypeId::of::<E>())
+    }
+
+    fn register(&self, commands: &mut Commands, handle: &ReactorHandle) -> bool
     {
         commands.syscall(handle.clone(), register_broadcast_reactor::<E>);
-        Some(ReactorType::Broadcast(TypeId::of::<E>()))
+        true
     }
 }
 
@@ -336,18 +387,24 @@ pub fn broadcast<E: Send + Sync + 'static>() -> BroadcastEventTrigger<E> { Broad
 
 /// Reaction trigger for despawns.
 /// - Registration does nothing if the entity does not exist.
+#[derive(Copy, Clone)]
 pub struct DespawnTrigger(Entity);
 
 impl ReactionTrigger for DespawnTrigger
 {
-    fn register(self, commands: &mut Commands, handle: &ReactorHandle) -> Option<ReactorType>
+    fn reactor_type(&self) -> ReactorType
+    {
+        ReactorType::Despawn(self.0)
+    }
+
+    fn register(&self, commands: &mut Commands, handle: &ReactorHandle) -> bool
     {
         // check if the entity exists
-        let Some(_) = commands.get_entity(self.0) else { return None; };
+        let Some(_) = commands.get_entity(self.0) else { return false; };
 
         // add despawn tracker
         commands.syscall((self.0, handle.clone()), register_despawn_reactor);
-        Some(ReactorType::Despawn(self.0))
+        true
     }
 }
 

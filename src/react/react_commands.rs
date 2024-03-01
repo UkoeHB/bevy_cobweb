@@ -310,7 +310,7 @@ impl<'w, 's> ReactCommands<'w, 's>
         {
             if let Some(reactor) = once_reactor.take() { (reactor)(world, cleanup); };
         };
-        self.commands.entity(entity).try_insert(SystemCommandStorage::new(SystemCommandCallback::new(once_system)));
+        self.commands.entity(entity).try_insert(SystemCommandStorage::new(SystemCommandCallback::with(once_system)));
 
         revoke_token
     }

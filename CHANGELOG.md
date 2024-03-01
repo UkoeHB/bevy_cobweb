@@ -4,6 +4,18 @@
 
 ### Changed
 
+- Rename `SystemCommandCallback::from_system` -> `SystemCommandCallback::new` and `SystemCommandCallback::new` -> `SystemCommandCallback::with`.
+
+### Added
+
+- Added `WorldReactor` trait with `Reactor` system param.
+- Added `ReactAppExt` and `ReactWorldExt`.
+
+
+## [0.1.0]
+
+### Changed
+
 - `AutoDespawner` now uses `despawn_recursive`.
 - Optimized entity-specific reactors.
 - Moved entity event reactor handles so they are stored on entities, ensuring they are cleaned up automatically when entities despawn.

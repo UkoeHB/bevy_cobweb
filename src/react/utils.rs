@@ -132,6 +132,20 @@ pub struct RevokeToken
     pub(crate) id       : SystemCommand,
 }
 
+impl RevokeToken
+{
+    /// Makes a new token from raw parts.
+    ///
+    /// This is useful for manually removing triggers from persistent reactors. See [`Reactor::remove_triggers`].
+    pub(crate) fn new_from(sys_command: SystemCommand, triggers: impl ReactionTriggerBundle) -> Self
+    {
+        Self{
+            reactors : Arc::from(get_reactor_types(triggers)),
+            id       : sys_command,
+        }
+    }
+}
+
 //-------------------------------------------------------------------------------------------------------------------
 
 /// Handle for managing a reactor within the react backend.

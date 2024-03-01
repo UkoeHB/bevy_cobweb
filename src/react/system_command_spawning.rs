@@ -51,8 +51,21 @@ pub struct SystemCommandCallback
 
 impl SystemCommandCallback
 {
-    /// Makes a new system command callback.
-    pub fn new(callback: impl FnMut(&mut World, SystemCommandCleanup) + Send + Sync + 'static) -> Self
+    /// Makes a new system command callback from a system.
+    pub fn new<S, M>(system: S) -> Self
+    where
+        S: IntoSystem<(), (), M> + Send + Sync + 'static
+    {
+        let mut callback = CallbackSystem::new(system);
+        let command = move |world: &mut World, cleanup: SystemCommandCleanup|
+        {
+            callback.run_with_cleanup(world, (), move |world: &mut World| cleanup.run(world));
+        };
+        Self::with(command)
+    }
+
+    /// Makes a new system command callback from a pre-defined callback.
+    pub fn with(callback: impl FnMut(&mut World, SystemCommandCleanup) + Send + Sync + 'static) -> Self
     {
         Self{ inner: Box::new(callback) }
     }
@@ -102,17 +115,11 @@ impl SystemCommandStorage
 /// Spawns a system as a [`SystemCommand`].
 ///
 /// Systems are not initialized until they are first run.
-pub fn spawn_system_command<S, Marker>(world: &mut World, system: S) -> SystemCommand
+pub fn spawn_system_command<S, M>(world: &mut World, system: S) -> SystemCommand
 where
-    S: IntoSystem<(), (), Marker> + Send + Sync + 'static,
+    S: IntoSystem<(), (), M> + Send + Sync + 'static,
 {
-    let mut callback = CallbackSystem::new(system);
-    let command = move |world: &mut World, cleanup: SystemCommandCleanup|
-    {
-        callback.run_with_cleanup(world, (), move |world: &mut World| cleanup.run(world));
-    };
-
-    spawn_system_command_from(world, SystemCommandCallback::new(command))
+    spawn_system_command_from(world, SystemCommandCallback::new(system))
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -136,9 +143,9 @@ pub fn spawn_system_command_from(world: &mut World, callback: SystemCommandCallb
 /// Returns a cleanup handle. The system will be dropped when the last copy of the handle is dropped.
 ///
 /// Panics if [`setup_auto_despawn()`](AutoDespawnAppExt::setup_auto_despawn) was not added to your app.
-pub fn spawn_rc_system_command<S, Marker>(world: &mut World, system: S) -> AutoDespawnSignal
+pub fn spawn_rc_system_command<S, M>(world: &mut World, system: S) -> AutoDespawnSignal
 where
-    S: IntoSystem<(), (), Marker> + Send + Sync + 'static,
+    S: IntoSystem<(), (), M> + Send + Sync + 'static,
 {
     let system_command = spawn_system_command(world, system);
     world.resource::<AutoDespawner>().prepare(*system_command)

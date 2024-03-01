@@ -15,8 +15,11 @@ use bevy_fn_plugin::*;
 #[bevy_plugin]
 pub fn ReactPlugin(app: &mut App)
 {
-    app.init_resource::<ReactCache>()
-        .init_resource::<CobwebCommandQueue<SystemCommand>>()
+    if !app.world.contains_resource::<ReactCache>()
+    {
+        app.init_resource::<ReactCache>();
+    }
+    app.init_resource::<CobwebCommandQueue<SystemCommand>>()
         .init_resource::<CobwebCommandQueue<EventCommand>>()
         .init_resource::<CobwebCommandQueue<ReactionCommand>>()
         .init_resource::<SystemEventAccessTracker>()

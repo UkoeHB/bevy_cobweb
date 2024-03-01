@@ -11,24 +11,39 @@ use bevy::utils::all_tuples;
 //-------------------------------------------------------------------------------------------------------------------
 
 /// Helper trait for registering reactors with [`ReactCommands`].
-pub trait ReactionTrigger
+pub trait ReactionTrigger: Copy + Clone + Send + Sync + 'static
 {
+    /// Gets the trigger's [`ReactorType`].
+    fn reactor_type(&self) -> ReactorType;
+
     /// Register a trigger with [`ReactCommands`].
-    fn register(self, commands: &mut Commands, handle: &ReactorHandle) -> Option<ReactorType>;
+    ///
+    /// Returns `false` if the trigger should be ignored.
+    fn register(&self, commands: &mut Commands, handle: &ReactorHandle) -> bool;
 }
 
 impl<R: ReactionTrigger> ReactionTriggerBundle for R
 {
     fn len(&self) -> usize { 1 }
 
-    fn get_reactor_types(
+    fn collect_reactor_types(self, func: &mut impl FnMut(ReactorType))
+    {
+        func(self.reactor_type());
+    }
+
+    fn register_triggers(
             self,
             func     : &mut impl FnMut(Option<ReactorType>),
             commands : &mut Commands,
             handle   : &ReactorHandle,
         )
     {
-        func(self.register(commands, handle));
+        let result = match self.register(commands, handle)
+        {
+            true => Some(self.reactor_type()),
+            false => None,
+        };
+        func(result);
     }
 }
 
@@ -38,13 +53,16 @@ impl<R: ReactionTrigger> ReactionTriggerBundle for R
 ///
 /// All members of a trigger bundle must implement [`ReactionTriggerBundle`]. You should implement [`ReactionTrigger`]
 /// on the root members of a bundle.
-pub trait ReactionTriggerBundle
+pub trait ReactionTriggerBundle: Copy + Clone + Send + Sync + 'static
 {
-    /// Get the number of triggers in the bundle
+    /// Gets the number of triggers in the bundle
     fn len(&self) -> usize;
 
-    /// Register reactors and pass the reactor types to the injected function.
-    fn get_reactor_types(
+    /// Traverses reactor types in the bundle.
+    fn collect_reactor_types(self, func: &mut impl FnMut(ReactorType));
+
+    /// Registers reactors and passes the reactor types to the injected function.
+    fn register_triggers(
             self,
             func     : &mut impl FnMut(Option<ReactorType>),
             commands : &mut Commands,
@@ -54,7 +72,22 @@ pub trait ReactionTriggerBundle
 
 //-------------------------------------------------------------------------------------------------------------------
 
-pub fn reactor_registration(
+/// Extracts reactor types from a [`ReactionTriggerBundle`].
+pub fn get_reactor_types(bundle: impl ReactionTriggerBundle) -> Vec<ReactorType>
+{
+    let mut reactors = Vec::with_capacity(bundle.len());
+    let mut func =
+        |reactor_type: ReactorType|
+        {
+            reactors.push(reactor_type);
+        };
+    bundle.collect_reactor_types(&mut func);
+    reactors
+}
+
+//-------------------------------------------------------------------------------------------------------------------
+
+pub(crate) fn reactor_registration(
     commands : &mut Commands,
     handle   : &ReactorHandle,
     triggers : impl ReactionTriggerBundle,
@@ -68,7 +101,7 @@ pub fn reactor_registration(
         ReactorMode::Cleanup =>
         {
             let mut func = |_| {};
-            triggers.get_reactor_types(&mut func, commands, handle);
+            triggers.register_triggers(&mut func, commands, handle);
 
             None
         }
@@ -81,7 +114,7 @@ pub fn reactor_registration(
                     let Some(reactor_type) = reactor_type else { return; };
                     reactors.push(reactor_type);
                 };
-            triggers.get_reactor_types(&mut func, commands, handle);
+            triggers.register_triggers(&mut func, commands, handle);
 
             Some(RevokeToken{ reactors: reactors.into(), id: handle.sys_command() })
         }
@@ -113,7 +146,18 @@ macro_rules! tuple_impl
 
             #[allow(unused_variables, unused_mut)]
             #[inline(always)]
-            fn get_reactor_types(
+            fn collect_reactor_types(self, func: &mut impl FnMut(ReactorType))
+            {
+                #[allow(non_snake_case)]
+                let ($(mut $name,)*) = self;
+                $(
+                    $name.collect_reactor_types(&mut *func);
+                )*
+            }
+
+            #[allow(unused_variables, unused_mut)]
+            #[inline(always)]
+            fn register_triggers(
                 self,
                 func     : &mut impl FnMut(Option<ReactorType>),
                 commands : &mut Commands,
@@ -122,7 +166,7 @@ macro_rules! tuple_impl
                 #[allow(non_snake_case)]
                 let ($(mut $name,)*) = self;
                 $(
-                    $name.get_reactor_types(&mut *func, commands, handle);
+                    $name.register_triggers(&mut *func, commands, handle);
                 )*
             }
         }
