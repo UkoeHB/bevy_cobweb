@@ -57,51 +57,51 @@ fn on_despawn(In(entity): In<Entity>, mut rcommands: ReactCommands) -> RevokeTok
 fn on_any_entity_mutation(In(entity): In<Entity>, mut rcommands: ReactCommands) -> RevokeToken
 {
     rcommands.on_revokable(
-            (
-                entity_insertion::<TestComponent>(entity),
-                entity_mutation::<TestComponent>(entity),
-                entity_removal::<TestComponent>(entity),
-                despawn(entity)
-            ),
-            move
-            |
-                insertion: InsertionEvent<TestComponent>,
-                mutation: MutationEvent<TestComponent>,
-                removal: RemovalEvent<TestComponent>,
-                despawn: DespawnEvent,
-                mut recorder: ResMut<TestReactRecorder>
-            |
+        (
+            entity_insertion::<TestComponent>(entity),
+            entity_mutation::<TestComponent>(entity),
+            entity_removal::<TestComponent>(entity),
+            despawn(entity)
+        ),
+        move
+        |
+            insertion: InsertionEvent<TestComponent>,
+            mutation: MutationEvent<TestComponent>,
+            removal: RemovalEvent<TestComponent>,
+            despawn: DespawnEvent,
+            mut recorder: ResMut<TestReactRecorder>
+        |
+        {
+            if let Some(_) = insertion.read()
             {
-                if let Some(_) = insertion.read()
-                {
-                    recorder.0 += 1;
-                    assert!(mutation.is_empty());
-                    assert!(removal.is_empty());
-                    assert!(despawn.is_empty());
-                }
-                if let Some(_) = mutation.read()
-                {
-                    recorder.0 += 10;
-                    assert!(insertion.is_empty());
-                    assert!(removal.is_empty());
-                    assert!(despawn.is_empty());
-                }
-                if let Some(_) = removal.read()
-                {
-                    recorder.0 += 100;
-                    assert!(insertion.is_empty());
-                    assert!(mutation.is_empty());
-                    assert!(despawn.is_empty());
-                }
-                if let Some(_) = despawn.read()
-                {
-                    recorder.0 += 1000;
-                    assert!(insertion.is_empty());
-                    assert!(mutation.is_empty());
-                    assert!(removal.is_empty());
-                }
+                recorder.0 += 1;
+                assert!(mutation.is_empty());
+                assert!(removal.is_empty());
+                assert!(despawn.is_empty());
             }
-        )
+            if let Some(_) = mutation.read()
+            {
+                recorder.0 += 10;
+                assert!(insertion.is_empty());
+                assert!(removal.is_empty());
+                assert!(despawn.is_empty());
+            }
+            if let Some(_) = removal.read()
+            {
+                recorder.0 += 100;
+                assert!(insertion.is_empty());
+                assert!(mutation.is_empty());
+                assert!(despawn.is_empty());
+            }
+            if let Some(_) = despawn.read()
+            {
+                recorder.0 += 1000;
+                assert!(insertion.is_empty());
+                assert!(mutation.is_empty());
+                assert!(removal.is_empty());
+            }
+        }
+    )
 }
 
 fn on_mutation_recursive(mut rcommands: ReactCommands) -> RevokeToken
