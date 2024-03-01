@@ -64,8 +64,8 @@ pub fn reactor_registration(
     match mode
     {
         ReactorMode::Persistent |
-        // note: despawn cleanup is handled automatically by the ReactorHandle type
-        ReactorMode::DespawnCleanup =>
+        // note: cleanup is handled automatically by the ReactorHandle type
+        ReactorMode::Cleanup =>
         {
             let mut func = |_| {};
             triggers.get_reactor_types(&mut func, commands, handle);

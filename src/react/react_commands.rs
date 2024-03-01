@@ -102,8 +102,8 @@ pub enum ReactorMode
     ///
     /// This is the most efficient mode as it requires the minimum amount of allocations to register a reactor.
     Persistent,
-    /// The reactor will be despawned when all [`despawn()`] triggers have fired if there are no other triggers.
-    DespawnCleanup,
+    /// The reactor will be despawned when it has no triggers, include if all [`despawn()`] triggers have fired.
+    Cleanup,
     /// The reactor will receive a [`RevokeToken`] that can be used to revoke it.
     ///
     /// The reactor will be automatically dropped when all [`despawn()`] triggers have fired if there are no other triggers.
@@ -116,9 +116,9 @@ impl ReactorMode
     {
         match self
         {
-            Self::Persistent     => ReactorHandle::Persistent(sys_command),
-            Self::DespawnCleanup |
-            Self::Revokable      => ReactorHandle::AutoDespawn(despawner.prepare(*sys_command)),
+            Self::Persistent => ReactorHandle::Persistent(sys_command),
+            Self::Cleanup    |
+            Self::Revokable  => ReactorHandle::AutoDespawn(despawner.prepare(*sys_command)),
         }
     }
 }
@@ -196,7 +196,7 @@ impl<'w, 's> ReactCommands<'w, 's>
     /// `(resource_mutation::<A>(), resource_mutation::<B>())`, then mutate `A` and `B` in succession, the reactor will
     /// execute twice.
     ///
-    /// Uses [`ReactorMode::DespawnCleanup`].
+    /// Uses [`ReactorMode::Cleanup`].
     ///
     /// Example:
     /// ```no_run
@@ -206,11 +206,9 @@ impl<'w, 's> ReactCommands<'w, 's>
         &mut self,
         triggers : impl ReactionTriggerBundle,
         reactor  : impl IntoSystem<(), (), M> + Send + Sync + 'static
-    ) -> SystemCommand
-    {
+    ){
         let sys_command = self.commands.spawn_system_command(reactor);
-        let _ = self.with(triggers, sys_command, ReactorMode::DespawnCleanup);
-        sys_command
+        let _ = self.with(triggers, sys_command, ReactorMode::Cleanup);
     }
 
     /// Registers a reactor triggered by ECS changes using [`ReactorMode::Persistent`].
@@ -251,8 +249,8 @@ impl<'w, 's> ReactCommands<'w, 's>
     ///
     /// Note that you can call this method multiple times for the same [`SystemCommand`] to add triggers.
     /// It is highly recommended to use [`ReactorMode::Persistent`] in that case, otherwise your
-    /// reactor may be despawned unexpectedly if a [`despawn()`] trigger is used or if you try to revoke any [`RevokeTokens`]
-    /// associated with the reactor.
+    /// reactor may be despawned unexpectedly if a [`despawn()`] trigger is used or if you try to revoke any
+    /// [`RevokeTokens`](RevokeToken) associated with the reactor.
     ///
     /// Returns `None` unless [`ReactorMode::Revokable`] is used.
     ///

@@ -5,6 +5,9 @@ Reactivity is built on system commands, system events, a core reactivity API, an
 
 ## System Commands
 
+All reactors are [`SystemCommands`](bevy_cobweb::prelude::SystemCommand).
+
+
 ### Spawning Systems
 
 Systems can be spawned as [`SystemCommands`](bevy_cobweb::prelude::SystemCommand) with [`Commands::spawn_system_command`](bevy_cobweb::prelude::ReactCommandsExt::spawn_system_command). System commands are similar to Bevy one-shot systems, however the actual system is wrapped in a closure that takes `World` and a [`SystemCommandCleanup`](bevy_cobweb::prelude::SystemCommandCleanup) as input. See [Scheduling](#scheduling) for more details.
@@ -56,7 +59,9 @@ commands.send_system_event(syscommand, vec![0, 18, 42]);
 
 In `bevy_cobweb`, reactivity revolves around the [`ReactCommands`](bevy_cobweb::prelude::ReactCommands) system parameter.
 
-We use custom reactivity instead of Bevy change detection in order to achieve precise, responsive, recursive reactions with an ergonomic API. This means ECS reactivity is only implemented for [`ReactResource`](bevy_cobweb::prelude::ReactResource) resources and [`ReactComponent`](bevy_cobweb::prelude::ReactComponent) components, which are accessed with [`ReactRes`](bevy_cobweb::prelude::ReactRes)/[`ReactResMut`](bevy_cobweb::prelude::ReactResMut) system parameters and the [`React<C>`](bevy_cobweb::prelude::React) component wrapper respectively. When Bevy implements [observers](https://github.com/bevyengine/bevy/pull/10839), we expect those inconveniences to be eliminated.
+ECS reactivity is only implemented for [`ReactResource`](bevy_cobweb::prelude::ReactResource) resources and [`ReactComponent`](bevy_cobweb::prelude::ReactComponent) components, which are accessed with [`ReactRes`](bevy_cobweb::prelude::ReactRes)/[`ReactResMut`](bevy_cobweb::prelude::ReactResMut) system parameters and the [`React<C>`](bevy_cobweb::prelude::React) component wrapper respectively.
+
+We use custom reactivity instead of Bevy change detection in order to achieve precise, responsive, recursive reactions with an ergonomic API. When Bevy implements [observers](https://github.com/bevyengine/bevy/pull/10839), we expect the 'extra' API layer to be eliminated.
 
 A reactor will run in the first `apply_deferred` after its reaction trigger is detected. If a reactor triggers other reactors, they will run immediately after the initial reactor in a telescoping fashion until the entire tree of reactions terminates. Recursive reactions are fully supported. For more details see [Scheduling](#scheduling).
 
@@ -77,16 +82,16 @@ fn setup(mut rcommands: ReactCommands)
 ```
 
 The available reaction triggers are:
-- [`resource_mutation<R: ReactResource>()`](bevy_cobweb::prelude::resource_mutation)
-- [`insertion<C: ReactComponent>()`](bevy_cobweb::prelude::insertion)
-- [`mutation<C: ReactComponent>()`](bevy_cobweb::prelude::mutation)
-- [`removal<C: ReactComponent>()`](bevy_cobweb::prelude::removal)
-- [`entity_insertion<C: ReactComponent>(entity)`](bevy_cobweb::prelude::entity_insertion)
-- [`entity_mutation<C: ReactComponent>(entity)`](bevy_cobweb::prelude::entity_mutation)
-- [`entity_removal<C: ReactComponent>(entity)`](bevy_cobweb::prelude::entity_removal)
-- [`despawn()`](bevy_cobweb::prelude::despawn)
-- [`broadcast<E>()`](bevy_cobweb::prelude::broadcast)
-- [`entity_event<E>(entity)`](bevy_cobweb::prelude::entity_event)
+- [`resource_mutation<R: ReactResource>`](bevy_cobweb::prelude::resource_mutation)
+- [`insertion<C: ReactComponent>`](bevy_cobweb::prelude::insertion)
+- [`mutation<C: ReactComponent>`](bevy_cobweb::prelude::mutation)
+- [`removal<C: ReactComponent>`](bevy_cobweb::prelude::removal)
+- [`entity_insertion<C: ReactComponent>`](bevy_cobweb::prelude::entity_insertion)
+- [`entity_mutation<C: ReactComponent>`](bevy_cobweb::prelude::entity_mutation)
+- [`entity_removal<C: ReactComponent>`](bevy_cobweb::prelude::entity_removal)
+- [`despawn`](bevy_cobweb::prelude::despawn)
+- [`broadcast<E>`](bevy_cobweb::prelude::broadcast)
+- [`entity_event<E>`](bevy_cobweb::prelude::entity_event)
 
 A reactor can be associated with multiple reaction triggers:
 ```rust
@@ -203,8 +208,6 @@ rcommands.on(despawn(entity),
 );
 ```
 
-Note that a reactor triggered by only despawns will be automatically cleaned up after the last despawn.
-
 
 ### Trigger Type: Broadcast Events
 
@@ -252,7 +255,7 @@ rcommands.on(entity_event::<u32>(entity),
 
 ### One-off Reactors
 
-If you only want a reactor to run once, use [`ReactCommands::once()`]:
+If you only want a reactor to run once, use [`ReactCommands::once`]:
 ```rust
 let entity = rcommands.commands().spawn(Player);
 rcommands.once(broadcast::<ResetEverything>(),
@@ -262,6 +265,18 @@ rcommands.once(broadcast::<ResetEverything>(),
     }
 );
 ```
+
+
+### Reactor Cleanup
+
+Reactors are stateful boxed Bevy systems, so it is useful to manage their memory use. We control reactor lifetimes with [`ReactorMode`](bevy_cobweb::prelude::ReactorMode), which has three settings. You can manually specify the mode using [`ReactCommands::with`](bevy_cobweb::prelude::ReactCommands::with).
+
+- [`ReactorMode::Persistent`](bevy_cobweb::prelude::ReactorMode::Persistent): The reactor will never be cleaned up even if it has no triggers. This is the most efficient mode because there is no need to allocate a despawn counter or revoke token.
+    - See [`ReactCommands::on_persistent`](bevy_cobweb::prelude::ReactCommands::on_persistent), which returns a [`SystemCommand`](bevy_cobweb::prelude::SystemCommand).
+- [`ReactorMode::Cleanup`](bevy_cobweb::prelude::ReactorMode::Cleanup): The reactor will be cleaned up if it has no triggers, including if it started with [`despawn`](bevy_cobweb::prelude::despawn) triggers and all despawns have fired.
+    - See [`ReactCommands::on`](bevy_cobweb::prelude::ReactCommands::on).
+- [`ReactorMode::Revokable`](bevy_cobweb::prelude::ReactorMode::Revokable): The reactor will be cleaned up if it has no triggers, including if it starts with [`despawn`](bevy_cobweb::prelude::despawn triggers and all despawns have fired. Otherwise, you can revoke it manually with its [`RevokeToken`](bevy_cobweb::prelude::RevokeToken).
+    - See [`ReactCommands::on_revokable`](bevy_cobweb::prelude::ReactCommands::on_revokable), which returns a [`RevokeToken`](bevy_cobweb::prelude::RevokeToken).
 
 
 
