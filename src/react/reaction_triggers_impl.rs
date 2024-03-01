@@ -39,49 +39,49 @@ impl Drop for DespawnTracker
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
-fn register_insertion_reactor<C: ReactComponent>(In(signal): In<AutoDespawnSignal>, mut cache: ResMut<ReactCache>)
+fn register_insertion_reactor<C: ReactComponent>(In(handle): In<ReactorHandle>, mut cache: ResMut<ReactCache>)
 {
-    cache.register_insertion_reactor::<C>(signal);
+    cache.register_insertion_reactor::<C>(handle);
 }
 
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
-fn register_mutation_reactor<C: ReactComponent>(In(signal): In<AutoDespawnSignal>, mut cache: ResMut<ReactCache>)
+fn register_mutation_reactor<C: ReactComponent>(In(handle): In<ReactorHandle>, mut cache: ResMut<ReactCache>)
 {
-    cache.register_mutation_reactor::<C>(signal);
+    cache.register_mutation_reactor::<C>(handle);
 }
 
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
-fn register_removal_reactor<C: ReactComponent>(In(signal): In<AutoDespawnSignal>, mut cache: ResMut<ReactCache>)
+fn register_removal_reactor<C: ReactComponent>(In(handle): In<ReactorHandle>, mut cache: ResMut<ReactCache>)
 {
     cache.track_removals::<C>();
-    cache.register_removal_reactor::<C>(signal);
+    cache.register_removal_reactor::<C>(handle);
 }
 
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
-fn register_resource_mutation_reactor<R: ReactResource>(In(signal): In<AutoDespawnSignal>, mut cache: ResMut<ReactCache>)
+fn register_resource_mutation_reactor<R: ReactResource>(In(handle): In<ReactorHandle>, mut cache: ResMut<ReactCache>)
 {
-    cache.register_resource_mutation_reactor::<R>(signal);
+    cache.register_resource_mutation_reactor::<R>(handle);
 }
 
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
-fn register_broadcast_reactor<E: Send + Sync + 'static>(In(signal): In<AutoDespawnSignal>, mut cache: ResMut<ReactCache>)
+fn register_broadcast_reactor<E: Send + Sync + 'static>(In(handle): In<ReactorHandle>, mut cache: ResMut<ReactCache>)
 {
-    cache.register_broadcast_reactor::<E>(signal);
+    cache.register_broadcast_reactor::<E>(handle);
 }
 
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
 fn register_despawn_reactor(
-    In((entity, signal)) : In<(Entity, AutoDespawnSignal)>,
+    In((entity, handle)) : In<(Entity, ReactorHandle)>,
     world                : &mut World,
 ){
     world.resource_scope(
@@ -91,7 +91,7 @@ fn register_despawn_reactor(
             let Some(mut entity_mut) = world.get_entity_mut(entity) else { return; };
 
             // Register the reactor.
-            cache.register_despawn_reactor(entity, signal);
+            cache.register_despawn_reactor(entity, handle);
 
             // Leave if the entity already has a despawn tracker.
             // - We don't want to accidentally trigger `DespawnTracker::drop()` by replacing the existing component.
@@ -113,15 +113,15 @@ fn register_entity_reactor(
     In((
         rtype,
         entity,
-        signal
-    ))                  : In<(EntityReactionType, Entity, AutoDespawnSignal)>,
+        handle
+    ))                  : In<(EntityReactionType, Entity, ReactorHandle)>,
     mut commands        : Commands,
     mut entity_reactors : Query<&mut EntityReactors>,
 ){
     // add callback to entity
     match entity_reactors.get_mut(entity)
     {
-        Ok(mut entity_reactors) => entity_reactors.insert(rtype, signal),
+        Ok(mut entity_reactors) => entity_reactors.insert(rtype, handle),
         _ =>
         {
             let Some(mut entity_commands) = commands.get_entity(entity) else { return; };
@@ -130,7 +130,7 @@ fn register_entity_reactor(
             let mut entity_reactors = EntityReactors::default();
 
             // add callback and insert to entity
-            entity_reactors.insert(rtype, signal);
+            entity_reactors.insert(rtype, handle);
             entity_commands.insert(entity_reactors);
         }
     }
@@ -146,9 +146,9 @@ impl<C: ReactComponent> Default for InsertionTrigger<C> { fn default() -> Self {
 
 impl<C: ReactComponent> ReactionTrigger for InsertionTrigger<C>
 {
-    fn register(self, commands: &mut Commands, sys_handle: &AutoDespawnSignal) -> Option<ReactorType>
+    fn register(self, commands: &mut Commands, handle: &ReactorHandle) -> Option<ReactorType>
     {
-        commands.syscall(sys_handle.clone(), register_insertion_reactor::<C>);
+        commands.syscall(handle.clone(), register_insertion_reactor::<C>);
         Some(ReactorType::ComponentInsertion(TypeId::of::<C>()))
     }
 }
@@ -165,9 +165,9 @@ impl<C: ReactComponent> Default for MutationTrigger<C> { fn default() -> Self { 
 
 impl<C: ReactComponent> ReactionTrigger for MutationTrigger<C>
 {
-    fn register(self, commands: &mut Commands, sys_handle: &AutoDespawnSignal) -> Option<ReactorType>
+    fn register(self, commands: &mut Commands, handle: &ReactorHandle) -> Option<ReactorType>
     {
-        commands.syscall(sys_handle.clone(), register_mutation_reactor::<C>);
+        commands.syscall(handle.clone(), register_mutation_reactor::<C>);
         Some(ReactorType::ComponentMutation(TypeId::of::<C>()))
     }
 }
@@ -178,16 +178,15 @@ pub fn mutation<C: ReactComponent>() -> MutationTrigger<C> { MutationTrigger::de
 //-------------------------------------------------------------------------------------------------------------------
 
 /// Reaction trigger for [`ReactComponent`] removals from any entity.
-/// - For reactors that take the entity the component was removed from.
 /// - Reactions are not triggered if the entity was despawned.
 pub struct RemovalTrigger<C: ReactComponent>(PhantomData<C>);
 impl<C: ReactComponent> Default for RemovalTrigger<C> { fn default() -> Self { Self(PhantomData::default()) } }
 
 impl<C: ReactComponent> ReactionTrigger for RemovalTrigger<C>
 {
-    fn register(self, commands: &mut Commands, sys_handle: &AutoDespawnSignal) -> Option<ReactorType>
+    fn register(self, commands: &mut Commands, handle: &ReactorHandle) -> Option<ReactorType>
     {
-        commands.syscall(sys_handle.clone(), register_removal_reactor::<C>);
+        commands.syscall(handle.clone(), register_removal_reactor::<C>);
         Some(ReactorType::ComponentRemoval(TypeId::of::<C>()))
     }
 }
@@ -203,13 +202,13 @@ pub struct EntityInsertionTrigger<C: ReactComponent>(Entity, PhantomData<C>);
 
 impl<C: ReactComponent> ReactionTrigger for EntityInsertionTrigger<C>
 {
-    fn register(self, commands: &mut Commands, sys_handle: &AutoDespawnSignal) -> Option<ReactorType>
+    fn register(self, commands: &mut Commands, handle: &ReactorHandle) -> Option<ReactorType>
     {
         let comp_id = TypeId::of::<C>();
         let entity = self.0;
-        let sys_handle = sys_handle.clone();
+        let handle = handle.clone();
 
-        commands.syscall((EntityReactionType::Insertion(comp_id), entity, sys_handle), register_entity_reactor);
+        commands.syscall((EntityReactionType::Insertion(comp_id), entity, handle), register_entity_reactor);
         Some(ReactorType::EntityInsertion(entity, comp_id))
     }
 }
@@ -228,13 +227,13 @@ pub struct EntityMutationTrigger<C: ReactComponent>(Entity, PhantomData<C>);
 
 impl<C: ReactComponent> ReactionTrigger for EntityMutationTrigger<C>
 {
-    fn register(self, commands: &mut Commands, sys_handle: &AutoDespawnSignal) -> Option<ReactorType>
+    fn register(self, commands: &mut Commands, handle: &ReactorHandle) -> Option<ReactorType>
     {
         let comp_id = TypeId::of::<C>();
         let entity = self.0;
-        let sys_handle = sys_handle.clone();
+        let handle = handle.clone();
 
-        commands.syscall((EntityReactionType::Mutation(comp_id), entity, sys_handle), register_entity_reactor);
+        commands.syscall((EntityReactionType::Mutation(comp_id), entity, handle), register_entity_reactor);
         Some(ReactorType::EntityMutation(entity, comp_id))
     }
 }
@@ -255,14 +254,14 @@ pub struct EntityRemovalTrigger<C: ReactComponent>(Entity, PhantomData<C>);
 
 impl<C: ReactComponent> ReactionTrigger for EntityRemovalTrigger<C>
 {
-    fn register(self, commands: &mut Commands, sys_handle: &AutoDespawnSignal) -> Option<ReactorType>
+    fn register(self, commands: &mut Commands, handle: &ReactorHandle) -> Option<ReactorType>
     {
         let comp_id = TypeId::of::<C>();
         let entity = self.0;
-        let sys_handle = sys_handle.clone();
+        let handle = handle.clone();
 
         commands.syscall((), track_removals::<C>);
-        commands.syscall((EntityReactionType::Removal(comp_id), entity, sys_handle), register_entity_reactor);
+        commands.syscall((EntityReactionType::Removal(comp_id), entity, handle), register_entity_reactor);
         Some(ReactorType::EntityRemoval(entity, comp_id))
     }
 }
@@ -281,13 +280,13 @@ pub struct EntityEventTrigger<E: Send + Sync + 'static>(Entity, PhantomData<E>);
 
 impl<E: Send + Sync + 'static> ReactionTrigger for EntityEventTrigger<E>
 {
-    fn register(self, commands: &mut Commands, sys_handle: &AutoDespawnSignal) -> Option<ReactorType>
+    fn register(self, commands: &mut Commands, handle: &ReactorHandle) -> Option<ReactorType>
     {
         let event_id = TypeId::of::<E>();
         let entity = self.0;
-        let sys_handle = sys_handle.clone();
+        let handle = handle.clone();
 
-        commands.syscall((EntityReactionType::Event(event_id), entity, sys_handle), register_entity_reactor);
+        commands.syscall((EntityReactionType::Event(event_id), entity, handle), register_entity_reactor);
         Some(ReactorType::EntityEvent(entity, event_id))
     }
 }
@@ -306,9 +305,9 @@ impl<R: ReactResource> Default for ResourceMutationTrigger<R> { fn default() -> 
 
 impl<R: ReactResource> ReactionTrigger for ResourceMutationTrigger<R>
 {
-    fn register(self, commands: &mut Commands, sys_handle: &AutoDespawnSignal) -> Option<ReactorType>
+    fn register(self, commands: &mut Commands, handle: &ReactorHandle) -> Option<ReactorType>
     {
-        commands.syscall(sys_handle.clone(), register_resource_mutation_reactor::<R>);
+        commands.syscall(handle.clone(), register_resource_mutation_reactor::<R>);
         Some(ReactorType::ResourceMutation(TypeId::of::<R>()))
     }
 }
@@ -325,9 +324,9 @@ impl<E: Send + Sync + 'static> Default for BroadcastEventTrigger<E> { fn default
 
 impl<E: Send + Sync + 'static> ReactionTrigger for BroadcastEventTrigger<E>
 {
-    fn register(self, commands: &mut Commands, sys_handle: &AutoDespawnSignal) -> Option<ReactorType>
+    fn register(self, commands: &mut Commands, handle: &ReactorHandle) -> Option<ReactorType>
     {
-        commands.syscall(sys_handle.clone(), register_broadcast_reactor::<E>);
+        commands.syscall(handle.clone(), register_broadcast_reactor::<E>);
         Some(ReactorType::Broadcast(TypeId::of::<E>()))
     }
 }
@@ -338,17 +337,18 @@ pub fn broadcast<E: Send + Sync + 'static>() -> BroadcastEventTrigger<E> { Broad
 //-------------------------------------------------------------------------------------------------------------------
 
 /// Reaction trigger for despawns.
+/// - Registration does nothing if the entity does not exist.
 pub struct DespawnTrigger(Entity);
 
 impl ReactionTrigger for DespawnTrigger
 {
-    fn register(self, commands: &mut Commands, sys_handle: &AutoDespawnSignal) -> Option<ReactorType>
+    fn register(self, commands: &mut Commands, handle: &ReactorHandle) -> Option<ReactorType>
     {
         // check if the entity exists
         let Some(_) = commands.get_entity(self.0) else { return None; };
 
         // add despawn tracker
-        commands.syscall((self.0, sys_handle.clone()), register_despawn_reactor);
+        commands.syscall((self.0, handle.clone()), register_despawn_reactor);
         Some(ReactorType::Despawn(self.0))
     }
 }

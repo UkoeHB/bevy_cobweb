@@ -12,51 +12,51 @@ use bevy::prelude::*;
 
 fn on_entity_insertion(In(entity): In<Entity>, mut rcommands: ReactCommands) -> RevokeToken
 {
-    rcommands.on(entity_insertion::<TestComponent>(entity),
+    rcommands.on_revokable(entity_insertion::<TestComponent>(entity),
             move |world: &mut World| syscall(world, entity, update_test_recorder_with_component)
         )
 }
 
 fn on_entity_mutation(In(entity): In<Entity>, mut rcommands: ReactCommands) -> RevokeToken
 {
-    rcommands.on(entity_mutation::<TestComponent>(entity),
+    rcommands.on_revokable(entity_mutation::<TestComponent>(entity),
             move |world: &mut World| syscall(world, entity, update_test_recorder_with_component)
         )
 }
 
 fn on_entity_removal(In(entity): In<Entity>, mut rcommands: ReactCommands) -> RevokeToken
 {
-    rcommands.on(entity_removal::<TestComponent>(entity), infinitize_test_recorder)
+    rcommands.on_revokable(entity_removal::<TestComponent>(entity), infinitize_test_recorder)
 }
 
 fn on_insertion(mut rcommands: ReactCommands) -> RevokeToken
 {
-    rcommands.on(insertion::<TestComponent>(), update_test_recorder_on_insertion)
+    rcommands.on_revokable(insertion::<TestComponent>(), update_test_recorder_on_insertion)
 }
 
 fn on_mutation(mut rcommands: ReactCommands) -> RevokeToken
 {
-    rcommands.on(mutation::<TestComponent>(), update_test_recorder_on_mutation)
+    rcommands.on_revokable(mutation::<TestComponent>(), update_test_recorder_on_mutation)
 }
 
 fn on_removal(mut rcommands: ReactCommands) -> RevokeToken
 {
-    rcommands.on(removal::<TestComponent>(), |_, world: &mut World| syscall(world, (), infinitize_test_recorder))
+    rcommands.on_revokable(removal::<TestComponent>(), |_, world: &mut World| syscall(world, (), infinitize_test_recorder))
 }
 
 fn on_despawn_div2(In(entity): In<Entity>, mut rcommands: ReactCommands) -> RevokeToken
 {
-    rcommands.on(despawn(entity), test_recorder_div2)
+    rcommands.on_revokable(despawn(entity), test_recorder_div2)
 }
 
 fn on_despawn(In(entity): In<Entity>, mut rcommands: ReactCommands) -> RevokeToken
 {
-    rcommands.on(despawn(entity), infinitize_test_recorder)
+    rcommands.on_revokable(despawn(entity), infinitize_test_recorder)
 }
 
 fn on_any_entity_mutation(In(entity): In<Entity>, mut rcommands: ReactCommands) -> RevokeToken
 {
-    rcommands.on(
+    rcommands.on_revokable(
             (
                 entity_insertion::<TestComponent>(entity),
                 entity_mutation::<TestComponent>(entity),
@@ -106,7 +106,7 @@ fn on_any_entity_mutation(In(entity): In<Entity>, mut rcommands: ReactCommands) 
 
 fn on_mutation_recursive(mut rcommands: ReactCommands) -> RevokeToken
 {
-    rcommands.on((insertion::<TestComponent>(), mutation::<TestComponent>()),
+    rcommands.on_revokable((insertion::<TestComponent>(), mutation::<TestComponent>()),
         move
         |
             mut rcommands     : ReactCommands,
@@ -137,7 +137,7 @@ fn on_mutation_recursive(mut rcommands: ReactCommands) -> RevokeToken
 
 fn register_reader_for_insertion_event(In(entity): In<Entity>, mut rcommands: ReactCommands) -> RevokeToken
 {
-    rcommands.on(entity_insertion::<TestComponent>(entity),
+    rcommands.on_revokable(entity_insertion::<TestComponent>(entity),
             move
             |
                 insertion: InsertionEvent<TestComponent>,
@@ -158,7 +158,7 @@ fn register_reader_for_insertion_event(In(entity): In<Entity>, mut rcommands: Re
 
 fn register_reader_for_mutation_event(In(entity): In<Entity>, mut rcommands: ReactCommands) -> RevokeToken
 {
-    rcommands.on(entity_mutation::<TestComponent>(entity),
+    rcommands.on_revokable(entity_mutation::<TestComponent>(entity),
             move
             |
                 insertion: InsertionEvent<TestComponent>,
@@ -179,7 +179,7 @@ fn register_reader_for_mutation_event(In(entity): In<Entity>, mut rcommands: Rea
 
 fn register_reader_for_removal_event(In(entity): In<Entity>, mut rcommands: ReactCommands) -> RevokeToken
 {
-    rcommands.on(entity_removal::<TestComponent>(entity),
+    rcommands.on_revokable(entity_removal::<TestComponent>(entity),
             move
             |
                 insertion: InsertionEvent<TestComponent>,
@@ -200,7 +200,7 @@ fn register_reader_for_removal_event(In(entity): In<Entity>, mut rcommands: Reac
 
 fn register_reader_for_despawn_event(In(entity): In<Entity>, mut rcommands: ReactCommands) -> RevokeToken
 {
-    rcommands.on(despawn(entity),
+    rcommands.on_revokable(despawn(entity),
             move
             |
                 insertion: InsertionEvent<TestComponent>,
@@ -284,7 +284,7 @@ fn despawn_other_on_drop(
 ){
     let signal = despawner.prepare(proxy);
 
-    rcommands.on(despawn(entity), 
+    rcommands.on_revokable(despawn(entity), 
             move ||
             {
                 let _ = &signal;
@@ -301,7 +301,7 @@ fn dont_despawn_other_on_drop(
 ){
     let signal = despawner.prepare(proxy);
 
-    rcommands.on((insertion::<TestComponent>(), despawn(entity)), 
+    rcommands.on_revokable((insertion::<TestComponent>(), despawn(entity)), 
             move ||
             {
                 let _ = &signal;

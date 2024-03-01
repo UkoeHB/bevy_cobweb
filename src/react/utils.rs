@@ -52,23 +52,23 @@ pub(crate) enum EntityReactionType
 #[derive(Component)]
 pub(crate) struct EntityReactors
 {
-    reactors: SmallVec<[(EntityReactionType, AutoDespawnSignal); ENTITY_REACTORS_STATIC_SIZE]>,
+    reactors: SmallVec<[(EntityReactionType, ReactorHandle); ENTITY_REACTORS_STATIC_SIZE]>,
 }
 
 impl EntityReactors
 {
-    pub(crate) fn insert(&mut self, rtype: EntityReactionType, signal: AutoDespawnSignal)
+    pub(crate) fn insert(&mut self, rtype: EntityReactionType, handle: ReactorHandle)
     {
-        self.reactors.push((rtype, signal));
+        self.reactors.push((rtype, handle));
     }
 
-    pub(crate) fn remove(&mut self, rtype: EntityReactionType, reactor_id : u64)
+    pub(crate) fn remove(&mut self, rtype: EntityReactionType, reactor_id: SystemCommand)
     {
         self.reactors.drain_filter(
-                |(reaction_type, signal)|
+                |(reaction_type, handle)|
                 {
                     if *reaction_type != rtype { return false; }
-                    if signal.entity().to_bits() != reactor_id { return false; }
+                    if handle.sys_command() != reactor_id { return false; }
                     true
                 }
             );
@@ -84,10 +84,10 @@ impl EntityReactors
         self.reactors
             .iter()
             .filter_map(
-                move |(reaction_type, signal)|
+                move |(reaction_type, handle)|
                 {
                     if *reaction_type != rtype { return None; }
-                    Some(SystemCommand(signal.entity()))
+                    Some(handle.sys_command())
                 }
             )
     }
@@ -98,7 +98,7 @@ impl Default for EntityReactors
     fn default() -> Self
     {
         Self{
-            reactors : SmallVec::default(),
+            reactors: SmallVec::default(),
         }
     }
 }
@@ -129,7 +129,29 @@ pub enum ReactorType
 pub struct RevokeToken
 {
     pub(crate) reactors : Arc<[ReactorType]>,
-    pub(crate) id       : u64,
+    pub(crate) id       : SystemCommand,
+}
+
+//-------------------------------------------------------------------------------------------------------------------
+
+/// Handle for managing a reactor within the react backend.
+#[derive(Clone)]
+pub enum ReactorHandle
+{
+    Persistent(SystemCommand),
+    AutoDespawn(AutoDespawnSignal)
+}
+
+impl ReactorHandle
+{
+    pub(crate) fn sys_command(&self) -> SystemCommand
+    {
+        match self
+        {
+            Self::Persistent(sys_command) => *sys_command,
+            Self::AutoDespawn(signal)     => SystemCommand(signal.entity()),
+        }
+    }
 }
 
 //-------------------------------------------------------------------------------------------------------------------

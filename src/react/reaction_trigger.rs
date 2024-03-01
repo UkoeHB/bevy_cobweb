@@ -14,10 +14,7 @@ use bevy::utils::all_tuples;
 pub trait ReactionTrigger
 {
     /// Register a trigger with [`ReactCommands`].
-    fn register(self,
-        commands   : &mut Commands,
-        sys_handle : &AutoDespawnSignal,
-    ) -> Option<ReactorType>;
+    fn register(self, commands: &mut Commands, handle: &ReactorHandle) -> Option<ReactorType>;
 }
 
 impl<R: ReactionTrigger> ReactionTriggerBundle for R
@@ -26,12 +23,12 @@ impl<R: ReactionTrigger> ReactionTriggerBundle for R
 
     fn get_reactor_types(
             self,
-            commands   : &mut Commands,
-            sys_handle : &AutoDespawnSignal,
-            func       : &mut impl FnMut(Option<ReactorType>)
+            func     : &mut impl FnMut(Option<ReactorType>),
+            commands : &mut Commands,
+            handle   : &ReactorHandle,
         )
     {
-        func(self.register(commands, sys_handle));
+        func(self.register(commands, handle));
     }
 }
 
@@ -49,30 +46,46 @@ pub trait ReactionTriggerBundle
     /// Register reactors and pass the reactor types to the injected function.
     fn get_reactor_types(
             self,
-            commands   : &mut Commands,
-            sys_handle : &AutoDespawnSignal,
-            func       : &mut impl FnMut(Option<ReactorType>)
+            func     : &mut impl FnMut(Option<ReactorType>),
+            commands : &mut Commands,
+            handle   : &ReactorHandle,
         );
 }
 
 //-------------------------------------------------------------------------------------------------------------------
 
 pub fn reactor_registration(
-    commands   : &mut Commands,
-    sys_handle : &AutoDespawnSignal,
-    triggers   : impl ReactionTriggerBundle,
-) -> RevokeToken
+    commands : &mut Commands,
+    handle   : &ReactorHandle,
+    triggers : impl ReactionTriggerBundle,
+    mode     : ReactorMode,
+) -> Option<RevokeToken>
 {
-    let mut reactors = Vec::with_capacity(triggers.len());
-    let mut func =
-        |reactor_type: Option<ReactorType>|
+    match mode
+    {
+        ReactorMode::Persistent |
+        // note: despawn cleanup is handled automatically by the ReactorHandle type
+        ReactorMode::DespawnCleanup =>
         {
-            let Some(reactor_type) = reactor_type else { return; };
-            reactors.push(reactor_type);
-        };
-    triggers.get_reactor_types(commands, sys_handle, &mut func);
+            let mut func = |_| {};
+            triggers.get_reactor_types(&mut func, commands, handle);
 
-    RevokeToken{ reactors: reactors.into(), id: sys_handle.entity().to_bits() }
+            None
+        }
+        ReactorMode::Revokable =>
+        {
+            let mut reactors = Vec::with_capacity(triggers.len());
+            let mut func =
+                |reactor_type: Option<ReactorType>|
+                {
+                    let Some(reactor_type) = reactor_type else { return; };
+                    reactors.push(reactor_type);
+                };
+            triggers.get_reactor_types(&mut func, commands, handle);
+
+            Some(RevokeToken{ reactors: reactors.into(), id: handle.sys_command() })
+        }
+    }
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -102,14 +115,14 @@ macro_rules! tuple_impl
             #[inline(always)]
             fn get_reactor_types(
                 self,
-                commands   : &mut Commands,
-                sys_handle : &AutoDespawnSignal,
-                func       : &mut impl FnMut(Option<ReactorType>)
+                func     : &mut impl FnMut(Option<ReactorType>),
+                commands : &mut Commands,
+                handle   : &ReactorHandle,
             ){
                 #[allow(non_snake_case)]
                 let ($(mut $name,)*) = self;
                 $(
-                    $name.get_reactor_types(commands, sys_handle, &mut *func);
+                    $name.get_reactor_types(&mut *func, commands, handle);
                 )*
             }
         }

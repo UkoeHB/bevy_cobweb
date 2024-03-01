@@ -27,13 +27,13 @@ fn on_entity_mutation_chain_to_res(In(entity): In<Entity>, mut rcommands: ReactC
 
 fn on_broadcast_or_resource(mut rcommands: ReactCommands) -> RevokeToken
 {
-    rcommands.on((broadcast::<IntEvent>(), resource_mutation::<TestReactRes>()),
+    rcommands.on_revokable((broadcast::<IntEvent>(), resource_mutation::<TestReactRes>()),
         update_test_recorder_with_broadcast_and_resource)
 }
 
 fn on_resource_mutation(mut rcommands: ReactCommands) -> RevokeToken
 {
-    rcommands.on(resource_mutation::<TestReactRes>(), update_test_recorder_with_resource)
+    rcommands.on_revokable(resource_mutation::<TestReactRes>(), update_test_recorder_with_resource)
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -96,7 +96,7 @@ fn reaction_telescoping_data_visibility_impl(mut rcommands: ReactCommands)
             }
         );
 
-    rcommands.with(broadcast::<SystemCommand>(), broadcast_reader);
+    rcommands.with(broadcast::<SystemCommand>(), broadcast_reader, ReactorMode::Persistent);
     rcommands.broadcast(broadcast_reader);
 }
 

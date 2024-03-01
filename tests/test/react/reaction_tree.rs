@@ -66,8 +66,8 @@ fn multitest_prep_commands(mut rcommands: ReactCommands)
         );
 
     //**saved = Some(sys1);
-    rcommands.with(broadcast::<usize>(), sys1);
-    rcommands.with(broadcast::<usize>(), sys2);
+    rcommands.with(broadcast::<usize>(), sys1, ReactorMode::Persistent);
+    rcommands.with(broadcast::<usize>(), sys2, ReactorMode::Persistent);
 }
 
 //-------------------------------------------------------------------------------------------------------------------

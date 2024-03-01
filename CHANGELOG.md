@@ -8,6 +8,11 @@
 - Optimized entity-specific reactors.
 - Moved entity event reactor handles so they are stored on entities, ensuring they are cleaned up automatically when entities despawn.
 
+### Added
+
+- Impl `From<RevokeToken>` for `SystemCommand`.
+- Added `ReactorMode` for more versatile and efficient reactor management.
+
 
 ## [0.0.7]
 

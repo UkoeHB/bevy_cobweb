@@ -21,13 +21,13 @@ pub(crate) struct DespawnAccessTracker
     /// A handle to the current reactor.
     ///
     /// This will be dropped after the reactor runs, allowing it to be cleaned up automatically.
-    reactor_handle: Option<AutoDespawnSignal>,
+    reactor_handle: Option<ReactorHandle>,
 }
 
 impl DespawnAccessTracker
 {
     /// Sets metadata for the current entity reaction.
-    pub(crate) fn start(&mut self, source: Entity, handle: AutoDespawnSignal)
+    pub(crate) fn start(&mut self, source: Entity, handle: ReactorHandle)
     {
         self.currently_reacting = true;
         self.reaction_source = source;

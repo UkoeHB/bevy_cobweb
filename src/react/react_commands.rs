@@ -14,7 +14,7 @@ use bevy::prelude::*;
 fn revoke_entity_reactor(
     entity     : Entity,
     rtype      : EntityReactionType,
-    reactor_id : u64,
+    reactor_id : SystemCommand,
     reactors   : &mut Query<&mut EntityReactors>,
 ){
     let Ok(mut entity_reactors) = reactors.get_mut(entity) else { return; };
@@ -90,6 +90,41 @@ fn revoke_reactor_triggers(In(revoke_token): In<RevokeToken>, mut rcommands: Rea
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
+/// Setting for controlling how reactors are cleaned up.
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum ReactorMode
+{
+    /// The reactor will live forever.
+    ///
+    /// Immortal reactors can be freely updated with
+    /// new reaction triggers. Note that entity-specific triggers will automatically be removed when the referent entity is
+    /// despawned, but all other triggers cannot be removed.
+    ///
+    /// This is the most efficient mode as it requires the minimum amount of allocations to register a reactor.
+    Persistent,
+    /// The reactor will be despawned when all [`despawn()`] triggers have fired if there are no other triggers.
+    DespawnCleanup,
+    /// The reactor will receive a [`RevokeToken`] that can be used to revoke it.
+    ///
+    /// The reactor will be automatically dropped when all [`despawn()`] triggers have fired if there are no other triggers.
+    Revokable,
+}
+
+impl ReactorMode
+{
+    fn prepare(&self, despawner: &AutoDespawner, sys_command: SystemCommand) -> ReactorHandle
+    {
+        match self
+        {
+            Self::Persistent     => ReactorHandle::Persistent(sys_command),
+            Self::DespawnCleanup |
+            Self::Revokable      => ReactorHandle::AutoDespawn(despawner.prepare(*sys_command)),
+        }
+    }
+}
+
+//-------------------------------------------------------------------------------------------------------------------
+
 /// System paramter that drives reactivity.
 ///
 /// Requires [`ReactPlugin`].
@@ -161,6 +196,8 @@ impl<'w, 's> ReactCommands<'w, 's>
     /// `(resource_mutation::<A>(), resource_mutation::<B>())`, then mutate `A` and `B` in succession, the reactor will
     /// execute twice.
     ///
+    /// Uses [`ReactorMode::DespawnCleanup`].
+    ///
     /// Example:
     /// ```no_run
     /// rcommands.on((resource_mutation::<MyRes>(), mutation::<MyComponent>()), my_reactor_system);
@@ -169,13 +206,41 @@ impl<'w, 's> ReactCommands<'w, 's>
         &mut self,
         triggers : impl ReactionTriggerBundle,
         reactor  : impl IntoSystem<(), (), M> + Send + Sync + 'static
+    ) -> SystemCommand
+    {
+        let sys_command = self.commands.spawn_system_command(reactor);
+        let _ = self.with(triggers, sys_command, ReactorMode::DespawnCleanup);
+        sys_command
+    }
+
+    /// Registers a reactor triggered by ECS changes using [`ReactorMode::Persistent`].
+    ///
+    /// See [`Self::on`].
+    pub fn on_persistent<M>(
+        &mut self,
+        triggers : impl ReactionTriggerBundle,
+        reactor  : impl IntoSystem<(), (), M> + Send + Sync + 'static
+    ) -> SystemCommand
+    {
+        let sys_command = self.commands.spawn_system_command(reactor);
+        self.with(triggers, sys_command, ReactorMode::Persistent);
+        sys_command
+    }
+
+    /// Registers a reactor triggered by ECS changes using [`ReactorMode::Revokable`].
+    ///
+    /// See [`Self::on`].
+    pub fn on_revokable<M>(
+        &mut self,
+        triggers : impl ReactionTriggerBundle,
+        reactor  : impl IntoSystem<(), (), M> + Send + Sync + 'static
     ) -> RevokeToken
     {
         let sys_command = self.commands.spawn_system_command(reactor);
-        self.with(triggers, sys_command)
+        self.with(triggers, sys_command, ReactorMode::Revokable).unwrap()
     }
 
-    /// Registers a reactor triggered by ECS changes with a pre-defined [`SystemCommand`].
+    /// Registers a reactor triggered by ECS changes with a [`SystemCommand`] and [`ReactorMode`].
     ///
     /// You can tie a reactor to multiple reaction triggers.
     /// Duplicate triggers will be ignored.
@@ -184,53 +249,33 @@ impl<'w, 's> ReactCommands<'w, 's>
     /// `(resource_mutation::<A>(), resource_mutation::<B>())`, then mutate `A` and `B` in succession, the reactor will
     /// execute twice.
     ///
-    /// Note that you can call this method multiple times for the same [`SystemCommand`] to increase the number
-    /// of triggers.
-    /// Revoking any of the associated revoke tokens will *despawn* the system command, and cause a *memory leak*
-    /// because the trigger entries for the other tokens won't be cleaned up (unless you also revoke those tokens).
+    /// Note that you can call this method multiple times for the same [`SystemCommand`] to add triggers.
+    /// It is highly recommended to use [`ReactorMode::Persistent`] in that case, otherwise your
+    /// reactor may be despawned unexpectedly if a [`despawn()`] trigger is used or if you try to revoke any [`RevokeTokens`]
+    /// associated with the reactor.
+    ///
+    /// Returns `None` unless [`ReactorMode::Revokable`] is used.
     ///
     /// Example:
     /// ```no_run
     /// let command = rcommands.commands().spawn_system_command(my_reactor_system);
-    /// rcommands.with((resource_mutation::<MyRes>(), mutation::<MyComponent>()), command);
+    /// let mode = ReactorMode::Persistent;
+    /// rcommands.with((resource_mutation::<MyRes>(), mutation::<MyComponent>()), command, mode);
     /// ```
     pub fn with(
         &mut self,
         triggers    : impl ReactionTriggerBundle,
         sys_command : SystemCommand,
-    ) -> RevokeToken
+        mode        : ReactorMode,
+    ) -> Option<RevokeToken>
     {
-        let sys_handle = self.despawner.prepare(*sys_command);
-        reactor_registration(&mut self.commands, &sys_handle, triggers)
-    }
-
-    /// Registers a reactor triggered by ECS changes and runs it immediately once.
-    ///
-    /// See [`ReactCommands::on`] for details.
-    ///
-    /// This is useful if you need to initialize data that is updated by a reactor.
-    ///
-    /// Equivalent to:
-    /// ```no_run
-    /// let sys_command = rcommands.commands().spawn_system_command(my_reactor_system);
-    /// rcommands.with(resource_mutation::<MyRes>(), sys_command);
-    /// rcommands.commands().add(sys_command);
-    /// ```
-    pub fn register_and_run_once<M>(
-        &mut self,
-        triggers : impl ReactionTriggerBundle,
-        reactor  : impl IntoSystem<(), (), M> + Send + Sync + 'static
-    ) -> RevokeToken
-    {
-        let sys_command = self.commands.spawn_system_command(reactor);
-        let token = self.with(triggers, sys_command);
-        self.commands.add(sys_command);
-        token
+        let handle = mode.prepare(&self.despawner, sys_command);
+        reactor_registration(&mut self.commands, &handle, triggers, mode)
     }
 
     /// Registers a one-off reactor triggered by ECS changes.
     ///
-    /// Similar to [`Self::on`] except the reaction will run exactly once then get cleaned up.
+    /// Similar to [`Self::on_revokable`] except the reaction will run exactly once then get cleaned up.
     ///
     /// If an empty trigger bundle is used then the system will be dropped without running.
     ///
@@ -247,8 +292,9 @@ impl<'w, 's> ReactCommands<'w, 's>
     {
         // register reactors
         let entity = self.commands.spawn_empty().id();
-        let sys_handle = self.despawner.prepare(entity);
-        let revoke_token = reactor_registration(&mut self.commands, &sys_handle, triggers);
+        let mode = ReactorMode::Revokable;
+        let handle = mode.prepare(&self.despawner, SystemCommand(entity));
+        let revoke_token = reactor_registration(&mut self.commands, &handle, triggers, mode).unwrap();
 
         // wrap reactor in a system that will be called once, then clean itself up
         let revoke_token_clone = revoke_token.clone();

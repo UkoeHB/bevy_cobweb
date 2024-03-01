@@ -67,7 +67,7 @@ fn end_event_with_cleanup(world: &mut World)
 ///
 /// If scheduled as a [`Command`](bevy::ecs::system::Command) from user-land, this will cause a [`reaction_tree()`] to
 /// execute, otherwise it will be processed within the already-running reaction tree.
-#[derive(Debug, Copy, Clone, Deref)]
+#[derive(Debug, Copy, Clone, Deref, Eq, PartialEq)]
 pub struct SystemCommand(pub Entity);
 
 impl SystemCommand
@@ -84,6 +84,14 @@ impl Command for SystemCommand
     {
         world.resource_mut::<CobwebCommandQueue<SystemCommand>>().push(self);
         reaction_tree(world);
+    }
+}
+
+impl From<RevokeToken> for SystemCommand
+{
+    fn from(token: RevokeToken) -> Self
+    {
+        token.id
     }
 }
 
@@ -159,11 +167,11 @@ pub(crate) enum ReactionCommand
         reaction_source: Entity,
         /// The system command triggered by this event.
         reactor: SystemCommand,
-        /// A despawn handle for the reactor.
+        /// A possible despawn handle for the reactor.
         ///
         /// This will be dropped after the reactor runs, ensuring the reactor will be cleaned up if there are
         /// no other owners of the handle.
-        handle: AutoDespawnSignal,
+        handle: ReactorHandle,
     },
     /// A reaction to an event (can be a broadcasted event or an entity event).
     Event
