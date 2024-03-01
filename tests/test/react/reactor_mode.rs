@@ -6,6 +6,8 @@ use crate::*;
 use bevy::prelude::*;
 
 //standard shortcuts
+use std::sync::Arc;
+use std::sync::atomic::{AtomicU32, Ordering};
 
 //-------------------------------------------------------------------------------------------------------------------
 
@@ -98,7 +100,58 @@ fn persistent_reactor_lives_with_entity_triggers_despawned()
 
 //-------------------------------------------------------------------------------------------------------------------
 
-// persistent: reactor can acquire more triggers using .with()
+// persistent: reactor can acquire more triggers using .with() even when old triggers are despawned
+#[test]
+fn persistent_reactor_acquires_more_triggers()
+{
+    // setup
+    let mut app = App::new();
+    app.add_plugins(ReactPlugin);
+    let world = &mut app.world;
+
+    // prep target entity
+    let target1 = world.spawn_empty().id();
+
+    // register reactor
+    let count = Arc::new(AtomicU32::new(0u32));
+    let count_inner = count.clone();
+    let sys_command = world.syscall((),
+        move |mut rc: ReactCommands|
+        {
+            let count_inner = count_inner.clone();
+            rc.on_persistent(entity_mutation::<TestComponent>(target1),
+                move |reader: DespawnEvent|
+                {
+                    assert!(!reader.is_empty());
+                    count_inner.fetch_add(1, Ordering::Relaxed);
+                }
+            )
+        }
+    );
+
+    // remove target
+    world.despawn(target1);
+    reaction_tree(world);
+
+    // prep target entity
+    let target2 = world.spawn_empty().id();
+
+    // add more triggers
+    world.syscall((),
+        move |mut rc: ReactCommands|
+        {
+            rc.with(despawn(target2), sys_command, ReactorMode::Persistent);
+        }
+    );
+
+    // despawn new target
+    world.despawn(target2);
+    reaction_tree(world);
+    assert!(world.get_entity(*sys_command).is_some());
+
+    // event should be received
+    assert_eq!(count.load(Ordering::Relaxed), 1);
+}
 
 //-------------------------------------------------------------------------------------------------------------------
 
@@ -283,5 +336,9 @@ fn revokable_reactor_dies_with_entity_triggers_despawned()
 //-------------------------------------------------------------------------------------------------------------------
 
 // revokable: reactor despawned when revoked
+
+//-------------------------------------------------------------------------------------------------------------------
+
+// revokable: reactor with multiple tokens despawned when one token used to revoke it
 
 //-------------------------------------------------------------------------------------------------------------------
