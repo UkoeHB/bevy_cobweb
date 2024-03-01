@@ -162,60 +162,6 @@ impl<'w, 's, T: ReactComponent> InsertionEvent<'w, 's, T>
 
 //-------------------------------------------------------------------------------------------------------------------
 
-/// System parameter for reading entity component removal events in systems that react to those events.
-///
-/*
-```rust
-fn example(mut rcommands: ReactCommands, query: Query<Entity, With<React<A>>>)
-{
-    rcommands.on(
-        removal::<A>(),  // entity-specific: entity_removal::<A>(target_entity)
-        |event: RemovalEvent<A>|
-        {
-            if let Some(entity) = event.read()
-            {
-                println!("'A' was removed from {:?}", entity);
-            }
-        }
-    );
-
-    rcommands.commands().entity(*query.single()).remove::<A>();
-}
-```
-*/
-#[derive(SystemParam)]
-pub struct RemovalEvent<'w, 's, T: ReactComponent>
-{
-    component_id: Local<'s, ReactComponentId<T>>,
-    tracker: Res<'w, EntityReactionAccessTracker>,
-}
-
-impl<'w, 's, T: ReactComponent> RemovalEvent<'w, 's, T>
-{
-    /// Returns the entity from which a `React<T>` component was removed if the current system is
-    /// reacting to that removal.
-    ///
-    /// This will return at most one unique entity each time a reactor runs.
-    pub fn read(&self) -> Option<Entity>
-    {
-        if !self.tracker.is_reacting() { return None; }
-        let EntityReactionType::Removal(component_id) = self.tracker.reaction_type() else { return None; };
-        if component_id != self.component_id.id() { return None; }
-
-        Some(self.tracker.source())
-    }
-
-    /// Returns `true` if there is nothing to read.
-    ///
-    /// Equivalent to `event.read().is_none()`.
-    pub fn is_empty(&self) -> bool
-    {
-        self.read().is_none()
-    }
-}
-
-//-------------------------------------------------------------------------------------------------------------------
-
 /// System parameter for reading entity component mutation events in systems that react to those events.
 ///
 /// Can only be used within [`SystemCommands`](super::SystemCommand).
@@ -256,6 +202,64 @@ impl<'w, 's, T: ReactComponent> MutationEvent<'w, 's, T>
     {
         if !self.tracker.is_reacting() { return None; }
         let EntityReactionType::Mutation(component_id) = self.tracker.reaction_type() else { return None; };
+        if component_id != self.component_id.id() { return None; }
+
+        Some(self.tracker.source())
+    }
+
+    /// Returns `true` if there is nothing to read.
+    ///
+    /// Equivalent to `event.read().is_none()`.
+    pub fn is_empty(&self) -> bool
+    {
+        self.read().is_none()
+    }
+}
+
+//-------------------------------------------------------------------------------------------------------------------
+
+/// System parameter for reading entity component removal events in systems that react to those events.
+///
+/// Note that removals are detected for entity despawns, so if the entity returned from `RemovalEvent` does not
+/// exist that implies that it was removed due to a despawn (although not a guarantee, since it could have been removed
+/// and the entity despawned later).
+///
+/*
+```rust
+fn example(mut rcommands: ReactCommands, query: Query<Entity, With<React<A>>>)
+{
+    rcommands.on(
+        removal::<A>(),  // entity-specific: entity_removal::<A>(target_entity)
+        |event: RemovalEvent<A>|
+        {
+            if let Some(entity) = event.read()
+            {
+                println!("'A' was removed from {:?}", entity);
+            }
+        }
+    );
+
+    rcommands.commands().entity(*query.single()).remove::<A>();
+}
+```
+*/
+#[derive(SystemParam)]
+pub struct RemovalEvent<'w, 's, T: ReactComponent>
+{
+    component_id: Local<'s, ReactComponentId<T>>,
+    tracker: Res<'w, EntityReactionAccessTracker>,
+}
+
+impl<'w, 's, T: ReactComponent> RemovalEvent<'w, 's, T>
+{
+    /// Returns the entity from which a `React<T>` component was removed if the current system is
+    /// reacting to that removal.
+    ///
+    /// This will return at most one unique entity each time a reactor runs.
+    pub fn read(&self) -> Option<Entity>
+    {
+        if !self.tracker.is_reacting() { return None; }
+        let EntityReactionType::Removal(component_id) = self.tracker.reaction_type() else { return None; };
         if component_id != self.component_id.id() { return None; }
 
         Some(self.tracker.source())

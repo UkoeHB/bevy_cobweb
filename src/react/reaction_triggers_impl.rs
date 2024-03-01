@@ -248,8 +248,6 @@ pub fn entity_mutation<C: ReactComponent>(entity: Entity) -> EntityMutationTrigg
 
 /// Reaction trigger for [`ReactComponent`] removals from a specific entity.
 /// - Registration does nothing if the entity does not exist.
-/// - If a component is removed from the entity then despawned (or removed due to a despawn) before
-///   [`reaction_tree()`] is executed, then the reactor will not be scheduled.
 pub struct EntityRemovalTrigger<C: ReactComponent>(Entity, PhantomData<C>);
 
 impl<C: ReactComponent> ReactionTrigger for EntityRemovalTrigger<C>

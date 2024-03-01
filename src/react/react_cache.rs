@@ -402,9 +402,6 @@ impl ReactCache
             let rtype = EntityReactionType::Removal(checker.component_id);
             for entity in buffer.iter()
             {
-                // ignore entities that don't exist
-                if world.get_entity(*entity).is_none() { continue; }
-
                 // entity-specific component reactors
                 if let Ok(entity_reactors) = query.get(world, *entity)
                 {
