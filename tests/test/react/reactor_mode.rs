@@ -375,5 +375,67 @@ fn revokable_reactor_dies_when_revoked()
 //-------------------------------------------------------------------------------------------------------------------
 
 // revokable: reactor with multiple tokens despawned when one token used to revoke it
+#[test]
+fn revokable_reactor_dies_when_revoked_with_multiple_tokens()
+{
+    // setup
+    let mut app = App::new();
+    app.add_plugins(ReactPlugin);
+    let world = &mut app.world;
+
+    // register reactor
+    let token1 = world.syscall((),
+        move |mut rc: ReactCommands|
+        {
+            rc.on_revokable(broadcast::<()>(), ||{})
+        }
+    );
+
+    // reactor should be alive
+    let sys_command = SystemCommand::from(token1.clone());
+    assert!(world.get_entity(*sys_command).is_some());
+    reaction_tree(world);
+    assert!(world.get_entity(*sys_command).is_some());
+
+    // add another trigger
+    let token2 = world.syscall((),
+        move |mut rc: ReactCommands|
+        {
+            rc.with(broadcast::<usize>(), sys_command, ReactorMode::Revokable).unwrap()
+        }
+    );
+    assert_eq!(sys_command, SystemCommand::from(token2.clone()));
+
+    // reactor should be alive
+    assert!(world.get_entity(*sys_command).is_some());
+    reaction_tree(world);
+    assert!(world.get_entity(*sys_command).is_some());
+
+    // revoke the first reactor
+    world.syscall((),
+        move |mut rc: ReactCommands|
+        {
+            rc.revoke(token1.clone());
+        }
+    );
+
+    // reactor should be garbage collected
+    assert!(world.get_entity(*sys_command).is_some());
+    reaction_tree(world);
+    assert!(world.get_entity(*sys_command).is_none());
+
+    // revoke the second reactor
+    world.syscall((),
+        move |mut rc: ReactCommands|
+        {
+            rc.revoke(token2.clone());
+        }
+    );
+
+    // there should be no effect
+    assert!(world.get_entity(*sys_command).is_none());
+    reaction_tree(world);
+    assert!(world.get_entity(*sys_command).is_none());
+}
 
 //-------------------------------------------------------------------------------------------------------------------
