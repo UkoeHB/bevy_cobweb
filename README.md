@@ -1,6 +1,6 @@
 # Bevy Cobweb
 
-Bevy Cobweb is a general-purpose reactivity framework for Bevy. It includes ECS utilities and core reactivity primitives (system events, reaction triggers, reactive events, and reaction tree processing).
+General-purpose reactivity framework for Bevy. Includes ECS utilities and core reactivity primitives (system events, reaction triggers, reactive events, and reaction tree processing).
 
 Documentation for the reactivity primitives can be found [here](src/react/REACT.md).
 
@@ -11,18 +11,18 @@ Documentation for the reactivity primitives can be found [here](src/react/REACT.
 - Manually run systems with [`SystemCommands`](bevy_cobweb::prelude::SystemCommand).
 - React to ECS mutations: resource mutations, component insertions/mutations/removals, entity despawns.
 - React to events: broadcasted events and entity-targeted events.
-- Send data directly to system command systems with 'system events'.
+- Send data directly to systems with system events.
 - Write recursive system commands/system events/reactions.
 
 
 
 ## Companion crates
 
-- [bevy_cobweb_ui](https://github.com/UkoeHB/bevy_cobweb_ui): reactive UI framework.
+- [bevy_cobweb_ui](https://github.com/UkoeHB/bevy_cobweb_ui): Reactive UI framework.
 
 
 
-## `bevy` compatability
+## Bevy compatability
 
 | `bevy` | `bevy_cobweb` |
 |-------|----------------|
