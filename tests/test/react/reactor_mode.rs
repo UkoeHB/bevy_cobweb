@@ -336,6 +336,41 @@ fn revokable_reactor_dies_with_entity_triggers_despawned()
 //-------------------------------------------------------------------------------------------------------------------
 
 // revokable: reactor despawned when revoked
+#[test]
+fn revokable_reactor_dies_when_revoked()
+{
+    // setup
+    let mut app = App::new();
+    app.add_plugins(ReactPlugin);
+    let world = &mut app.world;
+
+    // register reactor
+    let token = world.syscall((),
+        move |mut rc: ReactCommands|
+        {
+            rc.on_revokable(broadcast::<()>(), ||{})
+        }
+    );
+
+    // reactor should be alive
+    let reactor_entity = *SystemCommand::from(token.clone());
+    assert!(world.get_entity(reactor_entity).is_some());
+    reaction_tree(world);
+    assert!(world.get_entity(reactor_entity).is_some());
+
+    // revoke the reactor
+    world.syscall((),
+        move |mut rc: ReactCommands|
+        {
+            rc.revoke(token.clone());
+        }
+    );
+
+    // reactor should be garbage collected
+    assert!(world.get_entity(reactor_entity).is_some());
+    reaction_tree(world);
+    assert!(world.get_entity(reactor_entity).is_none());
+}
 
 //-------------------------------------------------------------------------------------------------------------------
 
