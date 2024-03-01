@@ -644,6 +644,38 @@ fn entity_despawn_multiple_reactors()
 
 //-------------------------------------------------------------------------------------------------------------------
 
+// If reacting to a component removal, it should be triggered on despawn.
+#[test]
+fn component_removal_by_despawn()
+{
+    // setup
+    let mut app = App::new();
+    app.add_plugins(ReactPlugin)
+        .init_resource::<TestReactRecorder>();
+    let world = &mut app.world;
+
+    // entities
+    let test_entity_a = world.spawn_empty().id();
+
+    // add reactor
+    world.syscall((), on_removal);
+    assert_eq!(world.resource::<TestReactRecorder>().0, 0);
+
+    // insert (no reaction)
+    world.syscall((test_entity_a, TestComponent(1)), insert_on_test_entity);
+    assert_eq!(world.resource::<TestReactRecorder>().0, 0);
+
+    // despawn
+    world.despawn(test_entity_a);
+    // no immediate reaction
+    assert_eq!(world.resource::<TestReactRecorder>().0, 0);
+    // check for removals (reaction)
+    reaction_tree(world);
+    assert_eq!(world.resource::<TestReactRecorder>().0, usize::MAX);
+}
+
+//-------------------------------------------------------------------------------------------------------------------
+
 // Entity reactions are correctly readable by only their reader: InsertionEvent, RemovalEvent, MutationEvent, DespawnEvent.
 #[test]
 fn entity_reaction_reader_exclusion()

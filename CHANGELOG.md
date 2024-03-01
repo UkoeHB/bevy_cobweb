@@ -7,11 +7,16 @@
 - `AutoDespawner` now uses `despawn_recursive`.
 - Optimized entity-specific reactors.
 - Moved entity event reactor handles so they are stored on entities, ensuring they are cleaned up automatically when entities despawn.
+- Component removal reactors are now triggered even if the entity was despawned. This matches Bevy's `RemovedComponents` behavior.
 
 ### Added
 
 - Impl `From<RevokeToken>` for `SystemCommand`.
 - Added `ReactorMode` for more versatile and efficient reactor management.
+
+### Removed
+
+- Removed docs and files related to the 'reactive web' concept, which will not be pursued.
 
 
 ## [0.0.7]
