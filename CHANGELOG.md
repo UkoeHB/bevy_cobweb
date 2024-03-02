@@ -1,6 +1,6 @@
 # Changelog
 
-## [WIP]
+## [0.2.1]
 
 ### Changed
 
