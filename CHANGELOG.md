@@ -6,6 +6,10 @@
 
 - Panic if duplicate world reactors are added to an app.
 
+### Added
+
+- Added `broadcast` and `entity_event` methods to `ReactWorldExt`.
+
 
 ## [0.2.0]
 

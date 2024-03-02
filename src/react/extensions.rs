@@ -96,6 +96,16 @@ pub trait ReactWorldExt
     /// If scheduled from user-land, this will cause a [`reaction_tree()`] to execute, otherwise it will be
     /// processed within the already-running reaction tree.
     fn send_system_event<T: Send + Sync + 'static>(&mut self, command: SystemCommand, event: T);
+
+    /// Sends a broadcasted event.
+    /// - Reactors can listen for the event with the [`broadcast()`] trigger.
+    /// - Reactors can read the event with the [`BroadcastEvent`] system parameter.
+    fn broadcast<E: Send + Sync + 'static>(&mut self, event: E);
+
+    /// Sends an entity-targeted event.
+    /// - Reactors can listen for the event with the [`entity_event()`] trigger.
+    /// - Reactors can read the event with the [`EntityEvent`] system parameter.
+    fn entity_event<E: Send + Sync + 'static>(&mut self, entity: Entity, event: E);
 }
 
 impl ReactWorldExt for World
@@ -116,6 +126,16 @@ impl ReactWorldExt for World
     {
         let data_entity = self.spawn(SystemEventData::new(event)).id();
         EventCommand{ system: command, data_entity }.apply(self);
+    }
+
+    fn broadcast<E: Send + Sync + 'static>(&mut self, event: E)
+    {
+        self.syscall(event, ReactCache::schedule_broadcast_reaction::<E>);
+    }
+
+    fn entity_event<E: Send + Sync + 'static>(&mut self, entity: Entity, event: E)
+    {
+        self.syscall((entity, event), ReactCache::schedule_entity_event_reaction::<E>);
     }
 }
 
