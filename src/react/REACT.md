@@ -281,7 +281,7 @@ Reactors are stateful boxed Bevy systems, so it is useful to manage their memory
 
 ### World Reactors
 
-Special [`WorldReactors`](bevy_cobweb::prelude::WorldReactor) can be registered with apps and accessed with the [`Reactor<T: WorldReactor>`](bevy_cobweb::prelude::Reactor) system parameter. World reactors are similar to Bevy systems in that they live for the entire lifetime of an app. The advantage of world reactors is you can easily add/remove triggers from them without needing to create completely new reactors (which requires allocation). You can also easily run them manually from anywhere in your app.
+Special [`WorldReactors`](bevy_cobweb::prelude::WorldReactor) can be registered with apps and accessed with the [`Reactor<T: WorldReactor>`](bevy_cobweb::prelude::Reactor) system parameter. World reactors are similar to Bevy systems in that they live for the entire lifetime of an app. The advantage of world reactors over normal reactors is you can easily add/remove triggers from them anywhere in your app. You can also easily run them manually from anywhere in your app.
 
 Define a [`WorldReactor`](bevy_cobweb::prelude::WorldReactor):
 ```rust
@@ -318,7 +318,7 @@ Add the reactor to your app:
 ```rust
 fn setup(app: &mut App)
 {
-    app.add_reactor(DemoReactor);
+    app.add_reactor_with(DemoReactor, mutation::<A>());
 }
 ```
 
