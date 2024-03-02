@@ -1,10 +1,11 @@
 # Changelog
 
-## [0.1.0]
+## [0.2.0]
 
 ### Changed
 
 - Rename `SystemCommandCallback::from_system` -> `SystemCommandCallback::new` and `SystemCommandCallback::new` -> `SystemCommandCallback::with`.
+- Rename `BroadcastEventTrigger` -> `BroadcastTrigger`.
 
 ### Added
 

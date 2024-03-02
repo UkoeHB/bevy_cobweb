@@ -279,6 +279,60 @@ Reactors are stateful boxed Bevy systems, so it is useful to manage their memory
     - See [`ReactCommands::on_revokable`](bevy_cobweb::prelude::ReactCommands::on_revokable), which returns a [`RevokeToken`](bevy_cobweb::prelude::RevokeToken).
 
 
+### World Reactors
+
+Special [`WorldReactors`] can be registered with apps and accessed with the [`Reactor<T: WorldReactor>`] system parameter. World reactors are similar to Bevy systems in that they live for the entire lifetime of an app. The advantage of world reactors is you can easily add/remove triggers from them without needing to create completely new reactors (which requires allocation). You can also easily run them manually from anywhere in your app.
+
+Define a [`WorldReactor`]:
+```rust
+#[derive(ReactComponent)]
+struct A;
+
+struct DemoReactor;
+
+impl WorldReactor for DemoReactor
+{
+    type StartingTriggers = InsertionTrigger<A>;
+    type Triggers = EntityMutationTrigger<A>;
+
+    fn reactor(self) -> SystemCommandCallback
+    {
+        SystemCommandCallback::new(
+            |insertion: InsertionEvent<A>, mutation: MutationEvent<A>|
+            {
+                if let Some(_) = insertion.read()
+                {
+                    println!("A was inserted on an entity");
+                }
+                if let Some(_) = mutation.read()
+                {
+                    println!("A was mutated on an entity");
+                }
+            }
+        )
+    }
+}
+```
+
+Add the reactor to your app:
+```rust
+fn setup(app: &mut App)
+{
+    app.add_reactor(DemoReactor);
+}
+```
+
+Add a trigger to the reactor:
+```rust
+fn spawn_a(mut rc: ReactCommands, mut reactor: Reactor<DemoReactor>)
+{
+    let entity = rc.commands().spawn_empty().id();
+    rc.insert(A, entity);
+    reactor.add_triggers(&mut rc, entity_mutation::<A>(entity));
+}
+```
+
+
 
 ## Scheduling
 
