@@ -37,7 +37,7 @@ impl<T: WorldReactor> WorldReactorRes<T>
 ///
 /// Example:
 /**
-```no-run
+```no_run
 #[derive(ReactComponent, Debug)]
 struct A;
 
