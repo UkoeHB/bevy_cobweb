@@ -8,3 +8,4 @@ mod reactor_mode;
 mod resource_reactions;
 mod system_commands;
 mod system_events;
+mod world_reactor;

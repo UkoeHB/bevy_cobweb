@@ -16,7 +16,9 @@ pub trait ReactAppExt
     /// Adds a [`WorldReactor`] to the app.
     ///
     /// The reactor can be accessed with the [`Reactor`] system param.
-    fn add_reactor<R: WorldReactor>(&mut self, reactor: R) -> &mut Self;
+    fn add_reactor<R>(&mut self, reactor: R) -> &mut Self
+    where
+        R: WorldReactor<StartingTriggers = ()>;
 
     /// Adds a [`WorldReactor`] to the app with starting triggers.
     ///
@@ -26,7 +28,9 @@ pub trait ReactAppExt
 
 impl ReactAppExt for App
 {
-    fn add_reactor<R: WorldReactor>(&mut self, reactor: R) -> &mut Self
+    fn add_reactor<R>(&mut self, reactor: R) -> &mut Self
+    where
+        R: WorldReactor<StartingTriggers = ()>
     {
         let sys_command = self.world.spawn_system_command_from(reactor.reactor());
         self.world.insert_resource(WorldReactorRes::<R>::new(sys_command));

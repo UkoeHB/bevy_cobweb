@@ -361,12 +361,12 @@ pub fn resource_mutation<R: ReactResource>() -> ResourceMutationTrigger<R> { Res
 
 /// Reaction trigger for broadcast events.
 /// - Reactions only occur for events sent via [`ReactCommands::<E>::broadcast()`].
-pub struct BroadcastEventTrigger<E: Send + Sync + 'static>(PhantomData<E>);
-impl<E: Send + Sync + 'static> Default for BroadcastEventTrigger<E> { fn default() -> Self { Self(PhantomData::default()) } }
-impl<E: Send + Sync + 'static> Clone for BroadcastEventTrigger<E> { fn clone(&self) -> Self { *self } }
-impl<E: Send + Sync + 'static> Copy for BroadcastEventTrigger<E> {}
+pub struct BroadcastTrigger<E: Send + Sync + 'static>(PhantomData<E>);
+impl<E: Send + Sync + 'static> Default for BroadcastTrigger<E> { fn default() -> Self { Self(PhantomData::default()) } }
+impl<E: Send + Sync + 'static> Clone for BroadcastTrigger<E> { fn clone(&self) -> Self { *self } }
+impl<E: Send + Sync + 'static> Copy for BroadcastTrigger<E> {}
 
-impl<E: Send + Sync + 'static> ReactionTrigger for BroadcastEventTrigger<E>
+impl<E: Send + Sync + 'static> ReactionTrigger for BroadcastTrigger<E>
 {
     fn reactor_type(&self) -> ReactorType
     {
@@ -380,8 +380,8 @@ impl<E: Send + Sync + 'static> ReactionTrigger for BroadcastEventTrigger<E>
     }
 }
 
-/// Returns a [`BroadcastEventTrigger`] reaction trigger.
-pub fn broadcast<E: Send + Sync + 'static>() -> BroadcastEventTrigger<E> { BroadcastEventTrigger::default() }
+/// Returns a [`BroadcastTrigger`] reaction trigger.
+pub fn broadcast<E: Send + Sync + 'static>() -> BroadcastTrigger<E> { BroadcastTrigger::default() }
 
 //-------------------------------------------------------------------------------------------------------------------
 

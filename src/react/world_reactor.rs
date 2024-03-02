@@ -28,7 +28,10 @@ impl<T: WorldReactor> WorldReactorRes<T>
 
 //-------------------------------------------------------------------------------------------------------------------
 
-/// Trait for persistent reactors that are registered in the world with [`ReactAppExt::add_reactor].
+/// Trait for persistent reactors that are registered in the world.
+///
+/// Reactors with no starting triggers are registered with [`ReactAppExt::add_reactor`].
+/// Reactors with starting triggers are registered with [`ReactAppExt::add_reactor_with`].
 ///
 /// The reactor can be accessed with the [`Reactor`] system param.
 ///
@@ -68,7 +71,7 @@ impl Plugin for AddReactorPlugin
 */
 pub trait WorldReactor: Send + Sync + 'static
 {
-    /// Triggers that can be added when adding the reactor to your app with [`ReactAppExt::add_reactor_with].
+    /// Triggers that must be added when adding the reactor to your app with [`ReactAppExt::add_reactor_with].
     type StartingTriggers: ReactionTriggerBundle;
     /// Triggers that can be added to the reactor with [`Reactor::add_triggers`].
     type Triggers: ReactionTriggerBundle;
