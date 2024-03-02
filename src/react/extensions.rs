@@ -32,6 +32,10 @@ impl ReactAppExt for App
     where
         R: WorldReactor<StartingTriggers = ()>
     {
+        if self.world.contains_resource::<WorldReactorRes<R>>()
+        {
+            panic!("duplicate world reactors of type {:?} are not allowed", std::any::type_name::<R>());
+        }
         let sys_command = self.world.spawn_system_command_from(reactor.reactor());
         self.world.insert_resource(WorldReactorRes::<R>::new(sys_command));
         self
@@ -39,6 +43,10 @@ impl ReactAppExt for App
 
     fn add_reactor_with<R: WorldReactor>(&mut self, reactor: R, triggers: R::StartingTriggers) -> &mut Self
     {
+        if self.world.contains_resource::<WorldReactorRes<R>>()
+        {
+            panic!("duplicate world reactors of type {:?} are not allowed", std::any::type_name::<R>());
+        }
         let sys_command = self.world.spawn_system_command_from(reactor.reactor());
         self.world.insert_resource(WorldReactorRes::<R>::new(sys_command));
 

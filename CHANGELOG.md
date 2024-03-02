@@ -1,5 +1,12 @@
 # Changelog
 
+## [WIP]
+
+### Changed
+
+- Panic if duplicate world reactors are added to an app.
+
+
 ## [0.2.0]
 
 ### Changed
