@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2]
+
+### Changed
+
+- Loosen `set_if_not_eq` requirement from `Eq` to `PartialEq`.
+
+
 ## [0.2.1]
 
 ### Changed

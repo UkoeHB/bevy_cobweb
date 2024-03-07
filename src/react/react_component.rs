@@ -46,7 +46,7 @@ impl<C: ReactComponent> React<C>
     /// Returns the previous value if it changed.
     pub fn set_if_not_eq(&mut self, rcommands: &mut ReactCommands, new: C) -> Option<C>
     where
-        C: Eq
+        C: PartialEq
     {
         if new == self.component { return None; }
 

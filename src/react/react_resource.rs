@@ -53,7 +53,7 @@ impl<R: ReactResource> ReactResInner<R>
     /// Returns the previous value if it changed.
     fn set_if_not_eq(&mut self, rcommands: &mut ReactCommands, new: R) -> Option<R>
     where
-        R: Eq
+        R: PartialEq
     {
         if new == self.resource { return None; }
 
@@ -141,7 +141,7 @@ impl<'w, R: ReactResource> ReactResMut<'w, R>
     /// Returns the previous value if it changed.
     pub fn set_if_not_eq(&mut self, rcommands: &mut ReactCommands, new: R) -> Option<R>
     where
-        R: Eq
+        R: PartialEq
     {
         self.inner.set_if_not_eq(rcommands, new)
     }
