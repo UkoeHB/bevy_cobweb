@@ -72,6 +72,8 @@ impl Default for DespawnAccessTracker
 ///
 /// Can only be used within [`SystemCommands`](super::SystemCommand).
 ///
+/// Use [`despawn`] to make a trigger that will read these events.
+///
 /*
 ```rust
 fn example(mut rcommands: ReactCommands)

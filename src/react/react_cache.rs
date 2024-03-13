@@ -133,6 +133,9 @@ pub(crate) struct ReactCache
     /// Despawn receiver
     despawn_receiver: Receiver<Entity>,
 
+    /// Any entity event reactors
+    any_entity_event_reactors: HashMap<TypeId, Vec<ReactorHandle>>,
+
     /// Resource mutation reactors
     resource_reactors: HashMap<TypeId, Vec<ReactorHandle>>,
 
@@ -198,6 +201,14 @@ impl ReactCache
             .push(handle);
     }
 
+    pub(crate) fn register_any_entity_event_reactor<E: 'static>(&mut self, handle: ReactorHandle)
+    {
+        self.any_entity_event_reactors
+            .entry(TypeId::of::<E>())
+            .or_default()
+            .push(handle);
+    }
+
     pub(crate) fn register_resource_mutation_reactor<R: ReactResource>(&mut self, handle: ReactorHandle)
     {
         self.resource_reactors
@@ -254,6 +265,25 @@ impl ReactCache
         // cleanup empty hashmap entries
         if !reactors.is_empty() { return; }
         let _ = self.component_reactors.remove(&comp_id);
+    }
+
+    /// Revokes a resource mutation reactor.
+    pub(crate) fn revoke_any_entity_event_reactor(&mut self, event_id: TypeId, reactor_id: SystemCommand)
+    {
+        // get callbacks
+        let Some(callbacks) = self.any_entity_event_reactors.get_mut(&event_id) else { return; };
+
+        // revoke reactor
+        for (idx, handle) in callbacks.iter().enumerate()
+        {
+            if handle.sys_command() != reactor_id { continue; }
+            let _ = callbacks.remove(idx);
+            break;
+        }
+
+        // cleanup empty hashmap entries
+        if callbacks.len() > 0 { return; }
+        let _ = self.any_entity_event_reactors.remove(&event_id);
     }
 
     /// Revokes a resource mutation reactor.
@@ -440,35 +470,55 @@ impl ReactCache
     pub(crate) fn schedule_entity_event_reaction<E: Send + Sync + 'static>(
         In((target, event)) : In<(Entity, E)>,
         mut commands        : Commands,
+        cache               : Res<ReactCache>,
         mut queue           : ResMut<CobwebCommandQueue<ReactionCommand>>,
         entity_reactors     : Query<&EntityReactors>,
     ){
         // get reactors
-        let Ok(entity_reactors) = entity_reactors.get(target)
-        else
-        {
-            tracing::debug!(?target, "ignoring entity event, the entity doesn't have any reactors or was despawned");
-            return;
-        };
+        let entity_reactors = entity_reactors.get(target);
+        let handlers = cache.any_entity_event_reactors.get(&TypeId::of::<E>());
 
         // if there are no handlers, just drop the event data
         let reaction_type = EntityReactionType::Event(TypeId::of::<E>());
-        let num = entity_reactors.count(reaction_type);
+        let num = entity_reactors.map(|e| e.count(reaction_type)).unwrap_or_default()
+            + handlers.map(|h| h.len()).unwrap_or_default();
         if num == 0 { return; }
 
         // prep entity data
         let data_entity = commands.spawn(EntityEventData::new(target, event)).id();
 
-        // queue reactors
-        for (idx, reactor) in entity_reactors.iter_rtype(reaction_type).enumerate()
+        // entity-specific reactors
+        let mut count = 0;
+        if let Ok(entity_reactors) = entity_reactors
         {
-            queue.push(
+            for reactor in entity_reactors.iter_rtype(reaction_type)
+            {
+                count += 1;
+                queue.push(
+                        ReactionCommand::Event{
+                            data_entity,
+                            reactor,
+                            last_reader: count == num,
+                        }
+                    );
+            }            
+        }
+
+        // Entity-agnostic reactors
+        if let Some(handlers) = cache.any_entity_event_reactors.get(&TypeId::of::<E>())
+        {
+            // queue reactors
+            for handle in handlers.iter()
+            {
+                count += 1;
+                queue.push(
                     ReactionCommand::Event{
                         data_entity,
-                        reactor,
-                        last_reader: idx + 1 == num,
+                        reactor: handle.sys_command(),
+                        last_reader: count == num,
                     }
                 );
+            }
         }
 
         // reaction tree
@@ -571,8 +621,9 @@ impl Default for ReactCache
             despawn_reactors      : HashMap::new(),
             despawn_sender,
             despawn_receiver,
-            resource_reactors     : HashMap::new(),
-            broadcast_reactors    : HashMap::new(),
+            any_entity_event_reactors : HashMap::new(),
+            resource_reactors         : HashMap::new(),
+            broadcast_reactors        : HashMap::new(),
         }
     }
 }

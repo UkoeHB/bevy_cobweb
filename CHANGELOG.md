@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.3.0]
+
+### Added
+
+- Added `AnyEntityEventTrigger` with associated `any_entity_event` helper method.
+
+### Changed
+
+- `EntityEvent::read()` now returns `Option<(Entity, &T)>` instead of `&Option<(Entity, T)>.
+
+
 ## [0.2.2]
 
 ### Changed

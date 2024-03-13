@@ -112,6 +112,7 @@ pub enum ReactorType
     EntityMutation(Entity, TypeId),
     EntityRemoval(Entity, TypeId),
     EntityEvent(Entity, TypeId),
+    AnyEntityEvent(TypeId),
     ComponentInsertion(TypeId),
     ComponentMutation(TypeId),
     ComponentRemoval(TypeId),

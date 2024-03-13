@@ -67,7 +67,7 @@ fn on_entity_event(In(entity): In<Entity>, mut rcommands: ReactCommands) -> Revo
         move |event: EntityEvent<IntEvent>, mut recorder: ResMut<TestReactRecorder>|
         {
             let Some((received_entity, event)) = event.read() else { return; };
-            assert_eq!(*received_entity, entity);
+            assert_eq!(received_entity, entity);
             recorder.0 = event.0;
         }
     )
@@ -79,7 +79,7 @@ fn on_entity_event_add(In(entity): In<Entity>, mut rcommands: ReactCommands) -> 
         move |event: EntityEvent<IntEvent>, mut recorder: ResMut<TestReactRecorder>|
         {
             let Some((received_entity, event)) = event.read() else { return; };
-            assert_eq!(*received_entity, entity);
+            assert_eq!(received_entity, entity);
             recorder.0 += event.0;
         }
     )
@@ -91,7 +91,7 @@ fn on_entity_event_proxy(In((entity, proxy)): In<(Entity, Entity)>, mut rcommand
         move |event: EntityEvent<AutoDespawnSignal>|
         {
             let (event_entity, proxy_signal) = event.read().unwrap();
-            assert_eq!(entity, *event_entity);
+            assert_eq!(entity, event_entity);
             assert_eq!(proxy, proxy_signal.entity());
         }
     )
@@ -108,12 +108,27 @@ fn on_entity_event_recursive(In(entity): In<Entity>, mut rcommands: ReactCommand
         |
         {
             let Some((received_entity, event)) = event.read() else { return; };
-            assert_eq!(*received_entity, entity);
+            assert_eq!(received_entity, entity);
             recorder.0 += 1;
 
             // recurse until the event is 0
             if event.0 == 0 { return; }
             rcommands.entity_event(entity, IntEvent(event.0.saturating_sub(1)));
+        }
+    )
+}
+
+//-------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------
+
+fn on_any_entity_event(In(target_entity): In<Entity>, mut rcommands: ReactCommands) -> RevokeToken
+{
+    rcommands.on_revokable(any_entity_event::<IntEvent>(),
+        move |event: EntityEvent<IntEvent>, mut recorder: ResMut<TestReactRecorder>|
+        {
+            let Some((received_entity, event)) = event.read() else { return; };
+            assert_eq!(received_entity, target_entity);
+            recorder.0 = event.0;
         }
     )
 }
@@ -394,6 +409,33 @@ fn test_entity_event()
 
 //-------------------------------------------------------------------------------------------------------------------
 
+// Test entity events with 'any entity event' reactor.
+#[test]
+fn test_any_entity_event()
+{
+    // setup
+    let mut app = App::new();
+    app.add_plugins(ReactPlugin)
+        .init_resource::<TestReactRecorder>();
+    let world = &mut app.world;
+
+    let test_entity = world.spawn_empty().id();
+
+    // add reactor
+    world.syscall(test_entity, on_any_entity_event);
+    assert_eq!(world.resource::<TestReactRecorder>().0, 0);
+
+    // send event (reaction)
+    world.syscall((test_entity, 222), send_entity_event);
+    assert_eq!(world.resource::<TestReactRecorder>().0, 222);
+
+    // send event (reaction)
+    world.syscall((test_entity, 1), send_entity_event);
+    assert_eq!(world.resource::<TestReactRecorder>().0, 1);
+}
+
+//-------------------------------------------------------------------------------------------------------------------
+
 // Recursive entity events.
 #[test]
 fn recursive_entity_events()
@@ -567,6 +609,35 @@ fn revoke_entity_event_reactor()
 
     // add reactor
     let revoke_token = world.syscall(test_entity, on_entity_event);
+    assert_eq!(world.resource::<TestReactRecorder>().0, 0);
+
+    // send event (reaction)
+    world.syscall((test_entity, 222), send_entity_event);
+    assert_eq!(world.resource::<TestReactRecorder>().0, 222);
+
+    // revoke reactor
+    world.syscall(revoke_token, revoke_reactor);
+
+    // send event (no reaction)
+    world.syscall((test_entity, 1), send_entity_event);
+    assert_eq!(world.resource::<TestReactRecorder>().0, 222);
+}
+
+//-------------------------------------------------------------------------------------------------------------------
+
+#[test]
+fn revoke_any_entity_event_reactor()
+{
+    // setup
+    let mut app = App::new();
+    app.add_plugins(ReactPlugin)
+        .init_resource::<TestReactRecorder>();
+    let world = &mut app.world;
+
+    let test_entity = world.spawn_empty().id();
+
+    // add reactor
+    let revoke_token = world.syscall(test_entity, on_any_entity_event);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // send event (reaction)

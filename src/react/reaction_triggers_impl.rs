@@ -64,6 +64,14 @@ fn register_removal_reactor<C: ReactComponent>(In(handle): In<ReactorHandle>, mu
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
+fn register_any_entity_event_reactor<E: 'static>(In(handle): In<ReactorHandle>, mut cache: ResMut<ReactCache>)
+{
+    cache.register_any_entity_event_reactor::<E>(handle);
+}
+
+//-------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------
+
 fn register_resource_mutation_reactor<R: ReactResource>(In(handle): In<ReactorHandle>, mut cache: ResMut<ReactCache>)
 {
     cache.register_resource_mutation_reactor::<R>(handle);
@@ -330,6 +338,34 @@ impl<E: Send + Sync + 'static> ReactionTrigger for EntityEventTrigger<E>
 pub fn entity_event<E: Send + Sync + 'static>(target: Entity) -> EntityEventTrigger<E>
 {
     EntityEventTrigger(target, PhantomData::default())
+}
+
+//-------------------------------------------------------------------------------------------------------------------
+
+/// Reaction trigger for any entity event of a given type.
+/// - Reactions only occur for events sent via [`ReactCommands::<E>::entity_event()`].
+pub struct AnyEntityEventTrigger<E: Send + Sync + 'static>(PhantomData<E>);
+impl<E: Send + Sync + 'static> Clone for AnyEntityEventTrigger<E> { fn clone(&self) -> Self { *self } }
+impl<E: Send + Sync + 'static> Copy for AnyEntityEventTrigger<E> {}
+
+impl<E: Send + Sync + 'static> ReactionTrigger for AnyEntityEventTrigger<E>
+{
+    fn reactor_type(&self) -> ReactorType
+    {
+        ReactorType::AnyEntityEvent(TypeId::of::<E>())
+    }
+
+    fn register(&self, commands: &mut Commands, handle: &ReactorHandle) -> bool
+    {
+        commands.syscall(handle.clone(), register_any_entity_event_reactor::<E>);
+        true
+    }
+}
+
+/// Returns an [`AnyEntityEventTrigger`] reaction trigger.
+pub fn any_entity_event<E: Send + Sync + 'static>() -> AnyEntityEventTrigger<E>
+{
+    AnyEntityEventTrigger(PhantomData::default())
 }
 
 //-------------------------------------------------------------------------------------------------------------------

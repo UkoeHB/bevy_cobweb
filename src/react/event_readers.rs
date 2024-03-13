@@ -92,7 +92,8 @@ impl<T: Send + Sync + 'static> BroadcastEventData<T>
 #[derive(Component)]
 pub(crate) struct EntityEventData<T: Send + Sync + 'static>
 {
-    data: (Entity, T),
+    entity: Entity,
+    data: T,
 }
 
 impl<T: Send + Sync + 'static> EntityEventData<T>
@@ -100,13 +101,13 @@ impl<T: Send + Sync + 'static> EntityEventData<T>
     /// Makes a new entity event data.
     pub(crate) fn new(target_entity: Entity, data: T) -> Self
     {
-        Self{ data: (target_entity, data) }
+        Self{ entity: target_entity, data }
     }
 
     /// Reads the event data.
-    fn read(&self) -> &(Entity, T)
+    fn read(&self) -> (Entity, &T)
     {
-        &self.data
+        (self.entity, &self.data)
     }
 }
 
@@ -115,6 +116,8 @@ impl<T: Send + Sync + 'static> EntityEventData<T>
 /// System parameter for reading broadcast event data.
 ///
 /// Can only be used within [`SystemCommands`](super::SystemCommand).
+///
+/// Use [`broadcast`] to make a trigger that will read these events.
 ///
 /*
 ```rust
@@ -170,6 +173,8 @@ impl<'w, 's, T: Send + Sync + 'static> BroadcastEvent<'w, 's, T>
 ///
 /// Can only be used within [`SystemCommands`](super::SystemCommand).
 ///
+/// Use [`entity_event`] or [`any_entity_event`] to make a trigger that will read these events.
+///
 /*
 ```rust
 fn example(mut rcommands: ReactCommands)
@@ -179,9 +184,9 @@ fn example(mut rcommands: ReactCommands)
         entity_event::<()>(entity),
         |mut event: EntityEvent<()>|
         {
-            if let Some(()) = event.take()
+            if let Some(entity, data) = event.read()
             {
-                println!("event received");
+                println!("event {:?} received for {:?}", data, entity);
             }
         }
     );
@@ -202,7 +207,7 @@ impl<'w, 's, T: Send + Sync + 'static> EntityEvent<'w, 's, T>
     /// Reads entity event data if it exists.
     ///
     /// This will return at most one unique `T` each time a system runs.
-    pub fn read(&self) -> Option<&(Entity, T)>
+    pub fn read(&self) -> Option<(Entity, &T)>
     {
         if !self.tracker.is_reacting() { return None; }
         let Ok(data) = self.data.get(self.tracker.data_entity()) else { return None; };

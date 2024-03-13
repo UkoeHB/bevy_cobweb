@@ -109,6 +109,10 @@ impl Default for EntityReactionAccessTracker
 
 /// System parameter for reading entity component insertion events in systems that react to those events.
 ///
+/// Can only be used within [`SystemCommands`](super::SystemCommand).
+///
+/// Use [`entity_insertion`] or [`insertion`] to make a trigger that will read these events.
+///
 /*
 ```rust
 fn example(mut rcommands: ReactCommands)
@@ -165,6 +169,8 @@ impl<'w, 's, T: ReactComponent> InsertionEvent<'w, 's, T>
 /// System parameter for reading entity component mutation events in systems that react to those events.
 ///
 /// Can only be used within [`SystemCommands`](super::SystemCommand).
+///
+/// Use [`entity_mutation`] or [`mutation`] to make a trigger that will read these events.
 ///
 /*
 ```rust
@@ -223,6 +229,8 @@ impl<'w, 's, T: ReactComponent> MutationEvent<'w, 's, T>
 /// Note that removals are detected for entity despawns, so if the entity returned from `RemovalEvent` does not
 /// exist that implies that it was removed due to a despawn (although not a guarantee, since it could have been removed
 /// and the entity despawned later).
+///
+/// Use [`entity_removal`] or [`removal`] to make a trigger that will read these events.
 ///
 /*
 ```rust

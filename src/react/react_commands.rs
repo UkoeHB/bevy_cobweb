@@ -51,6 +51,10 @@ fn revoke_reactor(
             {
                 revoke_entity_reactor(entity, EntityReactionType::Event(event_id), id, &mut reactors);
             }
+            ReactorType::AnyEntityEvent(event_id) =>
+            {
+                cache.revoke_any_entity_event_reactor(event_id, id);
+            }
             ReactorType::ComponentInsertion(comp_id) =>
             {
                 cache.revoke_component_reactor(EntityReactionType::Insertion(comp_id), id);
