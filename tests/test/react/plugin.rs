@@ -11,9 +11,9 @@ use bevy::prelude::*;
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
-fn on_entity_insertion(In(entity): In<Entity>, mut rcommands: ReactCommands) -> RevokeToken
+fn on_entity_insertion(In(entity): In<Entity>, mut c: Commands) -> RevokeToken
 {
-    rcommands.on_revokable(entity_insertion::<TestComponent>(entity),
+    c.react().on_revokable(entity_insertion::<TestComponent>(entity),
             move |world: &mut World| syscall(world, entity, update_test_recorder_with_component)
         )
 }

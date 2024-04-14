@@ -36,9 +36,9 @@ impl<C: ReactComponent> React<C>
     }
 
     /// Mutably accesses the component and triggers reactions.
-    pub fn get_mut<'a>(&'a mut self, rc: &mut ReactCommands) -> &'a mut C
+    pub fn get_mut<'a>(&'a mut self, c: &mut Commands) -> &'a mut C
     {
-        rc.commands.syscall(self.entity, ReactCache::schedule_mutation_reaction::<C>);
+        c.syscall(self.entity, ReactCache::schedule_mutation_reaction::<C>);
         &mut self.component
     }
 
@@ -51,13 +51,13 @@ impl<C: ReactComponent> React<C>
     /// Sets the component value and triggers mutations only if the value will change.
     ///
     /// Returns the previous value if it changed.
-    pub fn set_if_not_eq(&mut self, rc: &mut ReactCommands, new: C) -> Option<C>
+    pub fn set_if_not_eq(&mut self, c: &mut Commands, new: C) -> Option<C>
     where
         C: PartialEq
     {
         if new == self.component { return None; }
 
-        rc.commands.syscall(self.entity, ReactCache::schedule_mutation_reaction::<C>);
+        c.syscall(self.entity, ReactCache::schedule_mutation_reaction::<C>);
         let old = std::mem::replace(&mut self.component, new);
         Some(old)
     }
@@ -125,10 +125,10 @@ impl<'w, 's, T: ReactComponent> ReactiveMut<'w, 's, T>
     /// Gets a mutable reference to `T` on `entity`.
     ///
     /// Triggers mutation reactions.
-    pub fn get_mut(&mut self, rc: &mut ReactCommands, entity: Entity) -> Option<&mut T>
+    pub fn get_mut(&mut self, c: &mut Commands, entity: Entity) -> Option<&mut T>
     {
         let x = self.components.get_mut(entity).ok()?;
-        Some(x.into_inner().get_mut(rc))
+        Some(x.into_inner().get_mut(c))
     }
 
     /// Gets a mutable reference to `T` on `entity`.

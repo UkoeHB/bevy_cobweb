@@ -11,22 +11,22 @@ use bevy::prelude::*;
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
-fn command_ordering_impl(mut rcommands: ReactCommands) -> Vec<usize>
+fn command_ordering_impl(mut c: Commands) -> Vec<usize>
 {
-    let system_command = rcommands.commands().spawn_system_command(
+    let system_command = c.spawn_system_command(
         |mut history: ResMut<TelescopeHistory>|
         {
             history.push(1);
         }
     );
-    let event_command = rcommands.commands().spawn_system_command(
+    let event_command = c.spawn_system_command(
         |mut event: SystemEvent<()>, mut history: ResMut<TelescopeHistory>|
         {
             event.take().unwrap();
             history.push(2);
         }
     );
-    rcommands.on(broadcast::<()>(),
+    c.react().on(broadcast::<()>(),
         |event: BroadcastEvent<()>, mut history: ResMut<TelescopeHistory>|
         {
             event.read().unwrap();
@@ -34,15 +34,15 @@ fn command_ordering_impl(mut rcommands: ReactCommands) -> Vec<usize>
         }
     );
 
-    let parent = rcommands.commands().spawn_system_command(
-        move |mut rcommands: ReactCommands|
+    let parent = c.spawn_system_command(
+        move |mut c: Commands|
         {
-            rcommands.broadcast(());
-            rcommands.commands().send_system_event(event_command, ());
-            rcommands.commands().add(system_command);
+            c.react().broadcast(());
+            c.react().commands().send_system_event(event_command, ());
+            c.react().commands().add(system_command);
         }
     );
-    rcommands.commands().add(parent);
+    c.add(parent);
 
     vec![1, 2, 3]
 }
@@ -50,15 +50,15 @@ fn command_ordering_impl(mut rcommands: ReactCommands) -> Vec<usize>
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
-fn multitest_prep_commands(mut rcommands: ReactCommands)
+fn multitest_prep_commands(mut c: Commands)
 {
-    let sys1 = rcommands.commands().spawn_system_command(
+    let sys1 = c.spawn_system_command(
             |event: BroadcastEvent<usize>, mut history: ResMut<TelescopeHistory>|
             {
                 history.push(*event.read().unwrap());
             }
         );
-    let sys2 = rcommands.commands().spawn_system_command(
+    let sys2 = c.spawn_system_command(
             |event: BroadcastEvent<usize>, mut history: ResMut<TelescopeHistory>|
             {
                 history.push(*event.read().unwrap());
@@ -66,26 +66,26 @@ fn multitest_prep_commands(mut rcommands: ReactCommands)
         );
 
     //**saved = Some(sys1);
-    rcommands.with(broadcast::<usize>(), sys1, ReactorMode::Persistent);
-    rcommands.with(broadcast::<usize>(), sys2, ReactorMode::Persistent);
+    c.react().with(broadcast::<usize>(), sys1, ReactorMode::Persistent);
+    c.react().with(broadcast::<usize>(), sys2, ReactorMode::Persistent);
 }
 
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
-fn multitest_system1(mut rcommands: ReactCommands, mut history: ResMut<TelescopeHistory>)
+fn multitest_system1(mut c: Commands, mut history: ResMut<TelescopeHistory>)
 {
     history.push(1);
-    rcommands.broadcast(3usize);
+    c.react().broadcast(3usize);
 }
 
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
-fn multitest_system2(mut rcommands: ReactCommands, mut history: ResMut<TelescopeHistory>)
+fn multitest_system2(mut c: Commands, mut history: ResMut<TelescopeHistory>)
 {
     history.push(2);
-    rcommands.broadcast(4usize);
+    c.react().broadcast(4usize);
 }
 
 //-------------------------------------------------------------------------------------------------------------------

@@ -9,6 +9,7 @@
 ### Changed
 
 - Rename `*_mut_noreact` to `*_noreact` for simplicity.
+- Rework `ReactCommands` to be derived from `Commands` instead of its own system parameter. Add `Commands::react` extension method for obtaining `ReactCommands` instances.
 
 
 ## [0.3.0]

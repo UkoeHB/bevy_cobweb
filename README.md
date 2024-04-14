@@ -26,5 +26,5 @@ Documentation for the reactivity primitives can be found [here](src/react/REACT.
 
 | `bevy` | `bevy_cobweb` |
 |-------|----------------|
-| 0.13  | 0.0.4 - master |
-| 0.12  | 0.0.1 - 0.0.3  |
+| 0.13  | 0.0.3 - master |
+| 0.12  | 0.0.1 - 0.0.2  |

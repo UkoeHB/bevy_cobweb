@@ -11,24 +11,24 @@ use bevy::prelude::*;
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
-fn on_broadcast(mut rcommands: ReactCommands) -> RevokeToken
+fn on_broadcast(mut c: Commands) -> RevokeToken
 {
-    rcommands.on_revokable(broadcast::<IntEvent>(), update_test_recorder_with_broadcast)
+    c.react().on_revokable(broadcast::<IntEvent>(), update_test_recorder_with_broadcast)
 }
 
-fn on_broadcast_recursive(mut rcommands: ReactCommands) -> RevokeToken
+fn on_broadcast_recursive(mut c: Commands) -> RevokeToken
 {
-    rcommands.on_revokable(broadcast::<IntEvent>(), update_test_recorder_with_broadcast_and_recurse)
+    c.react().on_revokable(broadcast::<IntEvent>(), update_test_recorder_with_broadcast_and_recurse)
 }
 
-fn on_broadcast_unit(mut rcommands: ReactCommands) -> RevokeToken
+fn on_broadcast_unit(mut c: Commands) -> RevokeToken
 {
-    rcommands.on_revokable(broadcast::<()>(), |mut recorder: ResMut<TestReactRecorder>| { recorder.0 += 1; })
+    c.react().on_revokable(broadcast::<()>(), |mut recorder: ResMut<TestReactRecorder>| { recorder.0 += 1; })
 }
 
-fn on_broadcast_int(mut rcommands: ReactCommands) -> RevokeToken
+fn on_broadcast_int(mut c: Commands) -> RevokeToken
 {
-    rcommands.on_revokable(broadcast::<usize>(),
+    c.react().on_revokable(broadcast::<usize>(),
         |event: BroadcastEvent<usize>, mut recorder: ResMut<TestReactRecorder>|
         {
             recorder.0 += event.read().unwrap();
@@ -36,9 +36,9 @@ fn on_broadcast_int(mut rcommands: ReactCommands) -> RevokeToken
     )
 }
 
-fn on_broadcast_add(mut rcommands: ReactCommands) -> RevokeToken
+fn on_broadcast_add(mut c: Commands) -> RevokeToken
 {
-    rcommands.on_revokable(broadcast::<IntEvent>(),
+    c.react().on_revokable(broadcast::<IntEvent>(),
         move |event: BroadcastEvent<IntEvent>, mut recorder: ResMut<TestReactRecorder>|
         {
             let Some(event) = event.read() else { return; };
@@ -47,9 +47,9 @@ fn on_broadcast_add(mut rcommands: ReactCommands) -> RevokeToken
     )
 }
 
-fn on_broadcast_proxy(In(proxy): In<Entity>, mut rcommands: ReactCommands) -> RevokeToken
+fn on_broadcast_proxy(In(proxy): In<Entity>, mut c: Commands) -> RevokeToken
 {
-    rcommands.on_revokable(broadcast::<AutoDespawnSignal>(),
+    c.react().on_revokable(broadcast::<AutoDespawnSignal>(),
         move |event: BroadcastEvent<AutoDespawnSignal>|
         {
             let proxy_signal = event.read().unwrap();
@@ -61,9 +61,9 @@ fn on_broadcast_proxy(In(proxy): In<Entity>, mut rcommands: ReactCommands) -> Re
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
-fn on_entity_event(In(entity): In<Entity>, mut rcommands: ReactCommands) -> RevokeToken
+fn on_entity_event(In(entity): In<Entity>, mut c: Commands) -> RevokeToken
 {
-    rcommands.on_revokable(entity_event::<IntEvent>(entity),
+    c.react().on_revokable(entity_event::<IntEvent>(entity),
         move |event: EntityEvent<IntEvent>, mut recorder: ResMut<TestReactRecorder>|
         {
             let Some((received_entity, event)) = event.read() else { return; };
@@ -73,9 +73,9 @@ fn on_entity_event(In(entity): In<Entity>, mut rcommands: ReactCommands) -> Revo
     )
 }
 
-fn on_entity_event_add(In(entity): In<Entity>, mut rcommands: ReactCommands) -> RevokeToken
+fn on_entity_event_add(In(entity): In<Entity>, mut c: Commands) -> RevokeToken
 {
-    rcommands.on_revokable(entity_event::<IntEvent>(entity),
+    c.react().on_revokable(entity_event::<IntEvent>(entity),
         move |event: EntityEvent<IntEvent>, mut recorder: ResMut<TestReactRecorder>|
         {
             let Some((received_entity, event)) = event.read() else { return; };
@@ -85,9 +85,9 @@ fn on_entity_event_add(In(entity): In<Entity>, mut rcommands: ReactCommands) -> 
     )
 }
 
-fn on_entity_event_proxy(In((entity, proxy)): In<(Entity, Entity)>, mut rcommands: ReactCommands) -> RevokeToken
+fn on_entity_event_proxy(In((entity, proxy)): In<(Entity, Entity)>, mut c: Commands) -> RevokeToken
 {
-    rcommands.on_revokable(entity_event::<AutoDespawnSignal>(entity),
+    c.react().on_revokable(entity_event::<AutoDespawnSignal>(entity),
         move |event: EntityEvent<AutoDespawnSignal>|
         {
             let (event_entity, proxy_signal) = event.read().unwrap();
@@ -97,12 +97,12 @@ fn on_entity_event_proxy(In((entity, proxy)): In<(Entity, Entity)>, mut rcommand
     )
 }
 
-fn on_entity_event_recursive(In(entity): In<Entity>, mut rcommands: ReactCommands) -> RevokeToken
+fn on_entity_event_recursive(In(entity): In<Entity>, mut c: Commands) -> RevokeToken
 {
-    rcommands.on_revokable(entity_event::<IntEvent>(entity),
+    c.react().on_revokable(entity_event::<IntEvent>(entity),
         move
         |
-            mut rcommands : ReactCommands,
+            mut c         : Commands,
             event         : EntityEvent<IntEvent>,
             mut recorder  : ResMut<TestReactRecorder>
         |
@@ -113,7 +113,7 @@ fn on_entity_event_recursive(In(entity): In<Entity>, mut rcommands: ReactCommand
 
             // recurse until the event is 0
             if event.0 == 0 { return; }
-            rcommands.entity_event(entity, IntEvent(event.0.saturating_sub(1)));
+            c.react().entity_event(entity, IntEvent(event.0.saturating_sub(1)));
         }
     )
 }
@@ -121,9 +121,9 @@ fn on_entity_event_recursive(In(entity): In<Entity>, mut rcommands: ReactCommand
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
-fn on_any_entity_event(In(target_entity): In<Entity>, mut rcommands: ReactCommands) -> RevokeToken
+fn on_any_entity_event(In(target_entity): In<Entity>, mut c: Commands) -> RevokeToken
 {
-    rcommands.on_revokable(any_entity_event::<IntEvent>(),
+    c.react().on_revokable(any_entity_event::<IntEvent>(),
         move |event: EntityEvent<IntEvent>, mut recorder: ResMut<TestReactRecorder>|
         {
             let Some((received_entity, event)) = event.read() else { return; };
@@ -136,9 +136,9 @@ fn on_any_entity_event(In(target_entity): In<Entity>, mut rcommands: ReactComman
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
-fn send_broadcast_with<T: Send + Sync + 'static>(In(event): In<T>, mut rcommands: ReactCommands)
+fn send_broadcast_with<T: Send + Sync + 'static>(In(event): In<T>, mut c: Commands)
 {
-    rcommands.broadcast(event);
+    c.react().broadcast(event);
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -148,11 +148,11 @@ fn send_broadcast_with<T: Send + Sync + 'static>(In(event): In<T>, mut rcommands
 fn send_multiple_broadcasts(In(data): In<Vec<usize>>, mut commands: Commands)
 {
     let events = commands.spawn_system_command(
-        move |mut rcommands: ReactCommands|
+        move |mut c: Commands|
         {
             for val in data.iter()
             {
-                rcommands.broadcast(IntEvent(*val));
+                c.react().broadcast(IntEvent(*val));
             }
         }
     );
@@ -166,11 +166,11 @@ fn send_multiple_broadcasts(In(data): In<Vec<usize>>, mut commands: Commands)
 fn send_multiple_entity_events(In((entity, data)): In<(Entity, Vec<usize>)>, mut commands: Commands)
 {
     let events = commands.spawn_system_command(
-        move |mut rcommands: ReactCommands|
+        move |mut c: Commands|
         {
             for val in data.iter()
             {
-                rcommands.entity_event(entity, IntEvent(*val));
+                c.react().entity_event(entity, IntEvent(*val));
             }
         }
     );
@@ -180,17 +180,17 @@ fn send_multiple_entity_events(In((entity, data)): In<(Entity, Vec<usize>)>, mut
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
-fn send_signal_proxy(In((entity, signal)): In<(Entity, AutoDespawnSignal)>, mut rcommands: ReactCommands)
+fn send_signal_proxy(In((entity, signal)): In<(Entity, AutoDespawnSignal)>, mut c: Commands)
 {
-    rcommands.entity_event(entity, signal);
+    c.react().entity_event(entity, signal);
 }
 
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
-fn broadcast_signal_proxy(In(signal): In<AutoDespawnSignal>, mut rcommands: ReactCommands)
+fn broadcast_signal_proxy(In(signal): In<AutoDespawnSignal>, mut c: Commands)
 {
-    rcommands.broadcast(signal);
+    c.react().broadcast(signal);
 }
 
 //-------------------------------------------------------------------------------------------------------------------

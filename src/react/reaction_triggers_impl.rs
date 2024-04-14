@@ -161,10 +161,9 @@ impl<C: ReactComponent> ReactionTrigger for InsertionTrigger<C>
         ReactorType::ComponentInsertion(TypeId::of::<C>())
     }
 
-    fn register(&self, commands: &mut Commands, handle: &ReactorHandle) -> bool
+    fn register(&self, commands: &mut Commands, handle: &ReactorHandle)
     {
         commands.syscall(handle.clone(), register_insertion_reactor::<C>);
-        true
     }
 }
 
@@ -187,10 +186,9 @@ impl<C: ReactComponent> ReactionTrigger for MutationTrigger<C>
         ReactorType::ComponentMutation(TypeId::of::<C>())
     }
 
-    fn register(&self, commands: &mut Commands, handle: &ReactorHandle) -> bool
+    fn register(&self, commands: &mut Commands, handle: &ReactorHandle)
     {
         commands.syscall(handle.clone(), register_mutation_reactor::<C>);
-        true
     }
 }
 
@@ -213,10 +211,9 @@ impl<C: ReactComponent> ReactionTrigger for RemovalTrigger<C>
         ReactorType::ComponentRemoval(TypeId::of::<C>())
     }
 
-    fn register(&self, commands: &mut Commands, handle: &ReactorHandle) -> bool
+    fn register(&self, commands: &mut Commands, handle: &ReactorHandle)
     {
         commands.syscall(handle.clone(), register_removal_reactor::<C>);
-        true
     }
 }
 
@@ -238,11 +235,10 @@ impl<C: ReactComponent> ReactionTrigger for EntityInsertionTrigger<C>
         ReactorType::EntityInsertion(self.0, TypeId::of::<C>())
     }
 
-    fn register(&self, commands: &mut Commands, handle: &ReactorHandle) -> bool
+    fn register(&self, commands: &mut Commands, handle: &ReactorHandle)
     {
         let handle = handle.clone();
         commands.syscall((EntityReactionType::Insertion(TypeId::of::<C>()), self.0, handle), register_entity_reactor);
-        true
     }
 }
 
@@ -267,11 +263,10 @@ impl<C: ReactComponent> ReactionTrigger for EntityMutationTrigger<C>
         ReactorType::EntityMutation(self.0, TypeId::of::<C>())
     }
 
-    fn register(&self, commands: &mut Commands, handle: &ReactorHandle) -> bool
+    fn register(&self, commands: &mut Commands, handle: &ReactorHandle)
     {
         let handle = handle.clone();
         commands.syscall((EntityReactionType::Mutation(TypeId::of::<C>()), self.0, handle), register_entity_reactor);
-        true
     }
 }
 
@@ -296,12 +291,11 @@ impl<C: ReactComponent> ReactionTrigger for EntityRemovalTrigger<C>
         ReactorType::EntityRemoval(self.0, TypeId::of::<C>())
     }
 
-    fn register(&self, commands: &mut Commands, handle: &ReactorHandle) -> bool
+    fn register(&self, commands: &mut Commands, handle: &ReactorHandle)
     {
         let handle = handle.clone();
         commands.syscall((), track_removals::<C>);
         commands.syscall((EntityReactionType::Removal(TypeId::of::<C>()), self.0, handle), register_entity_reactor);
-        true
     }
 }
 
@@ -326,11 +320,10 @@ impl<E: Send + Sync + 'static> ReactionTrigger for EntityEventTrigger<E>
         ReactorType::EntityEvent(self.0, TypeId::of::<E>())
     }
 
-    fn register(&self, commands: &mut Commands, handle: &ReactorHandle) -> bool
+    fn register(&self, commands: &mut Commands, handle: &ReactorHandle)
     {
         let handle = handle.clone();
         commands.syscall((EntityReactionType::Event(TypeId::of::<E>()), self.0, handle), register_entity_reactor);
-        true
     }
 }
 
@@ -355,10 +348,9 @@ impl<E: Send + Sync + 'static> ReactionTrigger for AnyEntityEventTrigger<E>
         ReactorType::AnyEntityEvent(TypeId::of::<E>())
     }
 
-    fn register(&self, commands: &mut Commands, handle: &ReactorHandle) -> bool
+    fn register(&self, commands: &mut Commands, handle: &ReactorHandle)
     {
         commands.syscall(handle.clone(), register_any_entity_event_reactor::<E>);
-        true
     }
 }
 
@@ -383,10 +375,9 @@ impl<R: ReactResource> ReactionTrigger for ResourceMutationTrigger<R>
         ReactorType::ResourceMutation(TypeId::of::<R>())
     }
 
-    fn register(&self, commands: &mut Commands, handle: &ReactorHandle) -> bool
+    fn register(&self, commands: &mut Commands, handle: &ReactorHandle)
     {
         commands.syscall(handle.clone(), register_resource_mutation_reactor::<R>);
-        true
     }
 }
 
@@ -409,10 +400,9 @@ impl<E: Send + Sync + 'static> ReactionTrigger for BroadcastTrigger<E>
         ReactorType::Broadcast(TypeId::of::<E>())
     }
 
-    fn register(&self, commands: &mut Commands, handle: &ReactorHandle) -> bool
+    fn register(&self, commands: &mut Commands, handle: &ReactorHandle)
     {
         commands.syscall(handle.clone(), register_broadcast_reactor::<E>);
-        true
     }
 }
 
@@ -433,14 +423,13 @@ impl ReactionTrigger for DespawnTrigger
         ReactorType::Despawn(self.0)
     }
 
-    fn register(&self, commands: &mut Commands, handle: &ReactorHandle) -> bool
+    fn register(&self, commands: &mut Commands, handle: &ReactorHandle)
     {
         // check if the entity exists
-        let Some(_) = commands.get_entity(self.0) else { return false; };
+        let Some(_) = commands.get_entity(self.0) else { return; };
 
         // add despawn tracker
         commands.syscall((self.0, handle.clone()), register_despawn_reactor);
-        true
     }
 }
 

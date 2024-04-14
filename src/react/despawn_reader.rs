@@ -76,10 +76,10 @@ impl Default for DespawnAccessTracker
 ///
 /*
 ```rust
-fn example(mut rcommands: ReactCommands)
+fn example(mut c: Commands)
 {
-    let entity = rcommands.commands().spawn_empty().id();
-    rcommands.on(
+    let entity = c.spawn_empty().id();
+    c.react().on(
         despawn(entity),
         |event: DespawnEvent|
         {
@@ -90,7 +90,7 @@ fn example(mut rcommands: ReactCommands)
         }
     );
 
-    rcommands.commands().despawn(entity);
+    c.despawn(entity);
 }
 ```
 */

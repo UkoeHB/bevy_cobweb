@@ -115,10 +115,10 @@ impl Default for EntityReactionAccessTracker
 ///
 /*
 ```rust
-fn example(mut rcommands: ReactCommands)
+fn example(mut c: Commands)
 {
-    let entity = rcommands.commands().spawn_empty().id();
-    rcommands.on(
+    let entity = c.spawn_empty().id();
+    c.react().on(
         insertion::<A>(),  // entity-specific: entity_insertion::<A>(target_entity)
         |event: InsertionEvent<A>|
         {
@@ -174,9 +174,9 @@ impl<'w, 's, T: ReactComponent> InsertionEvent<'w, 's, T>
 ///
 /*
 ```rust
-fn example(mut rcommands: ReactCommands, query: Query<&mut React<A>>)
+fn example(mut c: Commands, query: Query<&mut React<A>>)
 {
-    rcommands.on(
+    c.react().on(
         mutation::<A>(),  // entity-specific: entity_mutation::<A>(target_entity)
         |event: MutationEvent<A>|
         {
@@ -234,9 +234,9 @@ impl<'w, 's, T: ReactComponent> MutationEvent<'w, 's, T>
 ///
 /*
 ```rust
-fn example(mut rcommands: ReactCommands, query: Query<Entity, With<React<A>>>)
+fn example(mut c: Commands, query: Query<Entity, With<React<A>>>)
 {
-    rcommands.on(
+    c.react().on(
         removal::<A>(),  // entity-specific: entity_removal::<A>(target_entity)
         |event: RemovalEvent<A>|
         {
@@ -247,7 +247,7 @@ fn example(mut rcommands: ReactCommands, query: Query<Entity, With<React<A>>>)
         }
     );
 
-    rcommands.commands().entity(*query.single()).remove::<A>();
+    c.entity(*query.single()).remove::<A>();
 }
 ```
 */

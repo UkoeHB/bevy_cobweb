@@ -59,9 +59,9 @@ impl ReactAppExt for App
 
         // Add starting triggers.
         CallbackSystem::new(
-            move |mut rc: ReactCommands, mut reactor: Reactor<R>|
+            move |mut c: Commands, mut reactor: Reactor<R>|
             {
-                reactor.add_starting_triggers(&mut rc, triggers);
+                reactor.add_starting_triggers(&mut c, triggers);
             }
         ).run(&mut self.world, ());
         self
@@ -144,6 +144,9 @@ impl ReactWorldExt for World
 /// Extends `Commands` with reactivity helpers.
 pub trait ReactCommandsExt
 {
+    /// Obtains a [`ReactCommands`] instance.
+    fn react(&mut self) -> ReactCommands<'_, '_>;
+
     /// Schedules a [`SystemCommand`] to be spawned.
     ///
     /// Systems are not initialized until they are first run.
@@ -171,6 +174,11 @@ pub trait ReactCommandsExt
 
 impl<'w, 's> ReactCommandsExt for Commands<'w, 's>
 {
+    fn react(&mut self) -> ReactCommands<'_, '_>
+    {
+        ReactCommands{ commands: self.reborrow() }
+    }
+
     fn spawn_system_command<S, M>(&mut self, system: S) -> SystemCommand
     where
         S: IntoSystem<(), (), M> + Send + Sync + 'static

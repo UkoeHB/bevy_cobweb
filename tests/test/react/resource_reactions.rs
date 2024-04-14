@@ -10,14 +10,14 @@ use bevy::prelude::*;
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
-fn on_resource_mutation(mut rcommands: ReactCommands) -> RevokeToken
+fn on_resource_mutation(mut c: Commands) -> RevokeToken
 {
-    rcommands.on_revokable(resource_mutation::<TestReactRes>(), update_test_recorder_with_resource)
+    c.react().on_revokable(resource_mutation::<TestReactRes>(), update_test_recorder_with_resource)
 }
 
-fn on_resource_mutation_once(mut rcommands: ReactCommands) -> RevokeToken
+fn on_resource_mutation_once(mut c: Commands) -> RevokeToken
 {
-    rcommands.once(resource_mutation::<TestReactRes>(), update_test_recorder_with_resource)
+    c.react().once(resource_mutation::<TestReactRes>(), update_test_recorder_with_resource)
 }
 
 //-------------------------------------------------------------------------------------------------------------------

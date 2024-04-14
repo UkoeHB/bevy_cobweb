@@ -117,7 +117,7 @@ pub fn update_test_recorder_with_entity_event(event: EntityEvent<IntEvent>, mut 
 //-------------------------------------------------------------------------------------------------------------------
 
 pub fn update_test_recorder_with_broadcast_and_recurse(
-    mut rcommands : ReactCommands,
+    mut c : Commands,
     event         : BroadcastEvent<IntEvent>,
     mut recorder  : ResMut<TestReactRecorder>
 ){
@@ -126,7 +126,7 @@ pub fn update_test_recorder_with_broadcast_and_recurse(
 
     // recurse until the event is 0
     if event.0 == 0 { return; }
-    rcommands.broadcast(IntEvent(event.0.saturating_sub(1)));
+    c.react().broadcast(IntEvent(event.0.saturating_sub(1)));
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -148,9 +148,9 @@ pub fn update_test_recorder_with_broadcast_and_resource(
 
 //-------------------------------------------------------------------------------------------------------------------
 
-pub fn insert_on_test_entity(In((entity, component)): In<(Entity, TestComponent)>, mut rcommands: ReactCommands)
+pub fn insert_on_test_entity(In((entity, component)): In<(Entity, TestComponent)>, mut c: Commands)
 {
-    rcommands.insert(entity, component);
+    c.react().insert(entity, component);
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -164,11 +164,11 @@ pub fn remove_from_test_entity(In(entity): In<Entity>, mut commands: Commands)
 
 pub fn update_test_entity(
     In((entity, new_val)) : In<(Entity, TestComponent)>,
-    mut rcommands         : ReactCommands,
+    mut c         : Commands,
     mut test_entities     : ReactiveMut<TestComponent>,
 ){
     *test_entities
-        .get_mut(&mut rcommands, entity)
+        .get_mut(&mut c, entity)
         .unwrap() = new_val;
 }
 
@@ -176,30 +176,30 @@ pub fn update_test_entity(
 
 pub fn update_react_res(
     In(new_val)   : In<usize>,
-    mut rcommands : ReactCommands,
+    mut c         : Commands,
     mut react_res : ReactResMut<TestReactRes>
 ){
-    react_res.get_mut(&mut rcommands).0 = new_val;
+    react_res.get_mut(&mut c).0 = new_val;
 }
 
 //-------------------------------------------------------------------------------------------------------------------
 
-pub fn send_broadcast(In(data): In<usize>, mut rcommands: ReactCommands)
+pub fn send_broadcast(In(data): In<usize>, mut c: Commands)
 {
-    rcommands.broadcast(IntEvent(data));
+    c.react().broadcast(IntEvent(data));
 }
 //-------------------------------------------------------------------------------------------------------------------
 
-pub fn send_entity_event(In((entity, data)): In<(Entity, usize)>, mut rcommands: ReactCommands)
+pub fn send_entity_event(In((entity, data)): In<(Entity, usize)>, mut c: Commands)
 {
-    rcommands.entity_event(entity, IntEvent(data));
+    c.react().entity_event(entity, IntEvent(data));
 }
 
 //-------------------------------------------------------------------------------------------------------------------
 
-pub fn revoke_reactor(In(token): In<RevokeToken>, mut rcommands: ReactCommands)
+pub fn revoke_reactor(In(token): In<RevokeToken>, mut c: Commands)
 {
-    rcommands.revoke(token);
+    c.react().revoke(token);
 }
 
 //-------------------------------------------------------------------------------------------------------------------

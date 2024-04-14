@@ -59,20 +59,20 @@ Sending a system event will cause a reaction tree to run (see [Scheduling](#sche
 
 ## Reactivity API
 
-ECS reactivity is only implemented for [`ReactResource`](bevy_cobweb::prelude::ReactResource) resources and [`ReactComponent`](bevy_cobweb::prelude::ReactComponent) components, which are accessed with [`ReactRes`](bevy_cobweb::prelude::ReactRes)/[`ReactResMut`](bevy_cobweb::prelude::ReactResMut) system parameters and the [`React<C>`](bevy_cobweb::prelude::React) component wrapper respectively.
+ECS reactivity is only implemented for [`ReactResource`](bevy_cobweb::prelude::ReactResource) resources and [`ReactComponent`](bevy_cobweb::prelude::ReactComponent) components, which are accessed with [`ReactRes`](bevy_cobweb::prelude::ReactRes)/[`ReactResMut`](bevy_cobweb::prelude::ReactResMut) system parameters and the [`React<C>`](bevy_cobweb::prelude::React) component wrapper (or [`Reactive<C>`](bevy_cobweb::prelude::Reactive)/[`ReactiveMut<C>`](bevy_cobweb::prelude::ReactiveMut) system parameters) respectively.
 
-We use `ReactResource`/`ReactComponent` instead of Bevy change detection in order to achieve precise, responsive, recursive reactions with an ergonomic API. When Bevy implements [observers](https://github.com/bevyengine/bevy/pull/10839), we expect the 'extra' API layer to be eliminated.
+We use `ReactResource`/`ReactComponent` instead of Bevy change detection in order to achieve precise, responsive, recursive reactions with an ergonomic API. When Bevy implements [observers](https://github.com/bevyengine/bevy/pull/10839), we expect the 'extra' API layer to be reduced or eliminated.
 
 A reactor will run in the first `apply_deferred` after its reaction trigger is detected. If a reactor triggers other reactors, they will run immediately after the initial reactor in a telescoping fashion until the entire tree of reactions terminates. Recursive reactions are fully supported. For more details see [Scheduling](#scheduling).
 
 
 ### Registering Reactors
 
-Reactors are registered with [`ReactCommands`](bevy_cobweb::prelude::ReactCommands). You must specify a 'reaction trigger':
+Reactors are registered with [`ReactCommands`](bevy_cobweb::prelude::ReactCommands), which are obtained from [`Commands::react`](ReactCommandsExt::react). You must specify a 'reaction trigger':
 ```rust
-fn setup(mut rcommands: ReactCommands)
+fn setup(mut c: Commands)
 {
-    rcommands.on(resource_mutation::<A>(),
+    c.react().on(resource_mutation::<A>(),
         |a: ReactRes<A>|
         {
             //...
@@ -92,12 +92,13 @@ The available reaction triggers are:
 - [`despawn`](bevy_cobweb::prelude::despawn)
 - [`broadcast<E>`](bevy_cobweb::prelude::broadcast)
 - [`entity_event<E>`](bevy_cobweb::prelude::entity_event)
+- [`any_entity_event<E>`](bevy_cobweb::prelude::any_entity_event)
 
 A reactor can be associated with multiple reaction triggers:
 ```rust
-fn setup(mut rcommands: ReactCommands)
+fn setup(mut c: Commands)
 {
-    rcommands.on((resource_mutation::<A>(), entity_insertion::<B>(entity)),
+    c.react().on((resource_mutation::<A>(), entity_insertion::<B>(entity)),
         move |a: ReactRes<A>, q: Query<&React<B>>|
         {
             q.get(entity);
@@ -113,8 +114,8 @@ fn setup(mut rcommands: ReactCommands)
 Reactors can be revoked with [`RevokeTokens`](bevy_cobweb::prelude::RevokeToken) obtained on registration.
 
 ```rust
-let token = rcommands.on(resource_mutation::<A>(), || { todo!(); });
-rcommands.revoke(token);
+let token = c.react().on(resource_mutation::<A>(), || { todo!(); });
+c.react().revoke(token);
 ```
 
 
@@ -131,17 +132,17 @@ app.add_plugins(ReactPlugin)
 
 Mutate the resource:
 ```rust
-fn increment(mut rcommands: ReactCommands, mut counter: ReactResMut<Counter>)
+fn increment(mut c: Commands, mut counter: ReactResMut<Counter>)
 {
-    counter.get_mut(&mut rcommands).0 += 1;
+    counter.get_mut(&mut c).0 += 1;
 }
 ```
 
 React to the resource mutation:
 ```rust
-fn setup(mut rcommands: ReactCommands)
+fn setup(mut c: Commands)
 {
-    rcommands.on(resource_mutation::<Counter>(),
+    c.react().on(resource_mutation::<Counter>(),
         |counter: ReactRes<Counter>|
         {
             println!("count: {}", counter.0);
@@ -159,10 +160,10 @@ A reactor can listen to component insertion/mutation/removal on *any* entity or 
 #[derive(ReactComponent)]
 struct Health(u16);
 
-fn setup(mut rcommands: ReactCommands)
+fn setup(mut c: Commands)
 {
     // On any entity.
-    rcommands.on(insertion::<Health>(),
+    c.react().on(insertion::<Health>(),
         |event: InsertionEvent<Health>, q: Query<&React<Health>>|
         {
             let Some(entity) = event.read() else { return; };
@@ -172,8 +173,8 @@ fn setup(mut rcommands: ReactCommands)
     );
 
     // On a specific entity.
-    let entity = rcommands.commands().spawn_empty().id();
-    rcommands.on(entity_mutation::<Health>(entity),
+    let entity = c.spawn_empty().id();
+    c.react().on(entity_mutation::<Health>(entity),
         |event: InsertionEvent<Health>, q: Query<&React<Health>>|
         {
             let Some(entity) = event.read() else { return; };
@@ -183,14 +184,14 @@ fn setup(mut rcommands: ReactCommands)
     );
 
     // Trigger the insertion reactors.
-    rcommands.insert(entity, Health(0u16));
+    c.react().insert(entity, Health(0u16));
 }
 
-fn add_health(mut rcommands: ReactCommands, mut q: Query<&mut React<Health>>)
+fn add_health(mut c: Commands, mut q: Query<&mut React<Health>>)
 {
     for health in q.iter_mut()
     {
-        health.get_mut(&mut rcommands).0 += 10;
+        health.get_mut(&mut c).0 += 10;
     }
 }
 ```
@@ -200,7 +201,7 @@ fn add_health(mut rcommands: ReactCommands, mut q: Query<&mut React<Health>>)
 
 React to a despawn, using the [`DespawnEvent`](bevy_cobweb::prelude::DespawnEvent) system parameter to read which entity was despawned:
 ```rust
-rcommands.on(despawn(entity),
+c.react().on(despawn(entity),
     |entity: DespawnEvent|
     {
         println!("entity despawned: {}", entity.read().unwrap());
@@ -213,12 +214,12 @@ rcommands.on(despawn(entity),
 
 Send a broadcast:
 ```rust
-rcommands.broadcast(0u32);
+c.react().broadcast(0u32);
 ```
 
 React to the event, using the [`BroadcastEvent`](bevy_cobweb::prelude::BroadcastEvent) system parameter to access event data:
 ```rust
-rcommands.on(broadcast::<u32>(),
+c.react().on(broadcast::<u32>(),
     |event: BroadcastEvent<u32>|
     {
         if let Some(event) = event.read()
@@ -236,12 +237,12 @@ Entity events can be considered 'scoped broadcasts', sent only to systems listen
 
 Send an entity event:
 ```rust
-rcommands.entity_event(entity, 0u32);
+c.react().entity_event(entity, 0u32);
 ```
 
 React to the event, using the [`EntityEvent`](bevy_cobweb::prelude::EntityEvent) system parameter to access event data:
 ```rust
-rcommands.on(entity_event::<u32>(entity),
+c.react().on(entity_event::<u32>(entity),
     |event: EntityEvent<u32>|
     {
         if let Some((entity, event)) = event.read()
@@ -257,8 +258,8 @@ rcommands.on(entity_event::<u32>(entity),
 
 If you only want a reactor to run once, use [`ReactCommands::once`]:
 ```rust
-let entity = rcommands.commands().spawn(Player);
-rcommands.once(broadcast::<ResetEverything>(),
+let entity = c.spawn(Player);
+c.react().once(broadcast::<ResetEverything>(),
     move |world: &mut World|
     {
         world.despawn(entity);
@@ -324,11 +325,11 @@ fn setup(app: &mut App)
 
 Add a trigger to the reactor:
 ```rust
-fn spawn_a(mut rc: ReactCommands, mut reactor: Reactor<DemoReactor>)
+fn spawn_a(mut c: Commands, mut reactor: Reactor<DemoReactor>)
 {
-    let entity = rc.commands().spawn_empty().id();
-    rc.insert(A, entity);
-    reactor.add_triggers(&mut rc, entity_mutation::<A>(entity));
+    let entity = c.spawn_empty().id();
+    c.react().insert(entity, A);
+    reactor.add_triggers(&mut c, entity_mutation::<A>(entity));
 }
 ```
 

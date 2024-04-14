@@ -22,9 +22,9 @@ fn persistent_reactor_lives_without_triggers()
 
     // register reactor
     let sys_command = world.syscall((),
-        |mut rc: ReactCommands|
+        |mut c: Commands|
         {
-            rc.on_persistent((), ||{})
+            c.react().on_persistent((), ||{})
         }
     );
 
@@ -52,9 +52,9 @@ fn persistent_reactor_lives_with_despawn_triggers_finished()
 
     // register reactor
     let sys_command = world.syscall((),
-        move |mut rc: ReactCommands|
+        move |mut c: Commands|
         {
-            rc.on_persistent(despawn(target), ||{})
+            c.react().on_persistent(despawn(target), ||{})
         }
     );
 
@@ -83,9 +83,9 @@ fn persistent_reactor_lives_with_entity_triggers_despawned()
 
     // register reactor
     let sys_command = world.syscall((),
-        move |mut rc: ReactCommands|
+        move |mut c: Commands|
         {
-            rc.on_persistent(entity_mutation::<TestComponent>(target), ||{})
+            c.react().on_persistent(entity_mutation::<TestComponent>(target), ||{})
         }
     );
 
@@ -116,10 +116,10 @@ fn persistent_reactor_acquires_more_triggers()
     let count = Arc::new(AtomicU32::new(0u32));
     let count_inner = count.clone();
     let sys_command = world.syscall((),
-        move |mut rc: ReactCommands|
+        move |mut c: Commands|
         {
             let count_inner = count_inner.clone();
-            rc.on_persistent(entity_mutation::<TestComponent>(target1),
+            c.react().on_persistent(entity_mutation::<TestComponent>(target1),
                 move |reader: DespawnEvent|
                 {
                     assert!(!reader.is_empty());
@@ -138,9 +138,9 @@ fn persistent_reactor_acquires_more_triggers()
 
     // add more triggers
     world.syscall((),
-        move |mut rc: ReactCommands|
+        move |mut c: Commands|
         {
-            rc.with(despawn(target2), sys_command, ReactorMode::Persistent);
+            c.react().with(despawn(target2), sys_command, ReactorMode::Persistent);
         }
     );
 
@@ -166,10 +166,10 @@ fn cleanup_reactor_dies_without_triggers()
 
     // register reactor
     let sys_command = world.syscall((),
-        |mut rc: ReactCommands|
+        |mut c: Commands|
         {
-            let sys_command = rc.commands().spawn_system_command(||{});
-            rc.with((), sys_command, ReactorMode::Cleanup);
+            let sys_command = c.spawn_system_command(||{});
+            c.react().with((), sys_command, ReactorMode::Cleanup);
             sys_command
         }
     );
@@ -196,10 +196,10 @@ fn cleanup_reactor_dies_with_despawn_triggers_finished()
 
     // register reactor
     let sys_command = world.syscall((),
-        move |mut rc: ReactCommands|
+        move |mut c: Commands|
         {
-            let sys_command = rc.commands().spawn_system_command(||{});
-            rc.with(despawn(target), sys_command, ReactorMode::Cleanup);
+            let sys_command = c.spawn_system_command(||{});
+            c.react().with(despawn(target), sys_command, ReactorMode::Cleanup);
             sys_command
         }
     );
@@ -229,10 +229,10 @@ fn cleanup_reactor_dies_with_entity_triggers_despawned()
 
     // register reactor
     let sys_command = world.syscall((),
-        move |mut rc: ReactCommands|
+        move |mut c: Commands|
         {
-            let sys_command = rc.commands().spawn_system_command(||{});
-            rc.with(entity_mutation::<TestComponent>(target), sys_command, ReactorMode::Cleanup);
+            let sys_command = c.spawn_system_command(||{});
+            c.react().with(entity_mutation::<TestComponent>(target), sys_command, ReactorMode::Cleanup);
             sys_command
         }
     );
@@ -259,9 +259,9 @@ fn revokable_reactor_dies_without_triggers()
 
     // register reactor
     let token = world.syscall((),
-        |mut rc: ReactCommands|
+        |mut c: Commands|
         {
-            rc.on_revokable((), ||{})
+            c.react().on_revokable((), ||{})
         }
     );
 
@@ -287,9 +287,9 @@ fn revokable_reactor_dies_with_despawn_triggers_finished()
 
     // register reactor
     let token = world.syscall((),
-        move |mut rc: ReactCommands|
+        move |mut c: Commands|
         {
-            rc.on_revokable(despawn(target), ||{})
+            c.react().on_revokable(despawn(target), ||{})
         }
     );
 
@@ -318,9 +318,9 @@ fn revokable_reactor_dies_with_entity_triggers_despawned()
 
     // register reactor
     let token = world.syscall((),
-        move |mut rc: ReactCommands|
+        move |mut c: Commands|
         {
-            rc.on_revokable(entity_mutation::<TestComponent>(target), ||{})
+            c.react().on_revokable(entity_mutation::<TestComponent>(target), ||{})
         }
     );
 
@@ -346,9 +346,9 @@ fn revokable_reactor_dies_when_revoked()
 
     // register reactor
     let token = world.syscall((),
-        move |mut rc: ReactCommands|
+        move |mut c: Commands|
         {
-            rc.on_revokable(broadcast::<()>(), ||{})
+            c.react().on_revokable(broadcast::<()>(), ||{})
         }
     );
 
@@ -360,9 +360,9 @@ fn revokable_reactor_dies_when_revoked()
 
     // revoke the reactor
     world.syscall((),
-        move |mut rc: ReactCommands|
+        move |mut c: Commands|
         {
-            rc.revoke(token.clone());
+            c.react().revoke(token.clone());
         }
     );
 
@@ -385,9 +385,9 @@ fn revokable_reactor_dies_when_revoked_with_multiple_tokens()
 
     // register reactor
     let token1 = world.syscall((),
-        move |mut rc: ReactCommands|
+        move |mut c: Commands|
         {
-            rc.on_revokable(broadcast::<()>(), ||{})
+            c.react().on_revokable(broadcast::<()>(), ||{})
         }
     );
 
@@ -399,9 +399,9 @@ fn revokable_reactor_dies_when_revoked_with_multiple_tokens()
 
     // add another trigger
     let token2 = world.syscall((),
-        move |mut rc: ReactCommands|
+        move |mut c: Commands|
         {
-            rc.with(broadcast::<usize>(), sys_command, ReactorMode::Revokable).unwrap()
+            c.react().with(broadcast::<usize>(), sys_command, ReactorMode::Revokable).unwrap()
         }
     );
     assert_eq!(sys_command, SystemCommand::from(token2.clone()));
@@ -413,9 +413,9 @@ fn revokable_reactor_dies_when_revoked_with_multiple_tokens()
 
     // revoke the first reactor
     world.syscall((),
-        move |mut rc: ReactCommands|
+        move |mut c: Commands|
         {
-            rc.revoke(token1.clone());
+            c.react().revoke(token1.clone());
         }
     );
 
@@ -426,9 +426,9 @@ fn revokable_reactor_dies_when_revoked_with_multiple_tokens()
 
     // revoke the second reactor
     world.syscall((),
-        move |mut rc: ReactCommands|
+        move |mut c: Commands|
         {
-            rc.revoke(token2.clone());
+            c.react().revoke(token2.clone());
         }
     );
 

@@ -2,11 +2,22 @@
 use crate::prelude::*;
 
 //third-party shortcuts
-use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
 //standard shortcuts
 
+
+//-------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------
+
+fn register_reactors<T: ReactionTriggerBundle>(
+    In((triggers, syscommand, mode)): In<(T, SystemCommand, ReactorMode)>,
+    mut commands: Commands,
+    despawner: Res<AutoDespawner>,
+){
+    let handle = mode.prepare(&despawner, syscommand);
+    triggers.register_triggers(&mut commands, &handle);
+}
 
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
@@ -86,9 +97,9 @@ fn revoke_reactor(
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
-fn revoke_reactor_triggers(In(revoke_token): In<RevokeToken>, mut rcommands: ReactCommands)
+fn revoke_reactor_triggers(In(revoke_token): In<RevokeToken>, mut c: Commands)
 {
-    rcommands.revoke(revoke_token);
+    c.react().revoke(revoke_token);
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -129,27 +140,31 @@ impl ReactorMode
 
 //-------------------------------------------------------------------------------------------------------------------
 
-/// System paramter that drives reactivity.
+/// Struct that drives reactivity.
 ///
-/// Requires [`ReactPlugin`].
+/// Obtained via [`Commands::react`](ReactCommandsExt::react).
 ///
 /// Note that each time you register a reactor, it is assigned a unique system state (including unique `Local`s). To avoid
 /// leaking memory, be sure to revoke reactors when you are done with them.
 ///
 /// All react command operations are deferred.
-#[derive(SystemParam)]
 pub struct ReactCommands<'w, 's>
 {
-    pub(crate) commands  : Commands<'w, 's>,
-    pub(crate) despawner : Res<'w, AutoDespawner>,
+    pub(crate) commands: Commands<'w, 's>,
 }
 
 impl<'w, 's> ReactCommands<'w, 's>
 {
-    /// Returns a mutable reference to `Commands`.
-    pub fn commands<'a>(&'a mut self) -> &'a mut Commands<'w, 's>
+    /// Returns a reborrow of the internal `Commands` with a shorter lifetime.
+    pub fn commands(&mut self) -> Commands<'_, '_>
     {
-        &mut self.commands
+        self.commands.reborrow()
+    }
+
+    /// Returns a reborrow of `self` with a shorter lifetime.
+    pub fn reborrow(&mut self) -> ReactCommands<'_, '_>
+    {
+        ReactCommands{ commands: self.commands() }
     }
 
     /// Inserts a [`ReactComponent`] to the specified entity. It can be queried with [`React<C>`].
@@ -260,9 +275,9 @@ impl<'w, 's> ReactCommands<'w, 's>
     ///
     /// Example:
     /// ```no_run
-    /// let command = rcommands.commands().spawn_system_command(my_reactor_system);
+    /// let command = commands.spawn_system_command(my_reactor_system);
     /// let mode = ReactorMode::Persistent;
-    /// rcommands.with((resource_mutation::<MyRes>(), mutation::<MyComponent>()), command, mode);
+    /// commands.react().with((resource_mutation::<MyRes>(), mutation::<MyComponent>()), command, mode);
     /// ```
     pub fn with(
         &mut self,
@@ -271,8 +286,12 @@ impl<'w, 's> ReactCommands<'w, 's>
         mode        : ReactorMode,
     ) -> Option<RevokeToken>
     {
-        let handle = mode.prepare(&self.despawner, sys_command);
-        reactor_registration(&mut self.commands, &handle, triggers, mode)
+        self.commands.syscall((triggers, sys_command, mode), register_reactors);
+        match mode
+        {
+            ReactorMode::Revokable => Some(RevokeToken::new_from(sys_command, triggers)),
+            _ => None,
+        }
     }
 
     /// Registers a one-off reactor triggered by ECS changes.
@@ -294,9 +313,10 @@ impl<'w, 's> ReactCommands<'w, 's>
     {
         // register reactors
         let entity = self.commands.spawn_empty().id();
+        let syscommand = SystemCommand(entity);
         let mode = ReactorMode::Revokable;
-        let handle = mode.prepare(&self.despawner, SystemCommand(entity));
-        let revoke_token = reactor_registration(&mut self.commands, &handle, triggers, mode).unwrap();
+        let revoke_token = RevokeToken::new_from(syscommand, triggers);
+        self.commands.syscall((triggers, syscommand, mode), register_reactors);
 
         // wrap reactor in a system that will be called once, then clean itself up
         let revoke_token_clone = revoke_token.clone();
@@ -308,7 +328,7 @@ impl<'w, 's> ReactCommands<'w, 's>
             cleanup.run(world);
             system.apply_deferred(world);
             world.despawn(entity);
-            syscall(world, revoke_token_clone, revoke_reactor_triggers);
+            world.syscall(revoke_token_clone, revoke_reactor_triggers);
         });
         let once_system = move |world: &mut World, cleanup: SystemCommandCleanup|
         {

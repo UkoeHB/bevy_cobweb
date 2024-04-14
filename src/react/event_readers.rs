@@ -121,9 +121,9 @@ impl<T: Send + Sync + 'static> EntityEventData<T>
 ///
 /*
 ```rust
-fn example(mut rcommands: ReactCommands)
+fn example(mut c: Commands)
 {
-    rcommands.on(
+    c.react().on(
         broadcast::<()>(),
         |mut event: BroadcastEvent<()>|
         {
@@ -134,7 +134,7 @@ fn example(mut rcommands: ReactCommands)
         }
     );
 
-    rcommands.broadcast(());
+    c.react().broadcast(());
 }
 ```
 */
@@ -177,10 +177,10 @@ impl<'w, 's, T: Send + Sync + 'static> BroadcastEvent<'w, 's, T>
 ///
 /*
 ```rust
-fn example(mut rcommands: ReactCommands)
+fn example(mut c: Commands)
 {
-    let entity = rcommands.commands.spawn_empty();
-    rcommands.on(
+    let entity = c.spawn_empty();
+    c.react().on(
         entity_event::<()>(entity),
         |mut event: EntityEvent<()>|
         {
@@ -191,7 +191,7 @@ fn example(mut rcommands: ReactCommands)
         }
     );
 
-    rcommands.entity_event(entity, ());
+    c.react().entity_event(entity, ());
 }
 ```
 */

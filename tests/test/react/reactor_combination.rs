@@ -10,40 +10,40 @@ use bevy::prelude::*;
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
-fn on_entity_mutation_chain_to_res(In(entity): In<Entity>, mut rcommands: ReactCommands)
+fn on_entity_mutation_chain_to_res(In(entity): In<Entity>, mut c: Commands)
 {
-    rcommands.on(entity_mutation::<TestComponent>(entity),
+    c.react().on(entity_mutation::<TestComponent>(entity),
             move
             |
-                mut rcommands : ReactCommands,
+                mut c         : Commands,
                 mut react_res : ReactResMut<TestReactRes>,
                 test_entities : Query<&React<TestComponent>>
             |
             {
-                react_res.get_mut(&mut rcommands).0 = test_entities.get(entity).unwrap().0;
+                react_res.get_mut(&mut c).0 = test_entities.get(entity).unwrap().0;
             }
         );
 }
 
-fn on_broadcast_or_resource(mut rcommands: ReactCommands) -> RevokeToken
+fn on_broadcast_or_resource(mut c: Commands) -> RevokeToken
 {
-    rcommands.on_revokable((broadcast::<IntEvent>(), resource_mutation::<TestReactRes>()),
+    c.react().on_revokable((broadcast::<IntEvent>(), resource_mutation::<TestReactRes>()),
         update_test_recorder_with_broadcast_and_resource)
 }
 
-fn on_resource_mutation(mut rcommands: ReactCommands) -> RevokeToken
+fn on_resource_mutation(mut c: Commands) -> RevokeToken
 {
-    rcommands.on_revokable(resource_mutation::<TestReactRes>(), update_test_recorder_with_resource)
+    c.react().on_revokable(resource_mutation::<TestReactRes>(), update_test_recorder_with_resource)
 }
 
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
-fn register_all_reactors(mut rcommands: ReactCommands)
+fn register_all_reactors(mut c: Commands)
 {
-    let entity = rcommands.commands().spawn_empty().id();
+    let entity = c.spawn_empty().id();
 
-    rcommands.on(
+    c.react().on(
             (
                 resource_mutation::<TestReactRes>(),
                 insertion::<TestComponent>(),
@@ -65,9 +65,9 @@ fn register_all_reactors(mut rcommands: ReactCommands)
 
 /// Here the reactor receives a broadcast event containing its own id, then schedules itself as a follow-up system
 /// command. The follow-up should not read the event data.
-fn reaction_telescoping_data_visibility_impl(mut rcommands: ReactCommands)
+fn reaction_telescoping_data_visibility_impl(mut c: Commands)
 {
-    let null_reader = rcommands.commands().spawn_system_command(
+    let null_reader = c.spawn_system_command(
             |event: BroadcastEvent<SystemCommand>|
             {
                 assert!(event.is_empty());
@@ -75,7 +75,7 @@ fn reaction_telescoping_data_visibility_impl(mut rcommands: ReactCommands)
         );
 
     let mut count = 0;
-    let broadcast_reader = rcommands.commands().spawn_system_command(
+    let broadcast_reader = c.spawn_system_command(
             move |mut commands: Commands, event: BroadcastEvent<SystemCommand>|
             {
                 match count
@@ -96,8 +96,8 @@ fn reaction_telescoping_data_visibility_impl(mut rcommands: ReactCommands)
             }
         );
 
-    rcommands.with(broadcast::<SystemCommand>(), broadcast_reader, ReactorMode::Persistent);
-    rcommands.broadcast(broadcast_reader);
+    c.react().with(broadcast::<SystemCommand>(), broadcast_reader, ReactorMode::Persistent);
+    c.react().broadcast(broadcast_reader);
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -107,19 +107,19 @@ fn reaction_telescoping_data_visibility_impl(mut rcommands: ReactCommands)
 /// until the event data reaches zero. The second reactor should be telescoped 'outside' the first reactor.
 ///
 /// Returns the expected event history after the reaction tree is processed.
-fn reaction_telescoping_inner_reactions_impl(mut rcommands: ReactCommands) -> Vec<usize>
+fn reaction_telescoping_inner_reactions_impl(mut c: Commands) -> Vec<usize>
 {
-    rcommands.on(broadcast::<usize>(),
-            move |mut rcommands: ReactCommands, event: BroadcastEvent<usize>, mut history: ResMut<TelescopeHistory>|
+    c.react().on(broadcast::<usize>(),
+            move |mut c: Commands, event: BroadcastEvent<usize>, mut history: ResMut<TelescopeHistory>|
             {
                 let data = *event.read().unwrap();
                 history.push(data);
 
                 if data == 0 { return; }
-                rcommands.broadcast(data - 1);
+                c.react().broadcast(data - 1);
             }
         );
-    rcommands.on(broadcast::<usize>(),
+    c.react().on(broadcast::<usize>(),
             move |event: BroadcastEvent<usize>, mut history: ResMut<TelescopeHistory>|
             {
                 let data = *event.read().unwrap();
@@ -127,7 +127,7 @@ fn reaction_telescoping_inner_reactions_impl(mut rcommands: ReactCommands) -> Ve
             }
         );
 
-    rcommands.broadcast(3usize);
+    c.react().broadcast(3usize);
 
     vec![3, 2, 1, 0, 0, 1, 2, 3]
 }

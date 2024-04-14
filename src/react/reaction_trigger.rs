@@ -17,9 +17,7 @@ pub trait ReactionTrigger: Copy + Clone + Send + Sync + 'static
     fn reactor_type(&self) -> ReactorType;
 
     /// Register a trigger with [`ReactCommands`].
-    ///
-    /// Returns `false` if the trigger should be ignored.
-    fn register(&self, commands: &mut Commands, handle: &ReactorHandle) -> bool;
+    fn register(&self, commands: &mut Commands, handle: &ReactorHandle);
 }
 
 impl<R: ReactionTrigger> ReactionTriggerBundle for R
@@ -31,19 +29,9 @@ impl<R: ReactionTrigger> ReactionTriggerBundle for R
         func(self.reactor_type());
     }
 
-    fn register_triggers(
-            self,
-            func     : &mut impl FnMut(Option<ReactorType>),
-            commands : &mut Commands,
-            handle   : &ReactorHandle,
-        )
+    fn register_triggers(self, commands: &mut Commands, handle: &ReactorHandle)
     {
-        let result = match self.register(commands, handle)
-        {
-            true => Some(self.reactor_type()),
-            false => None,
-        };
-        func(result);
+        self.register(commands, handle);
     }
 }
 
@@ -64,7 +52,6 @@ pub trait ReactionTriggerBundle: Copy + Clone + Send + Sync + 'static
     /// Registers reactors and passes the reactor types to the injected function.
     fn register_triggers(
             self,
-            func     : &mut impl FnMut(Option<ReactorType>),
             commands : &mut Commands,
             handle   : &ReactorHandle,
         );
@@ -83,42 +70,6 @@ pub fn get_reactor_types(bundle: impl ReactionTriggerBundle) -> Vec<ReactorType>
         };
     bundle.collect_reactor_types(&mut func);
     reactors
-}
-
-//-------------------------------------------------------------------------------------------------------------------
-
-pub(crate) fn reactor_registration(
-    commands : &mut Commands,
-    handle   : &ReactorHandle,
-    triggers : impl ReactionTriggerBundle,
-    mode     : ReactorMode,
-) -> Option<RevokeToken>
-{
-    match mode
-    {
-        ReactorMode::Persistent |
-        // note: cleanup is handled automatically by the ReactorHandle type
-        ReactorMode::Cleanup =>
-        {
-            let mut func = |_| {};
-            triggers.register_triggers(&mut func, commands, handle);
-
-            None
-        }
-        ReactorMode::Revokable =>
-        {
-            let mut reactors = Vec::with_capacity(triggers.len());
-            let mut func =
-                |reactor_type: Option<ReactorType>|
-                {
-                    let Some(reactor_type) = reactor_type else { return; };
-                    reactors.push(reactor_type);
-                };
-            triggers.register_triggers(&mut func, commands, handle);
-
-            Some(RevokeToken{ reactors: reactors.into(), id: handle.sys_command() })
-        }
-    }
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -159,14 +110,13 @@ macro_rules! tuple_impl
             #[inline(always)]
             fn register_triggers(
                 self,
-                func     : &mut impl FnMut(Option<ReactorType>),
                 commands : &mut Commands,
                 handle   : &ReactorHandle,
             ){
                 #[allow(non_snake_case)]
                 let ($(mut $name,)*) = self;
                 $(
-                    $name.register_triggers(&mut *func, commands, handle);
+                    $name.register_triggers(commands, handle);
                 )*
             }
         }

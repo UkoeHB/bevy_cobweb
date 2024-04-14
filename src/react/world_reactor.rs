@@ -95,7 +95,7 @@ impl<'w, T: WorldReactor> Reactor<'w, T>
     /// Adds starting triggers to the reactor.
     ///
     /// Returns `false` if the reactor doesn't exist.
-    pub(crate) fn add_starting_triggers(&mut self, rc: &mut ReactCommands, triggers: T::StartingTriggers) -> bool
+    pub(crate) fn add_starting_triggers(&mut self, c: &mut Commands, triggers: T::StartingTriggers) -> bool
     {
         let Some(inner) = &mut self.inner
         else
@@ -105,14 +105,14 @@ impl<'w, T: WorldReactor> Reactor<'w, T>
             return false;
         };
 
-        rc.with(triggers, inner.sys_command, ReactorMode::Persistent);
+        c.react().with(triggers, inner.sys_command, ReactorMode::Persistent);
         true
     }
 
     /// Adds triggers to the reactor.
     ///
     /// Returns `false` if the reactor doesn't exist.
-    pub fn add_triggers(&mut self, rc: &mut ReactCommands, triggers: T::Triggers) -> bool
+    pub fn add_triggers(&mut self, c: &mut Commands, triggers: T::Triggers) -> bool
     {
         let Some(inner) = &mut self.inner
         else
@@ -122,14 +122,14 @@ impl<'w, T: WorldReactor> Reactor<'w, T>
             return false;
         };
 
-        rc.with(triggers, inner.sys_command, ReactorMode::Persistent);
+        c.react().with(triggers, inner.sys_command, ReactorMode::Persistent);
         true
     }
 
     /// Removes triggers from the reactor.
     ///
     /// Returns `false` if the reactor doesn't exist.
-    pub fn remove_triggers(&mut self, rc: &mut ReactCommands, triggers: impl ReactionTriggerBundle) -> bool
+    pub fn remove_triggers(&mut self, c: &mut Commands, triggers: impl ReactionTriggerBundle) -> bool
     {
         let Some(inner) = &mut self.inner
         else
@@ -140,7 +140,7 @@ impl<'w, T: WorldReactor> Reactor<'w, T>
         };
 
         let token = RevokeToken::new_from(inner.sys_command, triggers);
-        rc.revoke(token);
+        c.react().revoke(token);
         true
     }
 

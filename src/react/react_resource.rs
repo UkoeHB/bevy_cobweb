@@ -12,9 +12,9 @@ use core::ops::Deref;
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
-fn trigger_resource_mutation<R: ReactResource>(mut rc: ReactCommands)
+fn trigger_resource_mutation<R: ReactResource>(mut c: Commands)
 {
-    rc.trigger_resource_mutation::<R>();
+    c.react().trigger_resource_mutation::<R>();
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -36,9 +36,9 @@ impl<R: ReactResource> ReactResInner<R>
     }
 
     /// Mutably access the resource and trigger reactions.
-    fn get_mut<'a>(&'a mut self, rc: &mut ReactCommands) -> &'a mut R
+    fn get_mut<'a>(&'a mut self, c: &mut Commands) -> &'a mut R
     {
-        rc.trigger_resource_mutation::<R>();
+        c.react().trigger_resource_mutation::<R>();
         &mut self.resource
     }
 
@@ -51,13 +51,13 @@ impl<R: ReactResource> ReactResInner<R>
     /// Sets the resource value and triggers mutations only if the value will change.
     ///
     /// Returns the previous value if it changed.
-    fn set_if_not_eq(&mut self, rc: &mut ReactCommands, new: R) -> Option<R>
+    fn set_if_not_eq(&mut self, c: &mut Commands, new: R) -> Option<R>
     where
         R: PartialEq
     {
         if new == self.resource { return None; }
 
-        rc.trigger_resource_mutation::<R>();
+        c.react().trigger_resource_mutation::<R>();
         let old = std::mem::replace(&mut self.resource, new);
         Some(old)
     }
@@ -125,9 +125,9 @@ pub struct ReactResMut<'w, R: ReactResource>
 impl<'w, R: ReactResource> ReactResMut<'w, R>
 {
     /// Mutably access the resource and trigger reactions.
-    pub fn get_mut<'a>(&'a mut self, rc: &mut ReactCommands) -> &'a mut R
+    pub fn get_mut<'a>(&'a mut self, c: &mut Commands) -> &'a mut R
     {
-        self.inner.get_mut(rc)
+        self.inner.get_mut(c)
     }
 
     /// Mutably access the resource without triggering reactions.
@@ -139,11 +139,11 @@ impl<'w, R: ReactResource> ReactResMut<'w, R>
     /// Sets the resource value and triggers mutations only if the value will change.
     ///
     /// Returns the previous value if it changed.
-    pub fn set_if_not_eq(&mut self, rc: &mut ReactCommands, new: R) -> Option<R>
+    pub fn set_if_not_eq(&mut self, c: &mut Commands, new: R) -> Option<R>
     where
         R: PartialEq
     {
-        self.inner.set_if_not_eq(rc, new)
+        self.inner.set_if_not_eq(c, new)
     }
 }
 
@@ -258,7 +258,7 @@ impl ReactResWorldExt for World
 
     fn trigger_resource_mutation<R: ReactResource>(&mut self)
     {
-        syscall(self, (), trigger_resource_mutation::<R>);
+        self.syscall((), trigger_resource_mutation::<R>);
     }
 }
 
