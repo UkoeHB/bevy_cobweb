@@ -112,7 +112,7 @@ fn on_mutation_recursive(mut rcommands: ReactCommands) -> RevokeToken
             mut rcommands     : ReactCommands,
             insertion         : InsertionEvent<TestComponent>,
             mutation          : MutationEvent<TestComponent>,
-            mut test_entities : Query<&mut React<TestComponent>>,
+            mut test_entities : ReactiveMut<TestComponent>,
             mut recorder      : ResMut<TestReactRecorder>
         |
         {
@@ -125,9 +125,9 @@ fn on_mutation_recursive(mut rcommands: ReactCommands) -> RevokeToken
             recorder.0 += 1;
 
             // recurse until the component is 0
-            let mut component = test_entities.get_mut(entity).unwrap();
+            let component = test_entities.get(entity).unwrap();
             if component.0 == 0 { return; }
-            component.get_mut(&mut rcommands).0 -= 1;
+            test_entities.get_mut(&mut rcommands, entity).unwrap().0 -= 1;
         }
     )
 }

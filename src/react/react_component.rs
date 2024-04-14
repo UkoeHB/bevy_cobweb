@@ -3,6 +3,7 @@ use crate::prelude::*;
 
 //third-party shortcuts
 use bevy::prelude::*;
+use bevy::ecs::system::SystemParam;
 
 //standard shortcuts
 use core::ops::Deref;
@@ -28,6 +29,12 @@ pub struct React<C: ReactComponent>
 
 impl<C: ReactComponent> React<C>
 {
+    /// Immutably accesses the component.
+    pub fn get(&self) -> &C
+    {
+        &self.component
+    }
+
     /// Mutably accesses the component and triggers reactions.
     pub fn get_mut<'a>(&'a mut self, rc: &mut ReactCommands) -> &'a mut C
     {
@@ -69,6 +76,68 @@ impl<C: ReactComponent> Deref for React<C>
     fn deref(&self) -> &C
     {
         &self.component
+    }
+}
+
+//-------------------------------------------------------------------------------------------------------------------
+
+/// System parameter for accessing [`React<T>`] components immutably.
+///
+/// See [`ReactiveMut`] for the mutable version.
+#[derive(SystemParam)]
+pub struct Reactive<'w, 's, T: ReactComponent>
+{
+    components: Query<'w, 's, &'static React<T>>,
+}
+
+impl<'w, 's, T: ReactComponent> Reactive<'w, 's, T>
+{
+    /// Reads `T` on `entity`.
+    ///
+    /// Does not trigger reactions.
+    pub fn get(&self, entity: Entity) -> Option<&T>
+    {
+        self.components.get(entity).ok().map(|c| &**c)
+    }
+}
+
+//-------------------------------------------------------------------------------------------------------------------
+
+/// System parameter for accessing [`React<T>`] components mutably.
+///
+/// See [`Reactive`] for the immutable version.
+#[derive(SystemParam)]
+pub struct ReactiveMut<'w, 's, T: ReactComponent>
+{
+    components: Query<'w, 's, &'static mut React<T>>,
+}
+
+impl<'w, 's, T: ReactComponent> ReactiveMut<'w, 's, T>
+{
+    /// Reads `T` on `entity`.
+    ///
+    /// Does not trigger reactions.
+    pub fn get(&self, entity: Entity) -> Option<&T>
+    {
+        self.components.get(entity).ok().map(|c| c.get())
+    }
+
+    /// Gets a mutable reference to `T` on `entity`.
+    ///
+    /// Triggers mutation reactions.
+    pub fn get_mut(&mut self, rc: &mut ReactCommands, entity: Entity) -> Option<&mut T>
+    {
+        let x = self.components.get_mut(entity).ok()?;
+        Some(x.into_inner().get_mut(rc))
+    }
+
+    /// Reads `T` on `entity`.
+    ///
+    /// Does not trigger reactions.
+    pub fn get_mut_noreact(&mut self, entity: Entity) -> Option<&mut T>
+    {
+        let x = self.components.get_mut(entity).ok()?;
+        Some(x.into_inner().get_mut_noreact())
     }
 }
 

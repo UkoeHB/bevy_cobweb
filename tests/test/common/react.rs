@@ -165,12 +165,11 @@ pub fn remove_from_test_entity(In(entity): In<Entity>, mut commands: Commands)
 pub fn update_test_entity(
     In((entity, new_val)) : In<(Entity, TestComponent)>,
     mut rcommands         : ReactCommands,
-    mut test_entities     : Query<&mut React<TestComponent>>,
+    mut test_entities     : ReactiveMut<TestComponent>,
 ){
     *test_entities
-        .get_mut(entity)
-        .unwrap()
-        .get_mut(&mut rcommands) = new_val;
+        .get_mut(&mut rcommands, entity)
+        .unwrap() = new_val;
 }
 
 //-------------------------------------------------------------------------------------------------------------------

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0]
+
+### Added
+
+- Added `Reactive` and `ReactiveMut` system parameters for easier access to `React` components.
+
+
 ## [0.3.0]
 
 ### Added

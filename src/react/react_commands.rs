@@ -106,7 +106,7 @@ pub enum ReactorMode
     ///
     /// This is the most efficient mode as it requires the minimum amount of allocations to register a reactor.
     Persistent,
-    /// The reactor will be despawned when it has no triggers, include if all [`despawn()`] triggers have fired.
+    /// The reactor will be despawned when it has no triggers, including if all [`despawn()`] triggers have fired.
     Cleanup,
     /// The reactor will receive a [`RevokeToken`] that can be used to revoke it.
     ///
