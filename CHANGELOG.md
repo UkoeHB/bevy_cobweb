@@ -6,6 +6,10 @@
 
 - Added `Reactive` and `ReactiveMut` system parameters for easier access to `React` components.
 
+### Changed
+
+- Rename `*_mut_noreact` to `*_noreact` for simplicity.
+
 
 ## [0.3.0]
 

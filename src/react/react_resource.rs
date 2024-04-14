@@ -43,7 +43,7 @@ impl<R: ReactResource> ReactResInner<R>
     }
 
     /// Mutably access the resource without triggering reactions.
-    fn get_mut_noreact(&mut self) -> &mut R
+    fn get_noreact(&mut self) -> &mut R
     {
         &mut self.resource
     }
@@ -131,9 +131,9 @@ impl<'w, R: ReactResource> ReactResMut<'w, R>
     }
 
     /// Mutably access the resource without triggering reactions.
-    pub fn get_mut_noreact(&mut self) -> &mut R
+    pub fn get_noreact(&mut self) -> &mut R
     {
-        self.inner.get_mut_noreact()
+        self.inner.get_noreact()
     }
 
     /// Sets the resource value and triggers mutations only if the value will change.
@@ -185,7 +185,7 @@ pub trait ReactResWorldExt
     /// Panics if the resource doesn't exist.
     fn react_resource_mut_noreact<R: ReactResource>(&mut self) -> &mut R;
     fn get_react_resource<R: ReactResource>(&self) -> Option<&R>;
-    fn get_react_resource_mut_noreact<R: ReactResource>(&mut self) -> Option<&mut R>;
+    fn get_react_resource_noreact<R: ReactResource>(&mut self) -> Option<&mut R>;
     fn get_react_resource_or_insert_with<R: ReactResource>(
         &mut self,
         func: impl FnOnce() -> R,
@@ -235,7 +235,7 @@ impl ReactResWorldExt for World
 
     fn react_resource_mut_noreact<R: ReactResource>(&mut self) -> &mut R
     {
-        self.get_react_resource_mut_noreact().expect("react resource missing!")
+        self.get_react_resource_noreact().expect("react resource missing!")
     }
 
     fn get_react_resource<R: ReactResource>(&self) -> Option<&R>
@@ -243,9 +243,9 @@ impl ReactResWorldExt for World
         self.get_resource::<ReactResInner<R>>().map_or(None, |r| Some(&r))
     }
 
-    fn get_react_resource_mut_noreact<R: ReactResource>(&mut self) -> Option<&mut R>
+    fn get_react_resource_noreact<R: ReactResource>(&mut self) -> Option<&mut R>
     {
-        self.get_resource_mut::<ReactResInner<R>>().map_or(None, |r| Some(r.into_inner().get_mut_noreact()))
+        self.get_resource_mut::<ReactResInner<R>>().map_or(None, |r| Some(r.into_inner().get_noreact()))
     }
 
     fn get_react_resource_or_insert_with<R: ReactResource>(

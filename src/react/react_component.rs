@@ -43,7 +43,7 @@ impl<C: ReactComponent> React<C>
     }
 
     /// Mutably accesses the component without triggering reactions.
-    pub fn get_mut_noreact(&mut self) -> &mut C
+    pub fn get_noreact(&mut self) -> &mut C
     {
         &mut self.component
     }
@@ -131,13 +131,13 @@ impl<'w, 's, T: ReactComponent> ReactiveMut<'w, 's, T>
         Some(x.into_inner().get_mut(rc))
     }
 
-    /// Reads `T` on `entity`.
+    /// Gets a mutable reference to `T` on `entity`.
     ///
     /// Does not trigger reactions.
-    pub fn get_mut_noreact(&mut self, entity: Entity) -> Option<&mut T>
+    pub fn get_noreact(&mut self, entity: Entity) -> Option<&mut T>
     {
         let x = self.components.get_mut(entity).ok()?;
-        Some(x.into_inner().get_mut_noreact())
+        Some(x.into_inner().get_noreact())
     }
 }
 
