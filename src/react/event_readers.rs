@@ -117,7 +117,7 @@ impl<T: Send + Sync + 'static> EntityEventData<T>
 ///
 /// Can only be used within [`SystemCommands`](super::SystemCommand).
 ///
-/// Use [`broadcast`] to make a trigger that will read these events.
+/// Use [`broadcast`](crate::prelude::broadcast) to make a trigger that will read these events.
 ///
 /*
 ```rust
@@ -173,7 +173,8 @@ impl<'w, 's, T: Send + Sync + 'static> BroadcastEvent<'w, 's, T>
 ///
 /// Can only be used within [`SystemCommands`](super::SystemCommand).
 ///
-/// Use [`entity_event`] or [`any_entity_event`] to make a trigger that will read these events.
+/// Use [`entity_event`](crate::prelude::entity_event) or [`any_entity_event`](crate::prelude::any_entity_event) to make
+/// a trigger that will read these events.
 ///
 /*
 ```rust
