@@ -5,6 +5,7 @@ use crate::prelude::*;
 //use bevy::ecs::component::ComponentId;
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
+use itertools::Either;
 
 //standard shortcuts
 use std::any::TypeId;
@@ -51,6 +52,8 @@ pub(crate) struct EntityReactionAccessTracker
 {
     /// True when in a system reacting to an entity reaction.
     currently_reacting: bool,
+    /// The system command that is running the current entity reaction.
+    system: SystemCommand,
     /// The source of the most recent entity reaction.
     reaction_source: Entity,
     /// The type of the most recent entity reaction trigger.
@@ -60,10 +63,11 @@ pub(crate) struct EntityReactionAccessTracker
 impl EntityReactionAccessTracker
 {
     /// Sets metadata for the current entity reaction.
-    pub(crate) fn start(&mut self, source: Entity, reaction: EntityReactionType)
+    pub(crate) fn start(&mut self, system: SystemCommand, source: Entity, reaction: EntityReactionType)
     {
         debug_assert!(!self.currently_reacting);
         self.currently_reacting = true;
+        self.system = system;
         self.reaction_source = source;
         self.reaction_type = reaction;
     }
@@ -78,6 +82,12 @@ impl EntityReactionAccessTracker
     fn is_reacting(&self) -> bool
     {
         self.currently_reacting
+    }
+
+    /// Returns the system running the entity reaction.
+    fn system(&self) -> SystemCommand
+    {
+        self.system
     }
 
     /// Returns the source of the most recent entity reaction.
@@ -99,7 +109,8 @@ impl Default for EntityReactionAccessTracker
     {
         Self{
             currently_reacting: false,
-            reaction_source: Entity::from_raw(0u32),
+            system: SystemCommand(Entity::PLACEHOLDER),
+            reaction_source: Entity::PLACEHOLDER,
             reaction_type: EntityReactionType::Insertion(TypeId::of::<()>()),
         }
     }
@@ -279,6 +290,133 @@ impl<'w, 's, T: ReactComponent> RemovalEvent<'w, 's, T>
     pub fn is_empty(&self) -> bool
     {
         self.read().is_none()
+    }
+}
+
+//-------------------------------------------------------------------------------------------------------------------
+
+/// System parameter for reading entity-specific data for [`EntityWorlReactor`] reactors.
+///
+/*
+```rust
+#[derive(ReactComponent)]
+struct MyComponent(Duration);
+
+struct MyReactor;
+
+impl EntityWorldReactor for MyReactor
+{
+    type StartingTriggers = ();
+    type Triggers = EntityMutation::<MyComponent>;
+    type Data = String;
+
+    fn reactor() -> SystemCommandCallback
+    {
+        SystemCommandCallback::new(
+            |data: ReactorData<MyReactor>, components: Reactive<MyComponent>|
+            {
+                for (entity, data) in data.iter()
+                {
+                    let Some(component) = components.get(entity) else { continue };
+                    println!("Entity {:?} now has {:?}", data, component);
+                }
+            }
+        )
+    }
+}
+
+fn prep_entity(mut c: Commands, reactor: EntityReactor<MyReactor>)
+{
+    let entity = c.spawn(MyComponent(Duration::default()));
+    reactor.add(&mut c, entity, "ClockTracker");
+}
+
+fn update_entity(mut commands: Commands, time: Res<Time>, mut components: ReactiveMut<MyComponent>)
+{
+    let elapsed = time.elapsed();
+    let component = components.single_mut(&mut c);
+    component.0 = elapsed;
+}
+
+struct ExamplePlugin;
+impl Plugin for ExamplePlugin
+{
+    fn build(&self, app: &mut App)
+    {
+        app.add_entity_reactor::<MyReactor>()
+            .add_systems(Setup, prep_entity)
+            .add_systems(Update, update_entity);
+    }
+}
+```
+*/
+#[derive(SystemParam)]
+pub struct ReactorData<'w, 's, T: EntityWorldReactor>
+{
+    reactor: EntityReactor<'w, T>,
+    tracker: Res<'w, EntityReactionAccessTracker>,
+    data: Query<'w, 's, (Entity, &'static mut EntityWorldReactorData<T>)>,
+}
+
+impl<'w, 's: 'w, T: EntityWorldReactor> ReactorData<'w, 's, T>
+{
+    /// Returns an iterator over reactor entities and their data available to the current reaction.
+    ///
+    /// If the current reaction is an *entity reaction*, then one entity will be returned. Otherwise all registered
+    /// entities will be returned.
+    ///
+    /// Returns nothing if used in any system other than the [`EntityWorldReactor`] that is `T`.
+    pub fn iter(&self) -> impl Iterator<Item = (Entity, &T::Data)> + '_
+    {
+        self.reactor
+            .system()
+            .into_iter()
+            .filter_map(|system|
+            {
+                if self.tracker.system() != system { return None }
+                Some(system)
+            })
+            .flat_map(|_|
+            {
+                if !self.tracker.is_reacting()
+                {
+                    Either::Left(self.data.iter())
+                }
+                else
+                {
+                    Either::Right(self.data.get(self.tracker.source()).ok().into_iter())
+                }.into_iter().map(|(e, data)| (e, data.inner()))
+            })
+    }
+
+    /// Returns a mutable iterator over reactor entities and their data available to the current reaction.
+    ///
+    /// If the current reaction is an *entity reaction*, then one entity will be returned. Otherwise all registered
+    /// entities will be returned.
+    ///
+    /// Returns nothing if used in any system other than the [`EntityWorldReactor`] that is `T`.
+    pub fn iter_mut(&'s mut self) -> impl Iterator<Item = (Entity, Mut<'w, T::Data>)> + '_
+    {
+        let Some(system) = self.reactor.system() else
+        {
+            return Either::Left(None.into_iter());
+        };
+
+        if self.tracker.system() != system
+        {
+            return Either::Left(None.into_iter());
+        }
+
+        let right = if !self.tracker.is_reacting()
+        {
+            Either::Left(self.data.iter_mut())
+        }
+        else
+        {
+            Either::Right(self.data.get_mut(self.tracker.source()).ok().into_iter())
+        }.into_iter().map(|(e, data)| (e, data.map_unchanged(EntityWorldReactorData::inner_mut)));
+
+        Either::Right(right)
     }
 }
 

@@ -242,6 +242,19 @@ impl<C: ReactComponent> ReactionTrigger for EntityInsertionTrigger<C>
     }
 }
 
+impl<C: ReactComponent> EntityTrigger for EntityInsertionTrigger<C>
+{
+    fn new_trigger(entity: Entity) -> Self
+    {
+        entity_insertion(entity)
+    }
+
+    fn entity(&self) -> Entity
+    {
+        self.0
+    }
+}
+
 /// Returns a [`EntityInsertionTrigger`] reaction trigger.
 pub fn entity_insertion<C: ReactComponent>(entity: Entity) -> EntityInsertionTrigger<C>
 {
@@ -267,6 +280,19 @@ impl<C: ReactComponent> ReactionTrigger for EntityMutationTrigger<C>
     {
         let handle = handle.clone();
         commands.syscall((EntityReactionType::Mutation(TypeId::of::<C>()), self.0, handle), register_entity_reactor);
+    }
+}
+
+impl<C: ReactComponent> EntityTrigger for EntityMutationTrigger<C>
+{
+    fn new_trigger(entity: Entity) -> Self
+    {
+        entity_mutation(entity)
+    }
+
+    fn entity(&self) -> Entity
+    {
+        self.0
     }
 }
 
@@ -299,6 +325,19 @@ impl<C: ReactComponent> ReactionTrigger for EntityRemovalTrigger<C>
     }
 }
 
+impl<C: ReactComponent> EntityTrigger for EntityRemovalTrigger<C>
+{
+    fn new_trigger(entity: Entity) -> Self
+    {
+        entity_removal(entity)
+    }
+
+    fn entity(&self) -> Entity
+    {
+        self.0
+    }
+}
+
 /// Returns a [`EntityRemovalTrigger`] reaction trigger.
 pub fn entity_removal<C: ReactComponent>(entity: Entity) -> EntityRemovalTrigger<C>
 {
@@ -324,6 +363,19 @@ impl<E: Send + Sync + 'static> ReactionTrigger for EntityEventTrigger<E>
     {
         let handle = handle.clone();
         commands.syscall((EntityReactionType::Event(TypeId::of::<E>()), self.0, handle), register_entity_reactor);
+    }
+}
+
+impl<E: Send + Sync + 'static> EntityTrigger for EntityEventTrigger<E>
+{
+    fn new_trigger(entity: Entity) -> Self
+    {
+        entity_event(entity)
+    }
+
+    fn entity(&self) -> Entity
+    {
+        self.0
     }
 }
 
@@ -430,6 +482,19 @@ impl ReactionTrigger for DespawnTrigger
 
         // add despawn tracker
         commands.syscall((self.0, handle.clone()), register_despawn_reactor);
+    }
+}
+
+impl EntityTrigger for DespawnTrigger
+{
+    fn new_trigger(entity: Entity) -> Self
+    {
+        despawn(entity)
+    }
+
+    fn entity(&self) -> Entity
+    {
+        self.0
     }
 }
 

@@ -97,7 +97,17 @@ impl<'w, 's, T: ReactComponent> Reactive<'w, 's, T>
     /// Does not trigger reactions.
     pub fn get(&self, entity: Entity) -> Option<&T>
     {
-        self.components.get(entity).ok().map(|c| &**c)
+        self.components.get(entity).ok().map(React::get)
+    }
+
+    /// Reads `T` on a single entity.
+    ///
+    /// Does not trigger reactions.
+    ///
+    /// Panics if the inner query is empty.
+    pub fn single(&self) -> &T
+    {
+        self.components.single().get()
     }
 }
 
@@ -119,7 +129,17 @@ impl<'w, 's, T: ReactComponent> ReactiveMut<'w, 's, T>
     /// Does not trigger reactions.
     pub fn get(&self, entity: Entity) -> Option<&T>
     {
-        self.components.get(entity).ok().map(|c| c.get())
+        self.components.get(entity).ok().map(React::get)
+    }
+
+    /// Reads `T` on a single entity.
+    ///
+    /// Does not trigger reactions.
+    ///
+    /// Panics if the inner query is empty.
+    pub fn single(&self) -> &T
+    {
+        self.components.single().get()
     }
 
     /// Gets a mutable reference to `T` on `entity`.
@@ -131,6 +151,17 @@ impl<'w, 's, T: ReactComponent> ReactiveMut<'w, 's, T>
         Some(x.into_inner().get_mut(c))
     }
 
+    /// Gets a mutable reference to `T` on a single entity.
+    ///
+    /// Triggers mutation reactions.
+    ///
+    /// Panics if the inner query is empty.
+    pub fn single_mut(&mut self, c: &mut Commands) -> &mut T
+    {
+        let x = self.components.single_mut();
+        x.into_inner().get_mut(c)
+    }
+
     /// Gets a mutable reference to `T` on `entity`.
     ///
     /// Does not trigger reactions.
@@ -138,6 +169,17 @@ impl<'w, 's, T: ReactComponent> ReactiveMut<'w, 's, T>
     {
         let x = self.components.get_mut(entity).ok()?;
         Some(x.into_inner().get_noreact())
+    }
+
+    /// Gets a mutable reference to `T` on a single entity
+    ///
+    /// Does not trigger reactions.
+    ///
+    /// Panics if the inner query is empty.
+    pub fn single_noreact(&mut self) -> &mut T
+    {
+        let x = self.components.single_mut();
+        x.into_inner().get_noreact()
     }
 }
 

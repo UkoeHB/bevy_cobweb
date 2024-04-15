@@ -3,7 +3,9 @@ use crate::prelude::*;
 
 //third-party shortcuts
 use bevy::ecs::system::Commands;
+use bevy::prelude::*;
 use bevy::utils::all_tuples;
+use smallvec::SmallVec;
 
 //standard shortcuts
 
@@ -37,6 +39,26 @@ impl<R: ReactionTrigger> ReactionTriggerBundle for R
 
 //-------------------------------------------------------------------------------------------------------------------
 
+/// Helper trait for [`EntityTriggerBundle`].
+pub trait EntityTrigger: Copy + Clone + Send + Sync + 'static
+{
+    /// Sets the trigger entity.
+    fn new_trigger(entity: Entity) -> Self;
+
+    /// Gets the trigger's trigger entity.
+    fn entity(&self) -> Entity;
+}
+
+impl<E: EntityTrigger> EntityTriggerBundle for E
+{
+    fn new_bundle(entity: Entity) -> Self
+    {
+        Self::new_trigger(entity)
+    }
+}
+
+//-------------------------------------------------------------------------------------------------------------------
+
 /// Helper trait for registering reactors with [`ReactCommands`].
 ///
 /// All members of a trigger bundle must implement [`ReactionTriggerBundle`]. You should implement [`ReactionTrigger`]
@@ -59,10 +81,21 @@ pub trait ReactionTriggerBundle: Copy + Clone + Send + Sync + 'static
 
 //-------------------------------------------------------------------------------------------------------------------
 
-/// Extracts reactor types from a [`ReactionTriggerBundle`].
-pub fn get_reactor_types(bundle: impl ReactionTriggerBundle) -> Vec<ReactorType>
+/// Helper trait for registering reactors with [`EntityWorldReactor`].
+///
+/// All triggers in a bundle must implement `EntityTrigger`, and they must all reference the same entity.
+pub trait EntityTriggerBundle
 {
-    let mut reactors = Vec::with_capacity(bundle.len());
+    /// Makes a new bundle from an entity.
+    fn new_bundle(entity: Entity) -> Self;
+}
+
+//-------------------------------------------------------------------------------------------------------------------
+
+/// Extracts reactor types from a [`ReactionTriggerBundle`].
+pub fn get_reactor_types(bundle: impl ReactionTriggerBundle) -> SmallVec<[ReactorType; 10]>
+{
+    let mut reactors = SmallVec::<[ReactorType; 10]>::with_capacity(bundle.len());
     let mut func =
         |reactor_type: ReactorType|
         {
@@ -124,5 +157,29 @@ macro_rules! tuple_impl
 }
 
 all_tuples!(tuple_impl, 0, 15, B);
+
+//-------------------------------------------------------------------------------------------------------------------
+
+// Implements [`EntityTriggerBundle`] for tuples of entity triggers.
+macro_rules! tuple_impl
+{
+    ($($name: ident),*) =>
+    {
+        impl<$($name: EntityTriggerBundle),*> EntityTriggerBundle for ($($name,)*)
+        {
+            #[allow(unused_variables, unused_mut)]
+            #[inline(always)]
+            fn new_bundle(entity: Entity) -> Self
+            {
+                #[allow(non_snake_case)]
+                ($(
+                    $name::new_bundle(entity),
+                )*)
+            }
+        }
+    }
+}
+
+all_tuples!(tuple_impl, 1, 15, B);
 
 //-------------------------------------------------------------------------------------------------------------------

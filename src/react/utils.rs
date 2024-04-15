@@ -79,6 +79,13 @@ impl EntityReactors
         self.iter_rtype(rtype).count()
     }
 
+    pub(crate) fn iter_reactors(&self) -> impl Iterator<Item = SystemCommand> + '_
+    {
+        self.reactors
+            .iter()
+            .map(|(_, handle)| handle.sys_command())
+    }
+
     pub(crate) fn iter_rtype(&self, rtype: EntityReactionType) -> impl Iterator<Item = SystemCommand> + '_
     {
         self.reactors
@@ -121,6 +128,28 @@ pub enum ReactorType
     Despawn(Entity),
 }
 
+impl ReactorType
+{
+    /// Gets the entity targeted by this reactor type if it's an entity-specific reactor.
+    pub fn get_entity(&self) -> Option<Entity>
+    {
+        match *self
+        {
+            Self::EntityInsertion(entity, _) |
+            Self::EntityMutation(entity, _) |
+            Self::EntityRemoval(entity, _) |
+            Self::EntityEvent(entity, _) |
+            Self::Despawn(entity) => Some(entity),
+            Self::AnyEntityEvent(_) |
+            Self::ComponentInsertion(_) |
+            Self::ComponentMutation(_) |
+            Self::ComponentRemoval(_) |
+            Self::ResourceMutation(_) |
+            Self::Broadcast(_) => None,
+        }
+    }
+}
+
 //-------------------------------------------------------------------------------------------------------------------
 
 /// Token for revoking reactors.
@@ -141,9 +170,28 @@ impl RevokeToken
     pub(crate) fn new_from(sys_command: SystemCommand, triggers: impl ReactionTriggerBundle) -> Self
     {
         Self{
-            reactors : Arc::from(get_reactor_types(triggers)),
+            reactors : Arc::from(get_reactor_types(triggers).as_slice()),
             id       : sys_command,
         }
+    }
+
+    /// Not efficient for very large numbers of reactors, which is unlikely to be an issue in practice.
+    pub(crate) fn iter_unique_entities(&self) -> impl Iterator<Item = Entity> + '_
+    {
+        self.reactors
+            .iter()
+            .enumerate()
+            .filter_map(
+                |(idx, reactor)|
+                {
+                    let Some(entity) = reactor.get_entity() else { return None };
+                    for idx in 0..idx
+                    {
+                        if self.reactors[idx].get_entity() == Some(entity) { return None }
+                    }
+                    Some(entity)
+                }
+            )
     }
 }
 

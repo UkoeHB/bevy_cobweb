@@ -84,10 +84,11 @@ pub trait WorldReactor: Send + Sync + 'static
 
 //-------------------------------------------------------------------------------------------------------------------
 
+/// System parameter for accessing and updating a [`WorldReactor`].
 #[derive(SystemParam)]
 pub struct Reactor<'w, T: WorldReactor>
 {
-    inner: Option<ResMut<'w, WorldReactorRes<T>>>,
+    inner: Option<Res<'w, WorldReactorRes<T>>>,
 }
 
 impl<'w, T: WorldReactor> Reactor<'w, T>
@@ -95,9 +96,9 @@ impl<'w, T: WorldReactor> Reactor<'w, T>
     /// Adds starting triggers to the reactor.
     ///
     /// Returns `false` if the reactor doesn't exist.
-    pub(crate) fn add_starting_triggers(&mut self, c: &mut Commands, triggers: T::StartingTriggers) -> bool
+    pub(crate) fn add_starting_triggers(&self, c: &mut Commands, triggers: T::StartingTriggers) -> bool
     {
-        let Some(inner) = &mut self.inner
+        let Some(inner) = &self.inner
         else
         {
             tracing::warn!("failed adding starting triggers, world reactor {:?} is missing; add it to your app with \
@@ -112,9 +113,9 @@ impl<'w, T: WorldReactor> Reactor<'w, T>
     /// Adds triggers to the reactor.
     ///
     /// Returns `false` if the reactor doesn't exist.
-    pub fn add_triggers(&mut self, c: &mut Commands, triggers: T::Triggers) -> bool
+    pub fn add_triggers(&self, c: &mut Commands, triggers: T::Triggers) -> bool
     {
-        let Some(inner) = &mut self.inner
+        let Some(inner) = &self.inner
         else
         {
             tracing::warn!("failed adding triggers, world reactor {:?} is missing; add it to your app with \
@@ -129,9 +130,9 @@ impl<'w, T: WorldReactor> Reactor<'w, T>
     /// Removes triggers from the reactor.
     ///
     /// Returns `false` if the reactor doesn't exist.
-    pub fn remove_triggers(&mut self, c: &mut Commands, triggers: impl ReactionTriggerBundle) -> bool
+    pub fn remove_triggers(&self, c: &mut Commands, triggers: impl ReactionTriggerBundle) -> bool
     {
-        let Some(inner) = &mut self.inner
+        let Some(inner) = &self.inner
         else
         {
             tracing::warn!("failed removing triggers, world reactor {:?} is missing; add it to your app with \
