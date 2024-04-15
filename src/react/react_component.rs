@@ -181,6 +181,17 @@ impl<'w, 's, T: ReactComponent> ReactiveMut<'w, 's, T>
         let x = self.components.single_mut();
         x.into_inner().get_noreact()
     }
+
+    /// Sets a new value on the specified entity if it would change.
+    ///
+    /// Returns the previous value if changed.
+    pub fn set_if_not_eq(&mut self, c: &mut Commands, entity: Entity, new: T) -> Option<T>
+    where
+        T: PartialEq
+    {
+        let mut x = self.components.get_mut(entity).ok()?;
+        x.set_if_not_eq(c, new)
+    }
 }
 
 //-------------------------------------------------------------------------------------------------------------------
