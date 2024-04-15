@@ -75,8 +75,8 @@ impl<T: EntityWorldReactor> EntityWorldReactorData<T>
 ///
 /// This reactor type includes [`Self::Data`], which allows data to be tied to a specific entity for this reactor.
 /// When the reactor runs, the [`ReactorData`] system param can be used to access data for associated entities.
-/// You can even use non-entity triggers in the starting bundle, and then access all associated entities when the reactor
-/// is triggered by something in that bundle.
+/// If you use non-entity triggers in the starting bundle, then when they are actived you can access all associated
+/// entities with [`ReactorData`] (which uses iterators).
 ///
 /// The reactor can be accessed with the [`EntityReactor`] system param.
 ///

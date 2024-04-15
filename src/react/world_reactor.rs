@@ -113,7 +113,7 @@ impl<'w, T: WorldReactor> Reactor<'w, T>
     /// Adds triggers to the reactor.
     ///
     /// Returns `false` if the reactor doesn't exist.
-    pub fn add_triggers(&self, c: &mut Commands, triggers: T::Triggers) -> bool
+    pub fn add(&self, c: &mut Commands, triggers: T::Triggers) -> bool
     {
         let Some(inner) = &self.inner
         else
@@ -130,7 +130,7 @@ impl<'w, T: WorldReactor> Reactor<'w, T>
     /// Removes triggers from the reactor.
     ///
     /// Returns `false` if the reactor doesn't exist.
-    pub fn remove_triggers(&self, c: &mut Commands, triggers: impl ReactionTriggerBundle) -> bool
+    pub fn remove(&self, c: &mut Commands, triggers: impl ReactionTriggerBundle) -> bool
     {
         let Some(inner) = &self.inner
         else

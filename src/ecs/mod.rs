@@ -6,8 +6,8 @@ mod spawned_syscall;
 mod syscall;
 
 //API exports
-pub use crate::ecs::auto_despawn::*;
-pub use crate::ecs::callbacks::*;
-pub use crate::ecs::named_syscall::*;
-pub use crate::ecs::spawned_syscall::*;
-pub use crate::ecs::syscall::*;
+pub use auto_despawn::*;
+pub use callbacks::*;
+pub use named_syscall::*;
+pub use spawned_syscall::*;
+pub use syscall::*;

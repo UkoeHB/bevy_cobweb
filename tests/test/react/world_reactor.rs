@@ -182,7 +182,7 @@ fn world_reactor_with_starting_triggers_fires_with_removal()
     world.syscall((),
         move |mut c: Commands, reactor: Reactor<StartingReactor>|
         {
-            reactor.remove_triggers(&mut c, broadcast::<()>());
+            reactor.remove(&mut c, broadcast::<()>());
         }
     );
 
@@ -241,7 +241,7 @@ fn world_reactor_with_all_triggers_fires()
     world.syscall((),
         move |mut c: Commands, reactor: Reactor<FullReactor>|
         {
-            reactor.add_triggers(&mut c, broadcast::<usize>());
+            reactor.add(&mut c, broadcast::<usize>());
         }
     );
 
@@ -304,7 +304,7 @@ fn world_reactor_with_all_triggers_fire_and_remove()
     world.syscall((),
         move |mut c: Commands, reactor: Reactor<FullReactor>|
         {
-            reactor.add_triggers(&mut c, broadcast::<usize>());
+            reactor.add(&mut c, broadcast::<usize>());
         }
     );
 
@@ -337,7 +337,7 @@ fn world_reactor_with_all_triggers_fire_and_remove()
     world.syscall((),
         move |mut c: Commands, reactor: Reactor<FullReactor>|
         {
-            reactor.remove_triggers(&mut c, (broadcast::<()>(), broadcast::<usize>()));
+            reactor.remove(&mut c, (broadcast::<()>(), broadcast::<usize>()));
         }
     );
 

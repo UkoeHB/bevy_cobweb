@@ -282,7 +282,9 @@ Reactors are stateful boxed Bevy systems, so it is useful to manage their memory
 
 ### World Reactors
 
-Special [`WorldReactors`](bevy_cobweb::prelude::WorldReactor) can be registered with apps and accessed with the [`Reactor<T: WorldReactor>`](bevy_cobweb::prelude::Reactor) system parameter. World reactors are similar to Bevy systems in that they live for the entire lifetime of an app. The advantage of world reactors over normal reactors is you can easily add/remove triggers from them anywhere in your app. You can also easily run them manually from anywhere in your app.
+Special [`WorldReactors`](bevy_cobweb::prelude::WorldReactor) can be registered with apps and accessed with the [`Reactor<T: WorldReactor>`](bevy_cobweb::prelude::Reactor) system parameter. World reactors are similar to Bevy systems in that they live for the entire lifetime of an app.
+
+The advantage of world reactors over normal reactors is you can easily add/remove triggers from them anywhere in your app. You can also easily run them manually from anywhere in your app. They also only need to be allocated once, as opposed to normal reactors that must be boxed every time you register one (and then their internal system state needs to be initialized).
 
 Define a [`WorldReactor`](bevy_cobweb::prelude::WorldReactor):
 ```rust
@@ -329,7 +331,67 @@ fn spawn_a(mut c: Commands, mut reactor: Reactor<DemoReactor>)
 {
     let entity = c.spawn_empty().id();
     c.react().insert(entity, A);
-    reactor.add_triggers(&mut c, entity_mutation::<A>(entity));
+    reactor.add(&mut c, entity_mutation::<A>(entity));
+}
+```
+
+
+### Entity World Reactors
+
+Similar to [`WorldReactor`](bevy_cobweb::prelude::WorldReactor) is [`EntityWorldReactor`](bevy_cobweb::prelude::EntityWorldReactor), which is used for entity-targeted reactors. Entity world reactors include custom data that is tied to a specific entity that triggers reactions. The data is then readable/writable with [`ReactorData`](bevy_cobweb::prelude::ReactorData) whenever that entity triggers a reaction.
+
+Adding an entity to an entity world reactor will register that reactor to run whenever the triggers in [`EntityWorldReactor::Triggers`](bevy_cobweb::prelude::EntityWorldReactor::Triggers) are activated on that entity. You don't need to manually specify the triggers.
+
+In the following example, we write the time to a reactive component every 500ms. The reactor picks this up and prints a message tailored to the reacting entity.
+
+```rust
+#[derive(ReactComponent)]
+struct TimeRecorder(Duration);
+
+struct TimeReactor;
+impl EntityWorldReactor for TimeReactor
+{
+    type StartingTriggers = ();
+    type Triggers = EntityMutation::<TimeRecorder>;
+    type Data = String;
+
+    fn reactor() -> SystemCommandCallback
+    {
+        SystemCommandCallback::new(
+            |data: ReactorData<TimeReactor>, components: Reactive<TimeRecorder>|
+            {
+                for (entity, data) in data.iter()
+                {
+                    let Some(component) = components.get(entity) else { continue };
+                    println!("Entity {:?} now has {:?}", data, component);
+                }
+            }
+        )
+    }
+}
+
+fn prep_entity(mut c: Commands, reactor: EntityReactor<TimeReactor>)
+{
+    let entity = c.spawn(TimeRecorder(Duration::default()));
+    reactor.add(&mut c, entity, "ClockTracker");
+}
+
+fn update_entity(mut commands: Commands, time: Res<Time>, mut components: ReactiveMut<TimeRecorder>)
+{
+    let elapsed = time.elapsed();
+    let component = components.single_mut(&mut c);
+    component.0 = elapsed;
+}
+
+struct ExamplePlugin;
+impl Plugin for ExamplePlugin
+{
+    fn build(&self, app: &mut App)
+    {
+        app.add_entity_reactor::<TimeReactor>()
+            .add_systems(Setup, prep_entity)
+            .add_systems(Update, update_entity.run_if(on_timer(Duration::from_millis(500)));
+    }
 }
 ```
 
