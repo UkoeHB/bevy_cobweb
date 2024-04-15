@@ -1,5 +1,6 @@
 //test modules
 mod entity_reactions;
+mod entity_world_reactor;
 mod event_reactions;
 mod plugin;
 mod reaction_tree;
