@@ -73,7 +73,7 @@ pub trait WorldReactor: Send + Sync + 'static
 {
     /// Triggers that must be added when adding the reactor to your app with [`ReactAppExt::add_reactor_with].
     type StartingTriggers: ReactionTriggerBundle;
-    /// Triggers that can be added to the reactor with [`Reactor::add_triggers`].
+    /// Triggers that can be added to the reactor with [`Reactor::add`].
     type Triggers: ReactionTriggerBundle;
 
     /// Consumes `Self` and returns the reactor system.

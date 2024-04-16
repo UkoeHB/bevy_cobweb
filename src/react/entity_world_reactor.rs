@@ -73,7 +73,7 @@ impl<T: EntityWorldReactor> EntityWorldLocal<T>
 /// These are 'entity' reactors which means trigger bundles are registered for specific entities. Only trigger
 /// bundles that implement [`EntityTriggerBundle`] can be used.
 ///
-/// This reactor type includes [`Self::Data`], which allows data to be tied to a specific entity for this reactor.
+/// This reactor type includes [`Self::Local`], which allows data to be tied to a specific entity for this reactor.
 /// When the reactor runs, the [`EntityLocal`] system param can be used to access data for the trigger entity.
 ///
 /// The reactor can be accessed with the [`EntityReactor`] system param.

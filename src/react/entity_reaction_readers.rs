@@ -294,7 +294,7 @@ impl<'w, 's, T: ReactComponent> RemovalEvent<'w, 's, T>
 
 //-------------------------------------------------------------------------------------------------------------------
 
-/// System parameter for reading entity-specific data for [`EntityWorlReactor`] reactors.
+/// System parameter for reading entity-specific data for [`EntityWorldReactor`] reactors.
 ///
 /*
 ```rust

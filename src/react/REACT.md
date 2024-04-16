@@ -351,7 +351,7 @@ struct TimeRecorder(Duration);
 struct TimeReactor;
 impl EntityWorldReactor for TimeReactor
 {
-    type Triggers = EntityMutation::<TimeRecorder>;
+    type Triggers = EntityMutation<TimeRecorder>;
     type Local = String;
 
     fn reactor() -> SystemCommandCallback
@@ -387,7 +387,7 @@ impl Plugin for ExamplePlugin
     {
         app.add_entity_reactor::<TimeReactor>()
             .add_systems(Setup, prep_entity)
-            .add_systems(Update, update_entity.run_if(on_timer(Duration::from_millis(500)));
+            .add_systems(Update, update_entity.run_if(on_timer(Duration::from_millis(500))));
     }
 }
 ```
