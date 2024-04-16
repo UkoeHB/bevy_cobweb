@@ -6,7 +6,7 @@ use bevy::ecs::system::Command;
 use bevy::prelude::*;
 
 //standard shortcuts
-
+use std::any::TypeId;
 
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
@@ -30,22 +30,43 @@ fn end_entity_reaction(world: &mut World)
 
 fn end_despawn_reaction(world: &mut World)
 {
+    end_entity_reaction(world);
     world.resource_mut::<DespawnAccessTracker>().end();
 }
 
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
-fn end_event(world: &mut World)
+fn end_entity_event(world: &mut World)
 {
+    end_entity_reaction(world);
     world.resource_mut::<EventAccessTracker>().end();
-    // note: cleanup is end_event_with_cleanup()
+    // note: data cleanup is end_event_with_cleanup()
 }
 
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
-fn end_event_with_cleanup(world: &mut World)
+fn end_entity_event_with_cleanup(world: &mut World)
+{
+    end_entity_reaction(world);
+    let data_entity = world.resource_mut::<EventAccessTracker>().end();
+    world.despawn(data_entity);
+}
+
+//-------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------
+
+fn end_broadcast_event(world: &mut World)
+{
+    world.resource_mut::<EventAccessTracker>().end();
+    // note: data cleanup is end_event_with_cleanup()
+}
+
+//-------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------
+
+fn end_broadcast_event_with_cleanup(world: &mut World)
 {
     let data_entity = world.resource_mut::<EventAccessTracker>().end();
     world.despawn(data_entity);
@@ -173,8 +194,22 @@ pub(crate) enum ReactionCommand
         /// no other owners of the handle.
         handle: ReactorHandle,
     },
-    /// A reaction to an event (can be a broadcasted event or an entity event).
-    Event
+    /// A reaction to an entity event.
+    EntityEvent
+    {
+        /// Target entity for the event.
+        target: Entity,
+        /// Entity where the event data is stored.
+        data_entity: Entity,
+        /// The system command triggered by this event.
+        reactor: SystemCommand,
+        /// True if this is the last reaction that will read this event.
+        ///
+        /// The `data_entity` will despawned in the system command cleanup callback if this is true.
+        last_reader: bool,
+    },
+    /// A reaction to a broadcast event.
+    BroadcastEvent
     {
         /// Entity where the event data is stored.
         data_entity: Entity,
@@ -205,13 +240,31 @@ impl ReactionCommand
             }
             Self::Despawn{ reaction_source, reactor, handle } =>
             {
+                // Include entity reaction tracker for EntityWorldReactor.
+                world.resource_mut::<EntityReactionAccessTracker>().start(
+                    reactor,
+                    reaction_source,
+                    EntityReactionType::Despawn,
+                );
                 world.resource_mut::<DespawnAccessTracker>().start(reaction_source, handle);
                 syscommand_runner(world, reactor, SystemCommandCleanup::new(end_despawn_reaction));
             }
-            Self::Event{ data_entity, reactor, last_reader } =>
+            Self::EntityEvent{ target, data_entity, reactor, last_reader } =>
+            {
+                // Include entity reaction tracker for EntityWorldReactor.
+                world.resource_mut::<EntityReactionAccessTracker>().start(
+                    reactor,
+                    target,
+                    EntityReactionType::Event(TypeId::of::<()>()),
+                );
+                world.resource_mut::<EventAccessTracker>().start(data_entity);
+                let cleanup = if last_reader { end_entity_event_with_cleanup } else { end_entity_event };
+                syscommand_runner(world, reactor, SystemCommandCleanup::new(cleanup));
+            }
+            Self::BroadcastEvent{ data_entity, reactor, last_reader } =>
             {
                 world.resource_mut::<EventAccessTracker>().start(data_entity);
-                let cleanup = if last_reader { end_event_with_cleanup } else { end_event };
+                let cleanup = if last_reader { end_broadcast_event_with_cleanup } else { end_broadcast_event };
                 syscommand_runner(world, reactor, SystemCommandCleanup::new(cleanup));
             }
         }

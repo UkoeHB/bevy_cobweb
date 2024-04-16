@@ -374,7 +374,7 @@ impl<'w, 's: 'w, T: EntityWorldReactor> ReactorData<'w, 's, T>
             .filter_map(|system|
             {
                 if self.tracker.system() != system { return None }
-                Some(system)
+                Some(())
             })
             .flat_map(|_|
             {
@@ -389,22 +389,25 @@ impl<'w, 's: 'w, T: EntityWorldReactor> ReactorData<'w, 's, T>
             })
     }
 
+    // TODO: Having trouble getting the lifetimes to work for this.
+/*
     /// Returns a mutable iterator over reactor entities and their data available to the current reaction.
     ///
     /// If the current reaction is an *entity reaction*, then one entity will be returned. Otherwise all registered
     /// entities will be returned.
     ///
     /// Returns nothing if used in any system other than the [`EntityWorldReactor`] that is `T`.
-    pub fn iter_mut(&'s mut self) -> impl Iterator<Item = (Entity, Mut<'w, T::Data>)> + '_
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = (Entity, &mut T::Data)> + '_
     {
+        let empty_iter = std::iter::empty::<(Entity, &mut T::Data)>();
         let Some(system) = self.reactor.system() else
         {
-            return Either::Left(None.into_iter());
+            return Either::Left(empty_iter);
         };
 
         if self.tracker.system() != system
         {
-            return Either::Left(None.into_iter());
+            return Either::Left(empty_iter);
         }
 
         let right = if !self.tracker.is_reacting()
@@ -414,10 +417,13 @@ impl<'w, 's: 'w, T: EntityWorldReactor> ReactorData<'w, 's, T>
         else
         {
             Either::Right(self.data.get_mut(self.tracker.source()).ok().into_iter())
-        }.into_iter().map(|(e, data)| (e, data.map_unchanged(EntityWorldReactorData::inner_mut)));
+        }.into_iter().map(|(e, data)|
+            (e, data.map_unchanged(EntityWorldReactorData::inner_mut).into_inner())
+        );
 
         Either::Right(right)
     }
+ */
 }
 
 //-------------------------------------------------------------------------------------------------------------------

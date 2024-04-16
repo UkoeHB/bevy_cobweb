@@ -60,7 +60,7 @@ impl<T: EntityWorldReactor> EntityWorldReactorData<T>
         &self.data
     }
 
-    pub(crate) fn inner_mut(&mut self) -> &mut T::Data
+    pub(crate) fn _inner_mut(&mut self) -> &mut T::Data
     {
         &mut self.data
     }

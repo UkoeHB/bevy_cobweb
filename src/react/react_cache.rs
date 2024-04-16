@@ -243,6 +243,7 @@ impl ReactCache
             EntityReactionType::Mutation(comp_id)  => (comp_id, self.component_reactors.get_mut(&comp_id)),
             EntityReactionType::Removal(comp_id)   => (comp_id, self.component_reactors.get_mut(&comp_id)),
             EntityReactionType::Event(_)           => unreachable!(),
+            EntityReactionType::Despawn            => unreachable!(),
         };
         let Some(reactors) = reactors else { return; };
         let callbacks = match rtype
@@ -251,6 +252,7 @@ impl ReactCache
             EntityReactionType::Mutation(_)  => &mut reactors.mutation_callbacks,
             EntityReactionType::Removal(_)   => &mut reactors.removal_callbacks,
             EntityReactionType::Event(_)     => unreachable!(),
+            EntityReactionType::Despawn      => unreachable!(),
         };
 
         // revoke reactor
@@ -495,7 +497,8 @@ impl ReactCache
             {
                 count += 1;
                 queue.push(
-                        ReactionCommand::Event{
+                        ReactionCommand::EntityEvent{
+                            target,
                             data_entity,
                             reactor,
                             last_reader: count == num,
@@ -512,7 +515,8 @@ impl ReactCache
             {
                 count += 1;
                 queue.push(
-                    ReactionCommand::Event{
+                    ReactionCommand::EntityEvent{
+                        target,
                         data_entity,
                         reactor: handle.sys_command(),
                         last_reader: count == num,
@@ -591,7 +595,7 @@ impl ReactCache
         for (idx, handle) in handlers.iter().enumerate()
         {
             queue.push(
-                ReactionCommand::Event{
+                ReactionCommand::BroadcastEvent{
                     data_entity,
                     reactor     : handle.sys_command(),
                     last_reader : idx + 1 == num,

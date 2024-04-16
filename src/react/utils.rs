@@ -44,6 +44,8 @@ pub(crate) enum EntityReactionType
     Removal(TypeId),
     /// An event was sent to this entity.
     Event(TypeId),
+    /// This entity was despawned.
+    Despawn,
 }
 
 //-------------------------------------------------------------------------------------------------------------------
