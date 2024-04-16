@@ -30,7 +30,6 @@ fn end_entity_reaction(world: &mut World)
 
 fn end_despawn_reaction(world: &mut World)
 {
-    end_entity_reaction(world);
     world.resource_mut::<DespawnAccessTracker>().end();
 }
 
@@ -240,12 +239,6 @@ impl ReactionCommand
             }
             Self::Despawn{ reaction_source, reactor, handle } =>
             {
-                // Include entity reaction tracker for EntityWorldReactor.
-                world.resource_mut::<EntityReactionAccessTracker>().start(
-                    reactor,
-                    reaction_source,
-                    EntityReactionType::Despawn,
-                );
                 world.resource_mut::<DespawnAccessTracker>().start(reaction_source, handle);
                 syscommand_runner(world, reactor, SystemCommandCleanup::new(end_despawn_reaction));
             }

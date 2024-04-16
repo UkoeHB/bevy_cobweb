@@ -465,6 +465,9 @@ pub fn broadcast<E: Send + Sync + 'static>() -> BroadcastTrigger<E> { BroadcastT
 
 /// Reaction trigger for despawns.
 /// - Registration does nothing if the entity does not exist.
+///
+/// Note that `DespawnTrigger` does not implement [`EntityTrigger`] because [`EntityWorldReactor`] only runs for entities
+/// that exist.
 #[derive(Copy, Clone)]
 pub struct DespawnTrigger(Entity);
 
@@ -482,19 +485,6 @@ impl ReactionTrigger for DespawnTrigger
 
         // add despawn tracker
         commands.syscall((self.0, handle.clone()), register_despawn_reactor);
-    }
-}
-
-impl EntityTrigger for DespawnTrigger
-{
-    fn new_trigger(entity: Entity) -> Self
-    {
-        despawn(entity)
-    }
-
-    fn entity(&self) -> Entity
-    {
-        self.0
     }
 }
 

@@ -243,7 +243,6 @@ impl ReactCache
             EntityReactionType::Mutation(comp_id)  => (comp_id, self.component_reactors.get_mut(&comp_id)),
             EntityReactionType::Removal(comp_id)   => (comp_id, self.component_reactors.get_mut(&comp_id)),
             EntityReactionType::Event(_)           => unreachable!(),
-            EntityReactionType::Despawn            => unreachable!(),
         };
         let Some(reactors) = reactors else { return; };
         let callbacks = match rtype
@@ -252,7 +251,6 @@ impl ReactCache
             EntityReactionType::Mutation(_)  => &mut reactors.mutation_callbacks,
             EntityReactionType::Removal(_)   => &mut reactors.removal_callbacks,
             EntityReactionType::Event(_)     => unreachable!(),
-            EntityReactionType::Despawn      => unreachable!(),
         };
 
         // revoke reactor
