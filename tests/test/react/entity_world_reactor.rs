@@ -17,7 +17,7 @@ struct EmptyReactor(Arc<AtomicU32>);
 impl EntityWorldReactor for EmptyReactor
 {
     type Triggers = EntityEventTrigger<usize>;
-    type Data = ();
+    type Local = ();
 
     fn reactor(self) -> SystemCommandCallback
     {
@@ -39,7 +39,7 @@ struct StartingReactor(Arc<AtomicU32>);
 impl EntityWorldReactor for StartingReactor
 {
     type Triggers = EntityEventTrigger<usize>;
-    type Data = ();
+    type Local = ();
 
     fn reactor(self) -> SystemCommandCallback
     {
@@ -61,7 +61,7 @@ struct FullReactor(Arc<AtomicU32>);
 impl EntityWorldReactor for FullReactor
 {
     type Triggers = EntityEventTrigger<usize>;
-    type Data = ();
+    type Local = ();
 
     fn reactor(self) -> SystemCommandCallback
     {
@@ -83,17 +83,15 @@ struct FullDataReactorDetector(Arc<AtomicU32>);
 impl EntityWorldReactor for FullDataReactorDetector
 {
     type Triggers = EntityEventTrigger<()>;
-    type Data = ();
+    type Local = usize;
 
     fn reactor(self) -> SystemCommandCallback
     {
         SystemCommandCallback::new(
-            move |data: ReactorData<Self>|
+            move |data: EntityLocal<Self>|
             {
-                for _ in data.iter()
-                {
-                    self.0.fetch_add(1, Ordering::Relaxed);
-                }
+                let (_, data) = data.get();
+                self.0.fetch_add(*data as u32, Ordering::Relaxed);
             }
         )
     }
@@ -101,36 +99,32 @@ impl EntityWorldReactor for FullDataReactorDetector
 
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
-/*
+
 /// Reactor with entity data that is mutated.
 struct FullDataReactorMutable(Arc<AtomicU32>);
 
 impl EntityWorldReactor for FullDataReactorMutable
 {
-    type StartingTriggers = ();
     type Triggers = EntityEventTrigger<usize>;
-    type Data = usize;
+    type Local = usize;
 
     fn reactor(self) -> SystemCommandCallback
     {
         SystemCommandCallback::new(
-            move |mut data: ReactorData<Self>, event: EntityEvent<usize>|
+            move |mut data: EntityLocal<Self>, event: EntityEvent<usize>|
             {
                 let (event_entity, event_data) = event.read().unwrap();
+                let (entity, entity_data) = data.get_mut();
 
-                assert_eq!(data.iter().count(), 1);
-                for (entity, entity_data) in data.iter_mut()
-                {
-                    assert_eq!(event_entity, entity);
-                    let new_data = *event_data + *entity_data;
-                    self.0.store(new_data as u32, Ordering::Relaxed);
-                    *entity_data += new_data as usize;
-                }
+                assert_eq!(event_entity, entity);
+                let new_data = *event_data + *entity_data;
+                self.0.store(new_data as u32, Ordering::Relaxed);
+                *entity_data = new_data as usize;
             }
         )
     }
 }
- */
+
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
@@ -254,7 +248,7 @@ fn entity_world_reactor_data_checks()
     world.syscall((),
         move |mut c: Commands, reactor: EntityReactor<FullDataReactorDetector>|
         {
-            reactor.add(&mut c, entity, ());
+            reactor.add(&mut c, entity, 1usize);
         }
     );
 
@@ -277,7 +271,7 @@ fn entity_world_reactor_data_checks()
     world.syscall((),
         move |mut c: Commands, reactor: EntityReactor<FullDataReactorDetector>|
         {
-            reactor.add(&mut c, entity2, ());
+            reactor.add(&mut c, entity2, 2usize);
         }
     );
 
@@ -300,16 +294,24 @@ fn entity_world_reactor_data_checks()
         }
     );
 
-    // system should have seen one data
-    assert_eq!(count.load(Ordering::Relaxed), 3);
+    // system should have seen data from entity 2
+    assert_eq!(count.load(Ordering::Relaxed), 4);
 }
 
 //-------------------------------------------------------------------------------------------------------------------
-/*
+
 // reactor with data should be mutable
 #[test]
 fn entity_world_reactor_mutable_data()
 {
+    // prepare tracing
+    /*
+    let subscriber = tracing_subscriber::FmtSubscriber::builder()
+        .with_max_level(tracing::Level::TRACE)
+        .finish();
+    tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
+    */
+
     // setup
     let count = Arc::new(AtomicU32::new(0u32));
     let count_inner = count.clone();
@@ -334,7 +336,7 @@ fn entity_world_reactor_mutable_data()
     world.syscall((),
         move |mut c: Commands|
         {
-            c.react().entity_event(entity, 1);
+            c.react().entity_event(entity, 1usize);
         }
     );
 
@@ -345,7 +347,7 @@ fn entity_world_reactor_mutable_data()
     world.syscall((),
         move |mut c: Commands|
         {
-            c.react().entity_event(entity, 1);
+            c.react().entity_event(entity, 1usize);
         }
     );
 
@@ -376,12 +378,23 @@ fn entity_world_reactor_mutable_data()
     world.syscall((),
         move |mut c: Commands|
         {
-            c.react().entity_event(entity, 3usize);
+            c.react().entity_event(entity2, 3usize);
         }
     );
 
-    // system should have run and seen both entities' data
-    assert_eq!(count.load(Ordering::Relaxed), 7);
+    // system should have run and seen the new entity's data
+    assert_eq!(count.load(Ordering::Relaxed), 3);
+
+    // trigger the reactor with original trigger
+    world.syscall((),
+        move |mut c: Commands|
+        {
+            c.react().entity_event(entity, 0usize);
+        }
+    );
+
+    // system should have run and seen the old entity's data
+    assert_eq!(count.load(Ordering::Relaxed), 4);
 }
- */
+
 //-------------------------------------------------------------------------------------------------------------------

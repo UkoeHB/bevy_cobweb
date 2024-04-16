@@ -338,7 +338,7 @@ fn spawn_a(mut c: Commands, mut reactor: Reactor<DemoReactor>)
 
 ### Entity World Reactors
 
-Similar to [`WorldReactor`](bevy_cobweb::prelude::WorldReactor) is [`EntityWorldReactor`](bevy_cobweb::prelude::EntityWorldReactor), which is used for entity-targeted reactors. Entity world reactors include custom data that is tied to a specific entity that triggers reactions. The data is then readable/writable with [`ReactorData`](bevy_cobweb::prelude::ReactorData) whenever that entity triggers a reaction.
+Similar to [`WorldReactor`](bevy_cobweb::prelude::WorldReactor) is [`EntityWorldReactor`](bevy_cobweb::prelude::EntityWorldReactor), which is used for entity-targeted reactors. Entity world reactors include custom data that is tied to a specific entity that triggers reactions. The data is then readable/writable with [`EntityLocal`](bevy_cobweb::prelude::EntityLocal) whenever that entity triggers a reaction.
 
 Adding an entity to an entity world reactor will register that reactor to run whenever the triggers in [`EntityWorldReactor::Triggers`](bevy_cobweb::prelude::EntityWorldReactor::Triggers) are activated on that entity. You don't need to manually specify the triggers.
 
@@ -352,18 +352,16 @@ struct TimeReactor;
 impl EntityWorldReactor for TimeReactor
 {
     type Triggers = EntityMutation::<TimeRecorder>;
-    type Data = String;
+    type Local = String;
 
     fn reactor() -> SystemCommandCallback
     {
         SystemCommandCallback::new(
-            |data: ReactorData<TimeReactor>, components: Reactive<TimeRecorder>|
+            |data: EntityLocal<TimeReactor>, components: Reactive<TimeRecorder>|
             {
-                for (entity, data) in data.iter()
-                {
-                    let Some(component) = components.get(entity) else { continue };
-                    println!("Entity {:?} now has {:?}", data, component);
-                }
+                let (entity, data) = data.get();
+                let Some(component) = components.get(entity) else { return };
+                println!("Entity {:?} now has {:?}", data, component);
             }
         )
     }

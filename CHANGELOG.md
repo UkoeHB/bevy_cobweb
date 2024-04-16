@@ -4,7 +4,7 @@
 
 ### Added
 
-- Added `EntityWorldReactor` for entity-associated reactions, with `ReactorData` that can read per-entity custom data in reactors.
+- Added `EntityWorldReactor` for entity-associated reactions, with `EntityLocal` that can read per-entity custom data in reactors.
 
 
 ## [0.4.0]

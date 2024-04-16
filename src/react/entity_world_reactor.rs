@@ -19,7 +19,7 @@ fn cleanup_reactor_data<T: EntityWorldReactor>(
 ){
     let Ok(reactor) = entities.get(entity) else { return };
     if reactor.iter_reactors().find(|reactor_id| *reactor_id == id).is_some() { return }
-    commands.entity(entity).remove::<EntityWorldReactorData<T>>();
+    commands.entity(entity).remove::<EntityWorldLocal<T>>();
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -43,24 +43,24 @@ impl<T: EntityWorldReactor> EntityWorldReactorRes<T>
 //-------------------------------------------------------------------------------------------------------------------
 
 #[derive(Component)]
-pub(crate) struct EntityWorldReactorData<T: EntityWorldReactor>
+pub(crate) struct EntityWorldLocal<T: EntityWorldReactor>
 {
-    data: T::Data,
+    data: T::Local,
 }
 
-impl<T: EntityWorldReactor> EntityWorldReactorData<T>
+impl<T: EntityWorldReactor> EntityWorldLocal<T>
 {
-    fn new(data: T::Data) -> Self
+    fn new(data: T::Local) -> Self
     {
         Self{ data }
     }
 
-    pub(crate) fn inner(&self) -> &T::Data
+    pub(crate) fn inner(&self) -> &T::Local
     {
         &self.data
     }
 
-    pub(crate) fn _inner_mut(&mut self) -> &mut T::Data
+    pub(crate) fn inner_mut(&mut self) -> &mut T::Local
     {
         &mut self.data
     }
@@ -74,7 +74,7 @@ impl<T: EntityWorldReactor> EntityWorldReactorData<T>
 /// bundles that implement [`EntityTriggerBundle`] can be used.
 ///
 /// This reactor type includes [`Self::Data`], which allows data to be tied to a specific entity for this reactor.
-/// When the reactor runs, the [`ReactorData`] system param can be used to access data for the trigger entity.
+/// When the reactor runs, the [`EntityLocal`] system param can be used to access data for the trigger entity.
 ///
 /// The reactor can be accessed with the [`EntityReactor`] system param.
 ///
@@ -93,13 +93,11 @@ impl EntityWorldReactor for MyReactor
     fn reactor(self) -> SystemCommandCallback
     {
         SystemCommandCallback::new(
-            |data: ReactorData<Self>, components: Reactive<A>|
+            |data: EntityLocal<Self>, components: Reactive<A>|
             {
-                for (entity, data) in data.iter()
-                {
-                    let a = components.get(entity).unwrap();
-                    println!("New value of A on entity {:?}: {:?}", data, a);
-                }
+                let (entity, data) = data.get();
+                let a = components.get(entity).unwrap();
+                println!("New value of A on entity {:?}: {:?}", data, a);
             }
         )
     }
@@ -117,12 +115,12 @@ impl Plugin for AddReactorPlugin
 */
 pub trait EntityWorldReactor: Send + Sync + 'static
 {
-    /// Triggers that can be added to the reactor with [`Reactor::add_triggers`].
+    /// Triggers that can be added for an entity with [`EntityReactor::add`].
     ///
-    /// There must be at least one trigger, and all triggers must point to the same entity when a bundle is added.
+    /// The trigger bundle must implement [`EntityTriggerBundle`], which must have at least one entry.
     type Triggers: EntityTriggerBundle + ReactionTriggerBundle;
-    /// Data that must be added when registering with [`Self::Triggers`].
-    type Data: Send + Sync + 'static;
+    /// Data that is 'local' to a specific entity that triggers the reactor.
+    type Local: Send + Sync + 'static;
 
     /// Consumes `Self` and returns the reactor system.
     ///
@@ -146,7 +144,7 @@ impl<'w, T: EntityWorldReactor> EntityReactor<'w, T>
     /// Returns `false` if:
     /// - The reactor doesn't exist.
     /// - The trigger entity doesn't exist.
-    pub fn add(&self, c: &mut Commands, trigger_entity: Entity, data: T::Data) -> bool
+    pub fn add(&self, c: &mut Commands, trigger_entity: Entity, data: T::Local) -> bool
     {
         let Some(inner) = &self.inner
         else
@@ -157,7 +155,7 @@ impl<'w, T: EntityWorldReactor> EntityReactor<'w, T>
         };
 
         let Some(mut ec) = c.get_entity(trigger_entity) else { return false };
-        ec.try_insert(EntityWorldReactorData::<T>::new(data));
+        ec.try_insert(EntityWorldLocal::<T>::new(data));
 
         let triggers = <T as EntityWorldReactor>::Triggers::new_bundle(trigger_entity);
         c.react().with(triggers, inner.sys_command, ReactorMode::Persistent);

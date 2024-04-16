@@ -5,7 +5,6 @@ use crate::prelude::*;
 //use bevy::ecs::component::ComponentId;
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
-use itertools::Either;
 
 //standard shortcuts
 use std::any::TypeId;
@@ -306,20 +305,17 @@ struct MyReactor;
 
 impl EntityWorldReactor for MyReactor
 {
-    type StartingTriggers = ();
     type Triggers = EntityMutation::<MyComponent>;
-    type Data = String;
+    type Local = String;
 
     fn reactor() -> SystemCommandCallback
     {
         SystemCommandCallback::new(
-            |data: ReactorData<MyReactor>, components: Reactive<MyComponent>|
+            |data: EntityLocal<MyReactor>, components: Reactive<MyComponent>|
             {
-                for (entity, data) in data.iter()
-                {
-                    let Some(component) = components.get(entity) else { continue };
-                    println!("Entity {:?} now has {:?}", data, component);
-                }
+                let (entity, data) = data.get();
+                let Some(component) = components.get(entity) else { return };
+                println!("Entity {:?} now has {:?}", data, component);
             }
         )
     }
@@ -351,79 +347,62 @@ impl Plugin for ExamplePlugin
 ```
 */
 #[derive(SystemParam)]
-pub struct ReactorData<'w, 's, T: EntityWorldReactor>
+pub struct EntityLocal<'w, 's, T: EntityWorldReactor>
 {
     reactor: EntityReactor<'w, T>,
     tracker: Res<'w, EntityReactionAccessTracker>,
-    data: Query<'w, 's, (Entity, &'static mut EntityWorldReactorData<T>)>,
+    data: Query<'w, 's, &'static mut EntityWorldLocal<T>>,
 }
 
-impl<'w, 's: 'w, T: EntityWorldReactor> ReactorData<'w, 's, T>
+impl<'w, 's, T: EntityWorldReactor> EntityLocal<'w, 's, T>
 {
-    /// Returns an iterator over reactor entities and their data available to the current reaction.
+    /// Gets the current entity.
     ///
-    /// If the current reaction is an *entity reaction*, then one entity will be returned. Otherwise all registered
-    /// entities will be returned.
-    ///
-    /// Returns nothing if used in any system other than the [`EntityWorldReactor`] that is `T`.
-    pub fn iter(&self) -> impl Iterator<Item = (Entity, &T::Data)> + '_
+    /// Panics if not called from within an [`EntityWorldReactor`] system.
+    pub fn entity(&self) -> Entity
     {
-        self.reactor
-            .system()
-            .into_iter()
-            .filter_map(|system|
-            {
-                if self.tracker.system() != system { return None }
-                Some(())
-            })
-            .flat_map(|_|
-            {
-                if !self.tracker.is_reacting()
-                {
-                    Either::Left(self.data.iter())
-                }
-                else
-                {
-                    Either::Right(self.data.get(self.tracker.source()).ok().into_iter())
-                }.into_iter().map(|(e, data)| (e, data.inner()))
-            })
+        self.check();
+        self.tracker.source()
     }
 
-    // TODO: Having trouble getting the lifetimes to work for this.
-/*
-    /// Returns a mutable iterator over reactor entities and their data available to the current reaction.
+    /// Gets the current entity's local data.
     ///
-    /// If the current reaction is an *entity reaction*, then one entity will be returned. Otherwise all registered
-    /// entities will be returned.
-    ///
-    /// Returns nothing if used in any system other than the [`EntityWorldReactor`] that is `T`.
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = (Entity, &mut T::Data)> + '_
+    /// Panics if not called from within an [`EntityWorldReactor`] system.
+    pub fn get(&self) -> (Entity, &T::Local)
     {
-        let empty_iter = std::iter::empty::<(Entity, &mut T::Data)>();
-        let Some(system) = self.reactor.system() else
-        {
-            return Either::Left(empty_iter);
-        };
-
-        if self.tracker.system() != system
-        {
-            return Either::Left(empty_iter);
-        }
-
-        let right = if !self.tracker.is_reacting()
-        {
-            Either::Left(self.data.iter_mut())
-        }
-        else
-        {
-            Either::Right(self.data.get_mut(self.tracker.source()).ok().into_iter())
-        }.into_iter().map(|(e, data)|
-            (e, data.map_unchanged(EntityWorldReactorData::inner_mut).into_inner())
-        );
-
-        Either::Right(right)
+        self.check();
+        (
+            self.tracker.source(),
+            self.data.get(self.tracker.source()).expect("entity missing local data in EntityLocal").inner()
+        )
     }
- */
+
+    /// Gets the current entity's local data.
+    ///
+    /// Panics if not called from within an [`EntityWorldReactor`] system.
+    pub fn get_mut(&mut self) -> (Entity, &mut T::Local)
+    {
+        self.check();
+        (
+            self.tracker.source(),
+            self.data.get_mut(self.tracker.source())
+                .expect("entity missing local data in EntityLocal")
+                .into_inner()
+                .inner_mut()
+        )
+    }
+
+    fn check(&self)
+    {
+        if !self.tracker.is_reacting()
+        {
+            panic!("EntityLocal should only be used in an EntityWorldReactor");
+        }
+        if self.tracker.system() != self.reactor.system().expect("EntityLocal should only be used in an EntityWorldReactor")
+        {
+            panic!("EntityLocal should only be used in an EntityWorldReactor");
+        }
+    }
 }
 
 //-------------------------------------------------------------------------------------------------------------------
