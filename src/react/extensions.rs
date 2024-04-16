@@ -3,7 +3,7 @@ use crate::prelude::*;
 
 //third-party shortcuts
 use bevy::prelude::*;
-use bevy::ecs::system::Command;
+use bevy::ecs::system::{Command, EntityCommands};
 
 //standard shortcuts
 
@@ -211,6 +211,29 @@ impl<'w, 's> ReactCommandsExt for Commands<'w, 's>
     {
         let data_entity = self.spawn(SystemEventData::new(event)).id();
         self.add(EventCommand{ system: command, data_entity });
+    }
+}
+
+//-------------------------------------------------------------------------------------------------------------------
+
+/// Extends `EntityCommands` with reactivity helpers.
+pub trait ReactEntityCommandsExt
+{
+    /// Registers the current entity with an [`EntityWorldReactor`].
+    fn add_reactor<T: EntityWorldReactor>(&mut self, data: T::Local);
+}
+
+impl<'a> ReactEntityCommandsExt for EntityCommands<'a>
+{
+    fn add_reactor<T: EntityWorldReactor>(&mut self, data: T::Local)
+    {
+        let id = self.id();
+        self.commands().syscall((id, data),
+            |In((id, data)): In<(Entity, T::Local)>, mut c: Commands, reactor: EntityReactor<T>|
+            {
+                reactor.add(&mut c, id, data);
+            }
+        );
     }
 }
 
