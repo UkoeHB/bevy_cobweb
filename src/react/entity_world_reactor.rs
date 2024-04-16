@@ -194,23 +194,6 @@ impl<'w, T: EntityWorldReactor> EntityReactor<'w, T>
         true
     }
 
-    /// Manually runs the reactor as a system command.
-    ///
-    /// Returns `false` if the reactor doesn't exist.
-    pub fn run(&self, commands: &mut Commands) -> bool
-    {
-        let Some(inner) = &self.inner
-        else
-        {
-            tracing::warn!("failed running entity world reactor {:?} because it is missing; add it to your app with \
-                ReactAppExt::add_entity_reactor", type_name::<T>());
-            return false;
-        };
-
-        commands.add(inner.sys_command);
-        true
-    }
-
     /// Gets the reactor's system command.
     ///
     /// Returns `None` if the reactor doesn't exist.

@@ -134,32 +134,6 @@ impl EntityWorldReactor for FullDataReactorMutable
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
-// register world reactor, run it manually
-#[test]
-fn entity_world_reactor_runs_manually()
-{
-    // setup
-    let count = Arc::new(AtomicU32::new(0u32));
-    let count_inner = count.clone();
-    let mut app = App::new();
-    app.add_plugins(ReactPlugin)
-        .add_entity_reactor(EmptyReactor(count_inner));
-    let world = &mut app.world;
-
-    // run the reactor
-    world.syscall((),
-        move |mut commands: Commands, reactor: EntityReactor<EmptyReactor>|
-        {
-            reactor.run(&mut commands);
-        }
-    );
-
-    // system should have run
-    assert_eq!(count.load(Ordering::Relaxed), 1);
-}
-
-//-------------------------------------------------------------------------------------------------------------------
-
 // register world reactor, add trigger, trigger fires
 #[test]
 fn entity_world_reactor_basic()
@@ -198,7 +172,7 @@ fn entity_world_reactor_basic()
 
 //-------------------------------------------------------------------------------------------------------------------
 
-// register world reactor, add triggers, triggers fire, remove triggers, run it manually
+// register world reactor, add triggers, triggers fire, remove triggers
 #[test]
 fn entity_world_reactor_with_all_triggers_fire_and_remove()
 {
@@ -251,17 +225,6 @@ fn entity_world_reactor_with_all_triggers_fire_and_remove()
 
     // system should not have run
     assert_eq!(count.load(Ordering::Relaxed), 1);
-
-    // run it manually
-    world.syscall((),
-        move |mut commands: Commands, reactor: EntityReactor<FullReactor>|
-        {
-            reactor.run(&mut commands);
-        }
-    );
-
-    // system should have run
-    assert_eq!(count.load(Ordering::Relaxed), 2);
 }
 
 //-------------------------------------------------------------------------------------------------------------------
