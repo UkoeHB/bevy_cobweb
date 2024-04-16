@@ -74,9 +74,7 @@ impl<T: EntityWorldReactor> EntityWorldReactorData<T>
 /// bundles that implement [`EntityTriggerBundle`] can be used.
 ///
 /// This reactor type includes [`Self::Data`], which allows data to be tied to a specific entity for this reactor.
-/// When the reactor runs, the [`ReactorData`] system param can be used to access data for associated entities.
-/// If you use non-entity triggers in the starting bundle, then when they are actived you can access all associated
-/// entities with [`ReactorData`] (which uses iterators).
+/// When the reactor runs, the [`ReactorData`] system param can be used to access data for the trigger entity.
 ///
 /// The reactor can be accessed with the [`EntityReactor`] system param.
 ///
@@ -89,7 +87,6 @@ struct A;
 struct MyReactor;
 impl EntityWorldReactor for MyReactor
 {
-    type StartingTriggers = ();
     type Triggers = EntityMutationTrigger<A>;
     type Data = String;
 
@@ -120,8 +117,6 @@ impl Plugin for AddReactorPlugin
 */
 pub trait EntityWorldReactor: Send + Sync + 'static
 {
-    /// Triggers that must be added when adding the reactor to your app with [`ReactAppExt::add_reactor_with].
-    type StartingTriggers: ReactionTriggerBundle;
     /// Triggers that can be added to the reactor with [`Reactor::add_triggers`].
     ///
     /// There must be at least one trigger, and all triggers must point to the same entity when a bundle is added.
@@ -146,23 +141,6 @@ pub struct EntityReactor<'w, T: EntityWorldReactor>
 
 impl<'w, T: EntityWorldReactor> EntityReactor<'w, T>
 {
-    /// Adds starting triggers to the reactor.
-    ///
-    /// Returns `false` if the reactor doesn't exist.
-    pub(crate) fn add_starting_triggers(&self, c: &mut Commands, triggers: T::StartingTriggers) -> bool
-    {
-        let Some(inner) = &self.inner
-        else
-        {
-            tracing::warn!("failed adding starting triggers, entity world reactor {:?} is missing; add it to your app with \
-                ReactAppExt::add_reactor", type_name::<T>());
-            return false;
-        };
-
-        c.react().with(triggers, inner.sys_command, ReactorMode::Persistent);
-        true
-    }
-
     /// Adds a listener to the reactor.
     ///
     /// Returns `false` if:
@@ -190,10 +168,11 @@ impl<'w, T: EntityWorldReactor> EntityReactor<'w, T>
     ///
     /// Note that registered data will be removed from an entity when all its entity-specific triggers for this
     /// reactor have been removed.
+    /// It is possible for this method to race with parallel systems that re-add entities referenced by the
+    /// removal bundle.
     ///
     /// Returns `false` if the reactor doesn't exist.
-    // Note: This is `&mut self` so token revocation synchronizes with cleanup.
-    pub fn remove(&mut self, c: &mut Commands, triggers: impl ReactionTriggerBundle) -> bool
+    pub fn remove(&self, c: &mut Commands, triggers: impl ReactionTriggerBundle) -> bool
     {
         let Some(inner) = &self.inner
         else

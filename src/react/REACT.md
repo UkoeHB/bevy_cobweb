@@ -351,7 +351,6 @@ struct TimeRecorder(Duration);
 struct TimeReactor;
 impl EntityWorldReactor for TimeReactor
 {
-    type StartingTriggers = ();
     type Triggers = EntityMutation::<TimeRecorder>;
     type Data = String;
 

@@ -28,14 +28,7 @@ pub trait ReactAppExt
     /// Adds an [`EntityWorldReactor`] to the app.
     ///
     /// The reactor can be accessed with the [`EntityReactor`] system param.
-    fn add_entity_reactor<R>(&mut self, reactor: R) -> &mut Self
-    where
-        R: EntityWorldReactor<StartingTriggers = ()>;
-
-    /// Adds an [`EntityWorldReactor`] to the app with starting triggers.
-    ///
-    /// The reactor be accessed with the [`EntityReactor`] system param.
-    fn add_entity_reactor_with<R: EntityWorldReactor>(&mut self, reactor: R, triggers: R::StartingTriggers) -> &mut Self;
+    fn add_entity_reactor<R: EntityWorldReactor>(&mut self, reactor: R) -> &mut Self;
 }
 
 impl ReactAppExt for App
@@ -79,9 +72,7 @@ impl ReactAppExt for App
         self
     }
 
-    fn add_entity_reactor<R>(&mut self, reactor: R) -> &mut Self
-    where
-        R: EntityWorldReactor<StartingTriggers = ()>
+    fn add_entity_reactor<R: EntityWorldReactor>(&mut self, reactor: R) -> &mut Self
     {
         if self.world.contains_resource::<EntityWorldReactorRes<R>>()
         {
@@ -89,32 +80,6 @@ impl ReactAppExt for App
         }
         let sys_command = self.world.spawn_system_command_from(reactor.reactor());
         self.world.insert_resource(EntityWorldReactorRes::<R>::new(sys_command));
-        self
-    }
-
-    fn add_entity_reactor_with<R: EntityWorldReactor>(&mut self, reactor: R, triggers: R::StartingTriggers) -> &mut Self
-    {
-        if self.world.contains_resource::<EntityWorldReactorRes<R>>()
-        {
-            panic!("duplicate entity world reactors of type {:?} are not allowed", std::any::type_name::<R>());
-        }
-        let sys_command = self.world.spawn_system_command_from(reactor.reactor());
-        self.world.insert_resource(EntityWorldReactorRes::<R>::new(sys_command));
-
-        // Make sure app is ready to use ReactCommands.
-        if !self.world.contains_resource::<ReactCache>()
-        {
-            self.init_resource::<ReactCache>();
-        }
-        self.setup_auto_despawn();
-
-        // Add starting triggers.
-        CallbackSystem::new(
-            move |mut c: Commands, reactor: EntityReactor<R>|
-            {
-                reactor.add_starting_triggers(&mut c, triggers);
-            }
-        ).run(&mut self.world, ());
         self
     }
 }
