@@ -114,7 +114,7 @@ fn setup(mut c: Commands)
 Reactors can be revoked with [`RevokeTokens`](bevy_cobweb::prelude::RevokeToken) obtained on registration.
 
 ```rust
-let token = c.react().on(resource_mutation::<A>(), || { todo!(); });
+let token = c.react().on_revokable(resource_mutation::<A>(), || { todo!(); });
 c.react().revoke(token);
 ```
 
@@ -338,14 +338,14 @@ fn spawn_a(mut c: Commands, mut reactor: Reactor<DemoReactor>)
 
 ### Entity World Reactors
 
-Similar to [`WorldReactor`](bevy_cobweb::prelude::WorldReactor) is [`EntityWorldReactor`](bevy_cobweb::prelude::EntityWorldReactor), which is used for entity-targeted reactors. Entity world reactors include custom data that is tied to a specific entity that triggers reactions. The data is then readable/writable with [`EntityLocal`](bevy_cobweb::prelude::EntityLocal) whenever that entity triggers a reaction.
+Similar to [`WorldReactor`](bevy_cobweb::prelude::WorldReactor) is [`EntityWorldReactor`](bevy_cobweb::prelude::EntityWorldReactor), which is used for entity-specific reactors (entity component insertion/mutation/removal and entity events). For each entity that is tracked by the reactor, you can add [`EntityWorldReactor::Local`](bevy_cobweb::prelude::EntityWorldReactor::Local) data that is readable/writable with [`EntityLocal`](bevy_cobweb::prelude::EntityLocal) when that entity triggers a reaction.
 
 Adding an entity to an entity world reactor will register that reactor to run whenever the triggers in [`EntityWorldReactor::Triggers`](bevy_cobweb::prelude::EntityWorldReactor::Triggers) are activated on that entity. You don't need to manually specify the triggers.
 
 In the following example, we write the time to a reactive component every 500ms. The reactor picks this up and prints a message tailored to the reacting entity.
 
 ```rust
-#[derive(ReactComponent)]
+#[derive(ReactComponent, Eq, PartialEq)]
 struct TimeRecorder(Duration);
 
 struct TimeReactor;
@@ -375,9 +375,7 @@ fn prep_entity(mut c: Commands, reactor: EntityReactor<TimeReactor>)
 
 fn update_entity(mut commands: Commands, time: Res<Time>, mut components: ReactiveMut<TimeRecorder>)
 {
-    let elapsed = time.elapsed();
-    let component = components.single_mut(&mut c);
-    component.0 = elapsed;
+    components.set_single_if_not_eq(&mut c, TimeRecorder(time.elapsed()));
 }
 
 struct ExamplePlugin;

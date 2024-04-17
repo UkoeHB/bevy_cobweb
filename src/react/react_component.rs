@@ -87,7 +87,7 @@ impl<C: ReactComponent> Deref for React<C>
 #[derive(SystemParam)]
 pub struct Reactive<'w, 's, T: ReactComponent>
 {
-    components: Query<'w, 's, &'static React<T>>,
+    components: Query<'w, 's, (Entity, &'static React<T>)>,
 }
 
 impl<'w, 's, T: ReactComponent> Reactive<'w, 's, T>
@@ -97,17 +97,18 @@ impl<'w, 's, T: ReactComponent> Reactive<'w, 's, T>
     /// Does not trigger reactions.
     pub fn get(&self, entity: Entity) -> Option<&T>
     {
-        self.components.get(entity).ok().map(React::get)
+        self.components.get(entity).ok().map(|(_, c)| c.get())
     }
 
     /// Reads `T` on a single entity.
     ///
     /// Does not trigger reactions.
     ///
-    /// Panics if the inner query is empty.
-    pub fn single(&self) -> &T
+    /// Panics if the inner query doesn't have exactly one entity.
+    pub fn single(&self) -> (Entity, &T)
     {
-        self.components.single().get()
+        let (e, x) = self.components.single();
+        (e, x.get())
     }
 }
 
@@ -119,7 +120,7 @@ impl<'w, 's, T: ReactComponent> Reactive<'w, 's, T>
 #[derive(SystemParam)]
 pub struct ReactiveMut<'w, 's, T: ReactComponent>
 {
-    components: Query<'w, 's, &'static mut React<T>>,
+    components: Query<'w, 's, (Entity, &'static mut React<T>)>,
 }
 
 impl<'w, 's, T: ReactComponent> ReactiveMut<'w, 's, T>
@@ -129,17 +130,18 @@ impl<'w, 's, T: ReactComponent> ReactiveMut<'w, 's, T>
     /// Does not trigger reactions.
     pub fn get(&self, entity: Entity) -> Option<&T>
     {
-        self.components.get(entity).ok().map(React::get)
+        self.components.get(entity).ok().map(|(_, c)| c.get())
     }
 
     /// Reads `T` on a single entity.
     ///
     /// Does not trigger reactions.
     ///
-    /// Panics if the inner query is empty.
-    pub fn single(&self) -> &T
+    /// Panics if the inner query doesn't have exactly one entity.
+    pub fn single(&self) -> (Entity, &T)
     {
-        self.components.single().get()
+        let (e, x) = self.components.single();
+        (e, x.get())
     }
 
     /// Gets a mutable reference to `T` on `entity`.
@@ -147,7 +149,7 @@ impl<'w, 's, T: ReactComponent> ReactiveMut<'w, 's, T>
     /// Triggers mutation reactions.
     pub fn get_mut(&mut self, c: &mut Commands, entity: Entity) -> Option<&mut T>
     {
-        let x = self.components.get_mut(entity).ok()?;
+        let (_, x) = self.components.get_mut(entity).ok()?;
         Some(x.into_inner().get_mut(c))
     }
 
@@ -155,11 +157,11 @@ impl<'w, 's, T: ReactComponent> ReactiveMut<'w, 's, T>
     ///
     /// Triggers mutation reactions.
     ///
-    /// Panics if the inner query is empty.
-    pub fn single_mut(&mut self, c: &mut Commands) -> &mut T
+    /// Panics if the inner query doesn't have exactly one entity.
+    pub fn single_mut(&mut self, c: &mut Commands) -> (Entity, &mut T)
     {
-        let x = self.components.single_mut();
-        x.into_inner().get_mut(c)
+        let (e, x) = self.components.single_mut();
+        (e, x.into_inner().get_mut(c))
     }
 
     /// Gets a mutable reference to `T` on `entity`.
@@ -167,7 +169,7 @@ impl<'w, 's, T: ReactComponent> ReactiveMut<'w, 's, T>
     /// Does not trigger reactions.
     pub fn get_noreact(&mut self, entity: Entity) -> Option<&mut T>
     {
-        let x = self.components.get_mut(entity).ok()?;
+        let (_, x) = self.components.get_mut(entity).ok()?;
         Some(x.into_inner().get_noreact())
     }
 
@@ -175,11 +177,11 @@ impl<'w, 's, T: ReactComponent> ReactiveMut<'w, 's, T>
     ///
     /// Does not trigger reactions.
     ///
-    /// Panics if the inner query is empty.
-    pub fn single_noreact(&mut self) -> &mut T
+    /// Panics if the inner query doesn't have exactly one entity.
+    pub fn single_noreact(&mut self) -> (Entity, &mut T)
     {
-        let x = self.components.single_mut();
-        x.into_inner().get_noreact()
+        let (e, x) = self.components.single_mut();
+        (e, x.into_inner().get_noreact())
     }
 
     /// Sets a new value on the specified entity if it would change.
@@ -189,8 +191,21 @@ impl<'w, 's, T: ReactComponent> ReactiveMut<'w, 's, T>
     where
         T: PartialEq
     {
-        let mut x = self.components.get_mut(entity).ok()?;
+        let (_, mut x) = self.components.get_mut(entity).ok()?;
         x.set_if_not_eq(c, new)
+    }
+
+    /// Sets a new value on a single entity if it would change.
+    ///
+    /// Returns the previous value if changed.
+    ///
+    /// Panics if the inner query doesn't have exactly one entity.
+    pub fn set_single_if_not_eq(&mut self, c: &mut Commands, new: T) -> (Entity, Option<T>)
+    where
+        T: PartialEq
+    {
+        let (e, mut x) = self.components.single_mut();
+        (e, x.set_if_not_eq(c, new))
     }
 }
 

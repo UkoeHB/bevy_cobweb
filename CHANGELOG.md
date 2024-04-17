@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.6.0]
+
+### Added
+
+- Added `ReactiveMut::set_single_if_not_eq`.
+
+### Changed
+
+- The `Reactive` and `ReactiveMut` system param's 'single' methods now return the single entity's id.
+
+
 ## [0.5.0]
 
 ### Added
