@@ -219,12 +219,20 @@ impl<'w, 's> ReactCommandsExt for Commands<'w, 's>
 /// Extends `EntityCommands` with reactivity helpers.
 pub trait ReactEntityCommandsExt
 {
+    /// Obtains a [`ReactCommands`] instance.
+    fn react(&mut self) -> ReactCommands<'_, '_>;
+
     /// Registers the current entity with an [`EntityWorldReactor`].
     fn add_reactor<T: EntityWorldReactor>(&mut self, data: T::Local);
 }
 
 impl<'a> ReactEntityCommandsExt for EntityCommands<'a>
 {
+    fn react(&mut self) -> ReactCommands<'_, '_>
+    {
+        ReactCommands{ commands: self.commands() }
+    }
+
     fn add_reactor<T: EntityWorldReactor>(&mut self, data: T::Local)
     {
         let id = self.id();

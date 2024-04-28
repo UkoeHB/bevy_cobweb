@@ -5,6 +5,7 @@
 ### Added
 
 - Added `ReactiveMut::set_single_if_not_eq`.
+- Added `.react()` extension method for `EntityCommands`.
 
 ### Changed
 
