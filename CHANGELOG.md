@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0]
+
+### Changed
+
+- `set_if_not_eq` -> `set_if_neq`
+
+
 ## [0.6.0]
 
 ### Added

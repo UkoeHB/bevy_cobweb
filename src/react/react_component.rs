@@ -51,7 +51,7 @@ impl<C: ReactComponent> React<C>
     /// Sets the component value and triggers mutations only if the value will change.
     ///
     /// Returns the previous value if it changed.
-    pub fn set_if_not_eq(&mut self, c: &mut Commands, new: C) -> Option<C>
+    pub fn set_if_neq(&mut self, c: &mut Commands, new: C) -> Option<C>
     where
         C: PartialEq
     {
@@ -187,12 +187,12 @@ impl<'w, 's, T: ReactComponent> ReactiveMut<'w, 's, T>
     /// Sets a new value on the specified entity if it would change.
     ///
     /// Returns the previous value if changed.
-    pub fn set_if_not_eq(&mut self, c: &mut Commands, entity: Entity, new: T) -> Option<T>
+    pub fn set_if_neq(&mut self, c: &mut Commands, entity: Entity, new: T) -> Option<T>
     where
         T: PartialEq
     {
         let (_, mut x) = self.components.get_mut(entity).ok()?;
-        x.set_if_not_eq(c, new)
+        x.set_if_neq(c, new)
     }
 
     /// Sets a new value on a single entity if it would change.
@@ -205,7 +205,7 @@ impl<'w, 's, T: ReactComponent> ReactiveMut<'w, 's, T>
         T: PartialEq
     {
         let (e, mut x) = self.components.single_mut();
-        (e, x.set_if_not_eq(c, new))
+        (e, x.set_if_neq(c, new))
     }
 }
 

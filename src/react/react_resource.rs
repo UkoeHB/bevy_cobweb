@@ -51,7 +51,7 @@ impl<R: ReactResource> ReactResInner<R>
     /// Sets the resource value and triggers mutations only if the value will change.
     ///
     /// Returns the previous value if it changed.
-    fn set_if_not_eq(&mut self, c: &mut Commands, new: R) -> Option<R>
+    fn set_if_neq(&mut self, c: &mut Commands, new: R) -> Option<R>
     where
         R: PartialEq
     {
@@ -139,11 +139,11 @@ impl<'w, R: ReactResource> ReactResMut<'w, R>
     /// Sets the resource value and triggers mutations only if the value will change.
     ///
     /// Returns the previous value if it changed.
-    pub fn set_if_not_eq(&mut self, c: &mut Commands, new: R) -> Option<R>
+    pub fn set_if_neq(&mut self, c: &mut Commands, new: R) -> Option<R>
     where
         R: PartialEq
     {
-        self.inner.set_if_not_eq(c, new)
+        self.inner.set_if_neq(c, new)
     }
 }
 
