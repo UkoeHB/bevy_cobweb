@@ -143,7 +143,7 @@ impl<'w, R: ReactResource> ReactResMut<'w, R>
     where
         R: PartialEq
     {
-        self.inner.set_if_neq(c, new)
+        (*self.inner).set_if_neq(c, new)
     }
 }
 

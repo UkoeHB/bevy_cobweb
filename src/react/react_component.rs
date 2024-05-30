@@ -192,7 +192,7 @@ impl<'w, 's, T: ReactComponent> ReactiveMut<'w, 's, T>
         T: PartialEq
     {
         let (_, mut x) = self.components.get_mut(entity).ok()?;
-        x.set_if_neq(c, new)
+        (*x).set_if_neq(c, new)
     }
 
     /// Sets a new value on a single entity if it would change.
@@ -205,7 +205,7 @@ impl<'w, 's, T: ReactComponent> ReactiveMut<'w, 's, T>
         T: PartialEq
     {
         let (e, mut x) = self.components.single_mut();
-        (e, x.set_if_neq(c, new))
+        (e, (*x).set_if_neq(c, new))
     }
 }
 

@@ -5,6 +5,7 @@
 ### Changed
 
 - `set_if_not_eq` -> `set_if_neq`
+- Removed `bevy_fn_plugin` dependency.
 
 
 ## [0.6.0]
