@@ -12,9 +12,9 @@ use std::sync::atomic::{AtomicU32, Ordering};
 //-------------------------------------------------------------------------------------------------------------------
 
 /// Reactor with no starting triggers.
-struct EmptyReactor(Arc<AtomicU32>);
+struct _EmptyReactor(Arc<AtomicU32>);
 
-impl EntityWorldReactor for EmptyReactor
+impl EntityWorldReactor for _EmptyReactor
 {
     type Triggers = EntityEventTrigger<usize>;
     type Local = ();
@@ -34,9 +34,9 @@ impl EntityWorldReactor for EmptyReactor
 //-------------------------------------------------------------------------------------------------------------------
 
 /// Reactor with starting triggers.
-struct StartingReactor(Arc<AtomicU32>);
+struct _StartingReactor(Arc<AtomicU32>);
 
-impl EntityWorldReactor for StartingReactor
+impl EntityWorldReactor for _StartingReactor
 {
     type Triggers = EntityEventTrigger<usize>;
     type Local = ();

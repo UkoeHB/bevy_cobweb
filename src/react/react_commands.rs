@@ -327,7 +327,7 @@ impl<'w, 's> ReactCommands<'w, 's>
             system.run((), world);
             cleanup.run(world);
             system.apply_deferred(world);
-            world.despawn(entity);
+            world.get_entity_mut(entity).map(|e| e.despawn());
             world.syscall(revoke_token_clone, revoke_reactor_triggers);
         });
         let once_system = move |world: &mut World, cleanup: SystemCommandCleanup|

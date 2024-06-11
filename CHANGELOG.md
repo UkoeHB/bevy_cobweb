@@ -7,6 +7,10 @@
 - `set_if_not_eq` -> `set_if_neq`
 - Removed `bevy_fn_plugin` dependency.
 
+### Fixed
+
+- Avoid redundant despawns, which cause Bevy error B0003.
+
 
 ## [0.6.0]
 

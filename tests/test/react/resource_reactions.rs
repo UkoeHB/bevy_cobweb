@@ -51,6 +51,14 @@ fn test_resource_mutation()
 #[test]
 fn test_resource_mutation_once()
 {
+    // prepare tracing
+    /*
+    let subscriber = tracing_subscriber::FmtSubscriber::builder()
+        .with_max_level(tracing::Level::TRACE)
+        .finish();
+    tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
+    */
+
     // setup
     let mut app = App::new();
     app.add_plugins(ReactPlugin)

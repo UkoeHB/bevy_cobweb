@@ -14,7 +14,7 @@ fn garbage_collect_entities(world: &mut World)
 {
     while let Some(entity) = world.resource::<AutoDespawner>().try_recv()
     {
-        world.despawn(entity);
+        world.get_entity_mut(entity).map(|e| e.despawn_recursive());
     }
 }
 
