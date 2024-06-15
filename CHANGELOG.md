@@ -1,6 +1,6 @@
 # Changelog
 
-## WIP
+## [0.7.1]
 
 ### Added
 
