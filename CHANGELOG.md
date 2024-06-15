@@ -1,5 +1,12 @@
 # Changelog
 
+## WIP
+
+### Added
+
+- Implement `CommandsSyscallExt` for `EntityCommands`.
+
+
 ## [0.7.0]
 
 ### Changed

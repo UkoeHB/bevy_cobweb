@@ -1,7 +1,7 @@
 //local shortcuts
 
 //third-party shortcuts
-use bevy::ecs::system::BoxedSystem;
+use bevy::ecs::system::{BoxedSystem, EntityCommands};
 use bevy::prelude::*;
 
 //standard shortcuts
@@ -152,6 +152,17 @@ impl CommandsSyscallExt for Commands<'_, '_>
         S: IntoSystem<I, (), Marker> + Send + Sync + 'static
     {
         self.add(move |world: &mut World| { world.syscall(input, system); });
+    }
+}
+
+impl CommandsSyscallExt for EntityCommands<'_>
+{
+    fn syscall<I, S, Marker>(&mut self, input: I, system: S)
+    where
+        I: Send + Sync + 'static,
+        S: IntoSystem<I, (), Marker> + Send + Sync + 'static
+    {
+        self.commands().syscall(input, system);
     }
 }
 
