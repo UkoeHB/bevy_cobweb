@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.2]
+
+### Added
+
+- Added `.react()` extension method to `App` and `World`.
+
+
 ## [0.7.1]
 
 ### Added

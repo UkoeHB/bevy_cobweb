@@ -3,7 +3,7 @@ use crate::prelude::*;
 
 //third-party shortcuts
 use bevy::prelude::*;
-use bevy::ecs::system::{Command, EntityCommands};
+use bevy::ecs::system::{Command, CommandQueue, EntityCommands};
 
 //standard shortcuts
 
@@ -29,6 +29,9 @@ pub trait ReactAppExt
     ///
     /// The reactor can be accessed with the [`EntityReactor`] system param.
     fn add_entity_reactor<R: EntityWorldReactor>(&mut self, reactor: R) -> &mut Self;
+
+    /// Provides access to [`ReactCommands`].
+    fn react<T>(&mut self, callback: impl FnOnce(&mut ReactCommands) -> T) -> &mut Self;
 }
 
 impl ReactAppExt for App
@@ -82,6 +85,13 @@ impl ReactAppExt for App
         self.world.insert_resource(EntityWorldReactorRes::<R>::new(sys_command));
         self
     }
+
+    fn react<T>(&mut self, callback: impl FnOnce(&mut ReactCommands) -> T) -> &mut Self
+    {
+        // Ignore returned value.
+        let _ = self.world.react(callback);
+        self
+    }
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -104,6 +114,9 @@ pub trait ReactWorldExt
     /// Returns the system command id that will eventually reference the spawned system.
     /// To run the system, schedule it with `commands.add(system_command)`.
     fn spawn_system_command_from(&mut self, callback: SystemCommandCallback) -> SystemCommand;
+
+    /// Provides access to [`ReactCommands`].
+    fn react<T>(&mut self, callback: impl FnOnce(&mut ReactCommands) -> T) -> T;
 
     /// Schedules a system event targeting a given [`SystemCommand`].
     ///
@@ -136,6 +149,17 @@ impl ReactWorldExt for World
     fn spawn_system_command_from(&mut self, callback: SystemCommandCallback) -> SystemCommand
     {
         SystemCommand(self.spawn(SystemCommandStorage::new(callback)).id())
+    }
+
+    fn react<T>(&mut self, callback: impl FnOnce(&mut ReactCommands) -> T) -> T
+    {
+        //todo: use built-in commands (bevy v0.14)
+        let mut queue = CommandQueue::default();
+        let mut c = Commands::new(&mut queue, self);
+        let mut rc = c.react();
+        let result = (callback)(&mut rc);
+        queue.apply(self);
+        result
     }
 
     fn send_system_event<T: Send + Sync + 'static>(&mut self, command: SystemCommand, event: T)
