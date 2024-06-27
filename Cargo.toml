@@ -2,7 +2,7 @@
 name = "bevy_cobweb"
 description = "Reactivity primitives for Bevy"
 authors = ["koe <ukoe@protonmail.com>"]
-version = "0.7.1"
+version = "0.7.2"
 edition = "2021"
 keywords = ["gamedev", "reactive"]
 license = "MIT OR Apache-2.0"
