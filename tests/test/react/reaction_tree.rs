@@ -100,7 +100,7 @@ fn command_ordering()
     app.add_plugins(ReactPlugin)
         .init_resource::<TelescopeHistory>()
         .insert_resource(SavedSystemCommand(None));
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     let expected = world.syscall((), command_ordering_impl);
     assert_eq!(expected, **world.resource::<TelescopeHistory>());
@@ -124,7 +124,7 @@ fn multisystem_scheduling()
         .add_systems(Update, multitest_system1)
         .add_systems(Update, multitest_system2)
         .update();
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     assert_eq!(vec![1, 2, 3, 3, 4, 4], **world.resource::<TelescopeHistory>());
 }

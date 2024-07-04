@@ -18,7 +18,7 @@ fn persistent_reactor_lives_without_triggers()
     // setup
     let mut app = App::new();
     app.add_plugins(ReactPlugin);
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     // register reactor
     let sys_command = world.syscall((),
@@ -45,7 +45,7 @@ fn persistent_reactor_lives_with_despawn_triggers_finished()
     // setup
     let mut app = App::new();
     app.add_plugins(ReactPlugin);
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     // prep target entity
     let target = world.spawn_empty().id();
@@ -76,7 +76,7 @@ fn persistent_reactor_lives_with_entity_triggers_despawned()
     // setup
     let mut app = App::new();
     app.add_plugins(ReactPlugin);
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     // prep target entity
     let target = world.spawn_empty().id();
@@ -107,7 +107,7 @@ fn persistent_reactor_acquires_more_triggers()
     // setup
     let mut app = App::new();
     app.add_plugins(ReactPlugin);
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     // prep target entity
     let target1 = world.spawn_empty().id();
@@ -162,7 +162,7 @@ fn cleanup_reactor_dies_without_triggers()
     // setup
     let mut app = App::new();
     app.add_plugins(ReactPlugin);
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     // register reactor
     let sys_command = world.syscall((),
@@ -189,7 +189,7 @@ fn cleanup_reactor_dies_with_despawn_triggers_finished()
     // setup
     let mut app = App::new();
     app.add_plugins(ReactPlugin);
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     // prep target entity
     let target = world.spawn_empty().id();
@@ -222,7 +222,7 @@ fn cleanup_reactor_dies_with_entity_triggers_despawned()
     // setup
     let mut app = App::new();
     app.add_plugins(ReactPlugin);
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     // prep target entity
     let target = world.spawn_empty().id();
@@ -255,7 +255,7 @@ fn revokable_reactor_dies_without_triggers()
     // setup
     let mut app = App::new();
     app.add_plugins(ReactPlugin);
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     // register reactor
     let token = world.syscall((),
@@ -280,7 +280,7 @@ fn revokable_reactor_dies_with_despawn_triggers_finished()
     // setup
     let mut app = App::new();
     app.add_plugins(ReactPlugin);
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     // prep target entity
     let target = world.spawn_empty().id();
@@ -311,7 +311,7 @@ fn revokable_reactor_dies_with_entity_triggers_despawned()
     // setup
     let mut app = App::new();
     app.add_plugins(ReactPlugin);
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     // prep target entity
     let target = world.spawn_empty().id();
@@ -342,7 +342,7 @@ fn revokable_reactor_dies_when_revoked()
     // setup
     let mut app = App::new();
     app.add_plugins(ReactPlugin);
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     // register reactor
     let token = world.syscall((),
@@ -381,7 +381,7 @@ fn revokable_reactor_dies_when_revoked_with_multiple_tokens()
     // setup
     let mut app = App::new();
     app.add_plugins(ReactPlugin);
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     // register reactor
     let token1 = world.syscall((),

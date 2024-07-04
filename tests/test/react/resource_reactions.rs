@@ -31,7 +31,7 @@ fn test_resource_mutation()
     app.add_plugins(ReactPlugin)
         .insert_react_resource(TestReactRes::default())
         .init_resource::<TestReactRecorder>();
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     // add reactor
     world.syscall((), on_resource_mutation);
@@ -64,7 +64,7 @@ fn test_resource_mutation_once()
     app.add_plugins(ReactPlugin)
         .insert_react_resource(TestReactRes::default())
         .init_resource::<TestReactRecorder>();
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     // add reactor
     world.syscall((), on_resource_mutation_once);
@@ -89,7 +89,7 @@ fn revoke_once_reactor()
     app.add_plugins(ReactPlugin)
         .insert_react_resource(TestReactRes::default())
         .init_resource::<TestReactRecorder>();
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     // add reactor
     let revoke_token = world.syscall((), on_resource_mutation_once);

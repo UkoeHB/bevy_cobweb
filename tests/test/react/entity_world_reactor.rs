@@ -138,7 +138,7 @@ fn entity_world_reactor_basic()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .add_entity_reactor(FullReactor(count_inner));
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     // add trigger
     let entity = world.spawn_empty().id();
@@ -176,7 +176,7 @@ fn entity_world_reactor_with_all_triggers_fire_and_remove()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .add_entity_reactor(FullReactor(count_inner));
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     // add trigger
     let entity = world.spawn_empty().id();
@@ -241,7 +241,7 @@ fn entity_world_reactor_data_checks()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .add_entity_reactor(FullDataReactorDetector(count_inner));
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     // add trigger
     let entity = world.spawn_empty().id();
@@ -318,7 +318,7 @@ fn entity_world_reactor_mutable_data()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .add_entity_reactor(FullDataReactorMutable(count_inner));
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     // add trigger
     let entity = world.spawn_empty().id();

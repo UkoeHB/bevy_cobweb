@@ -114,7 +114,7 @@ impl AutoDespawnAppExt for App
 {
     fn setup_auto_despawn(&mut self) -> &mut Self
     {
-        if self.world.contains_resource::<AutoDespawner>() { return self; }
+        if self.world().contains_resource::<AutoDespawner>() { return self; }
         self.insert_resource(AutoDespawner::new())
             .add_systems(Last, auto_despawn.in_set(AutoDespawnSet))
     }

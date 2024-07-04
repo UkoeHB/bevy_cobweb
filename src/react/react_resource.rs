@@ -275,13 +275,13 @@ impl ReactResAppExt for App
 {
     fn init_react_resource<R: ReactResource + FromWorld>(&mut self) -> &mut Self
     {
-        self.world.init_react_resource::<R>();
+        self.world_mut().init_react_resource::<R>();
         self
     }
 
     fn insert_react_resource<R: ReactResource>(&mut self, value: R) -> &mut Self
     {
-        self.world.insert_react_resource(value);
+        self.world_mut().insert_react_resource(value);
         self
     }
 }

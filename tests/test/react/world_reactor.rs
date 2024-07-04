@@ -87,7 +87,7 @@ fn world_reactor_runs_manually()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .add_reactor(EmptyReactor(count_inner));
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     // run the reactor
     world.syscall((),
@@ -113,7 +113,7 @@ fn world_reactor_with_starting_triggers_runs_manually()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .add_reactor_with(StartingReactor(count_inner), broadcast::<()>());
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     // run the reactor
     world.syscall((),
@@ -139,7 +139,7 @@ fn world_reactor_with_starting_triggers_fires()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .add_reactor_with(StartingReactor(count_inner), broadcast::<()>());
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     // run the reactor
     world.syscall((),
@@ -165,7 +165,7 @@ fn world_reactor_with_starting_triggers_fires_with_removal()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .add_reactor_with(StartingReactor(count_inner), broadcast::<()>());
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     // trigger the reactor
     world.syscall((),
@@ -224,7 +224,7 @@ fn world_reactor_with_all_triggers_fires()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .add_reactor_with(FullReactor(count_inner), broadcast::<()>());
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     // trigger the reactor with starting trigger
     world.syscall((),
@@ -283,7 +283,7 @@ fn world_reactor_with_all_triggers_fire_and_remove()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .add_reactor_with(FullReactor(count_inner), broadcast::<()>());
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     // trigger the reactor with starting trigger
     world.syscall((),

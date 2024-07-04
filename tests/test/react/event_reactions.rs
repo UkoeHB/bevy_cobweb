@@ -211,7 +211,7 @@ fn test_broadcast()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .init_resource::<TestReactRecorder>();
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     // add reactor
     world.syscall((), on_broadcast);
@@ -235,7 +235,7 @@ fn broadcast_out_of_order()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .init_resource::<TestReactRecorder>();
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     // send event (no reaction)
     world.syscall(222, send_broadcast);
@@ -267,7 +267,7 @@ fn recursive_broadcasts()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .init_resource::<TestReactRecorder>();
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     // add recursive reactor (no reaction)
     world.syscall((), on_broadcast_recursive);
@@ -298,7 +298,7 @@ fn broadcast_scoping()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .init_resource::<TestReactRecorder>();
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     // add reactors
     world.syscall((), on_broadcast_unit);
@@ -323,7 +323,7 @@ fn multiple_broadcast_noninterference()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .init_resource::<TestReactRecorder>();
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     // add reactor
     world.syscall((), on_broadcast_add);
@@ -343,7 +343,7 @@ fn broadcast_data_is_dropped()
     // setup
     let mut app = App::new();
     app.add_plugins(ReactPlugin);
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     let proxy_entity = world.spawn_empty().id();
     let signal = world.resource::<AutoDespawner>().prepare(proxy_entity);
@@ -368,7 +368,7 @@ fn broadcast_event_cleanup_on_no_run()
     // setup
     let mut app = App::new();
     app.add_plugins(ReactPlugin);
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     let proxy_entity = world.spawn_empty().id();
     let signal = world.resource::<AutoDespawner>().prepare(proxy_entity);
@@ -390,7 +390,7 @@ fn test_entity_event()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .init_resource::<TestReactRecorder>();
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     let test_entity = world.spawn_empty().id();
 
@@ -417,7 +417,7 @@ fn test_any_entity_event()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .init_resource::<TestReactRecorder>();
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     let test_entity = world.spawn_empty().id();
 
@@ -444,7 +444,7 @@ fn recursive_entity_events()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .init_resource::<TestReactRecorder>();
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     let test_entity = world.spawn_empty().id();
 
@@ -477,7 +477,7 @@ fn entity_event_scoping()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .init_resource::<TestReactRecorder>();
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     let test_entity_a = world.spawn_empty().id();
     let test_entity_b = world.spawn_empty().id();
@@ -506,7 +506,7 @@ fn multiple_entity_events_noninterference()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .init_resource::<TestReactRecorder>();
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     let test_entity = world.spawn_empty().id();
 
@@ -528,7 +528,7 @@ fn entity_event_data_is_dropped()
     // setup
     let mut app = App::new();
     app.add_plugins(ReactPlugin);
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     let test_entity = world.spawn_empty().id();
     let proxy_entity = world.spawn_empty().id();
@@ -554,7 +554,7 @@ fn entity_event_cleanup_on_no_run()
     // setup
     let mut app = App::new();
     app.add_plugins(ReactPlugin);
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     let test_entity = world.spawn_empty().id();
     let proxy_entity = world.spawn_empty().id();
@@ -576,7 +576,7 @@ fn revoke_broadcast_reactor()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .init_resource::<TestReactRecorder>();
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     // add reactor
     let revoke_token = world.syscall((), on_broadcast);
@@ -603,7 +603,7 @@ fn revoke_entity_event_reactor()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .init_resource::<TestReactRecorder>();
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     let test_entity = world.spawn_empty().id();
 
@@ -632,7 +632,7 @@ fn revoke_any_entity_event_reactor()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .init_resource::<TestReactRecorder>();
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     let test_entity = world.spawn_empty().id();
 

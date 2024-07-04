@@ -27,7 +27,7 @@ fn reactor_panic_without_plugin()
 {
     // setup
     let mut app = App::new();
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     // entity
     let test_entity = world.spawn_empty().id();

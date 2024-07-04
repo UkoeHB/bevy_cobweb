@@ -17,7 +17,7 @@ impl Plugin for ReactPlugin
 {
     fn build(&self, app: &mut App)
     {
-        if !app.world.contains_resource::<ReactCache>()
+        if !app.world().contains_resource::<ReactCache>()
         {
             app.init_resource::<ReactCache>();
         }

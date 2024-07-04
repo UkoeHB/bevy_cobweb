@@ -194,7 +194,7 @@ fn basic_system_events()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .init_resource::<TelescopeHistory>();
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     let expected = world.syscall((), basic_system_events_impl);
     assert_eq!(expected, **world.resource::<TelescopeHistory>());
@@ -210,7 +210,7 @@ fn system_event_noninterference()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .init_resource::<TelescopeHistory>();
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     let expected = world.syscall((), system_event_noninterference_impl);
     assert_eq!(expected, **world.resource::<TelescopeHistory>());
@@ -229,7 +229,7 @@ fn system_event_telescoping()
     app.add_plugins(ReactPlugin)
         .init_resource::<TelescopeHistory>()
         .insert_resource(SavedSystemCommand(None));
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     let expected = world.syscall((), system_event_telescoping_impl);
     assert_eq!(expected, **world.resource::<TelescopeHistory>());
@@ -246,7 +246,7 @@ fn system_event_recursion()
     app.add_plugins(ReactPlugin)
         .init_resource::<TelescopeHistory>()
         .insert_resource(SavedSystemCommand(None));
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     let expected = world.syscall((), system_event_recursion_impl);
     assert_eq!(expected, **world.resource::<TelescopeHistory>());
@@ -261,7 +261,7 @@ fn system_event_data_is_dropped_on_take()
     // setup
     let mut app = App::new();
     app.add_plugins(ReactPlugin);
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     let proxy_entity = world.spawn_empty().id();
     let signal = world.resource::<AutoDespawner>().prepare(proxy_entity);
@@ -280,7 +280,7 @@ fn system_event_data_is_dropped_on_ignore()
     // setup
     let mut app = App::new();
     app.add_plugins(ReactPlugin);
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     let proxy_entity = world.spawn_empty().id();
     let signal = world.resource::<AutoDespawner>().prepare(proxy_entity);
@@ -300,7 +300,7 @@ fn system_event_cleanup_on_no_run()
     // setup
     let mut app = App::new();
     app.add_plugins(ReactPlugin);
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     let proxy_entity = world.spawn_empty().id();
     let signal = world.resource::<AutoDespawner>().prepare(proxy_entity);

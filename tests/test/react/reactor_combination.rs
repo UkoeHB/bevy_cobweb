@@ -144,7 +144,7 @@ fn mutation_chain()
     app.add_plugins(ReactPlugin)
         .insert_react_resource(TestReactRes::default())
         .init_resource::<TestReactRecorder>();
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     // entities
     let test_entity_a = world.spawn_empty().id();
@@ -182,7 +182,7 @@ fn multiple_reactors()
     app.add_plugins(ReactPlugin)
         .insert_react_resource(TestReactRes::default())
         .init_resource::<TestReactRecorder>();
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     // add reactor
     world.syscall((), on_broadcast_or_resource);
@@ -206,7 +206,7 @@ fn all_reactors()
     // setup
     let mut app = App::new();
     app.add_plugins(ReactPlugin);
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     // add reactor
     world.syscall((), register_all_reactors);
@@ -223,7 +223,7 @@ fn reaction_telescoping_data_visibility()
     // setup
     let mut app = App::new();
     app.add_plugins(ReactPlugin);
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     world.syscall((), reaction_telescoping_data_visibility_impl);
 }
@@ -240,7 +240,7 @@ fn reaction_telescoping_inner_reactions()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .init_resource::<TelescopeHistory>();
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     let expected = world.syscall((), reaction_telescoping_inner_reactions_impl);
     assert_eq!(expected, **world.resource::<TelescopeHistory>());
@@ -256,7 +256,7 @@ fn revoke_multiple_reactors()
     app.add_plugins(ReactPlugin)
         .insert_react_resource(TestReactRes::default())
         .init_resource::<TestReactRecorder>();
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     // add reactor
     let revoke_token = world.syscall((), on_broadcast_or_resource);

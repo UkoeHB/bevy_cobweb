@@ -111,7 +111,7 @@ fn basic_system_command()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .init_resource::<TestReactRecorder>();
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     world.syscall(1, basic_system_command_impl);
     assert_eq!(1, world.resource::<TestReactRecorder>().0);
@@ -127,7 +127,7 @@ fn system_command_telescoping()
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
         .init_resource::<TelescopeHistory>();
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     let expected = world.syscall((), system_command_telescoping_impl);
     assert_eq!(expected, **world.resource::<TelescopeHistory>());
@@ -144,7 +144,7 @@ fn system_command_recursion()
     app.add_plugins(ReactPlugin)
         .init_resource::<TelescopeHistory>()
         .insert_resource(SavedSystemCommand(None));
-    let world = &mut app.world;
+    let world = app.world_mut();
 
     let expected = world.syscall((), system_command_recursion_impl);
     assert_eq!(expected, **world.resource::<TelescopeHistory>());

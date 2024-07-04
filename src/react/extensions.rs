@@ -3,7 +3,8 @@ use crate::prelude::*;
 
 //third-party shortcuts
 use bevy::prelude::*;
-use bevy::ecs::system::{Command, CommandQueue, EntityCommands};
+use bevy::ecs::system::EntityCommands;
+use bevy::ecs::world::{Command, CommandQueue};
 
 //standard shortcuts
 
@@ -40,26 +41,26 @@ impl ReactAppExt for App
     where
         R: WorldReactor<StartingTriggers = ()>
     {
-        if self.world.contains_resource::<WorldReactorRes<R>>()
+        if self.world().contains_resource::<WorldReactorRes<R>>()
         {
             panic!("duplicate world reactors of type {:?} are not allowed", std::any::type_name::<R>());
         }
-        let sys_command = self.world.spawn_system_command_from(reactor.reactor());
-        self.world.insert_resource(WorldReactorRes::<R>::new(sys_command));
+        let sys_command = self.world_mut().spawn_system_command_from(reactor.reactor());
+        self.world_mut().insert_resource(WorldReactorRes::<R>::new(sys_command));
         self
     }
 
     fn add_reactor_with<R: WorldReactor>(&mut self, reactor: R, triggers: R::StartingTriggers) -> &mut Self
     {
-        if self.world.contains_resource::<WorldReactorRes<R>>()
+        if self.world().contains_resource::<WorldReactorRes<R>>()
         {
             panic!("duplicate world reactors of type {:?} are not allowed", std::any::type_name::<R>());
         }
-        let sys_command = self.world.spawn_system_command_from(reactor.reactor());
-        self.world.insert_resource(WorldReactorRes::<R>::new(sys_command));
+        let sys_command = self.world_mut().spawn_system_command_from(reactor.reactor());
+        self.world_mut().insert_resource(WorldReactorRes::<R>::new(sys_command));
 
         // Make sure app is ready to use ReactCommands.
-        if !self.world.contains_resource::<ReactCache>()
+        if !self.world().contains_resource::<ReactCache>()
         {
             self.init_resource::<ReactCache>();
         }
@@ -71,25 +72,25 @@ impl ReactAppExt for App
             {
                 reactor.add_starting_triggers(&mut c, triggers);
             }
-        ).run(&mut self.world, ());
+        ).run(self.world_mut(), ());
         self
     }
 
     fn add_entity_reactor<R: EntityWorldReactor>(&mut self, reactor: R) -> &mut Self
     {
-        if self.world.contains_resource::<EntityWorldReactorRes<R>>()
+        if self.world().contains_resource::<EntityWorldReactorRes<R>>()
         {
             panic!("duplicate entity world reactors of type {:?} are not allowed", std::any::type_name::<R>());
         }
-        let sys_command = self.world.spawn_system_command_from(reactor.reactor());
-        self.world.insert_resource(EntityWorldReactorRes::<R>::new(sys_command));
+        let sys_command = self.world_mut().spawn_system_command_from(reactor.reactor());
+        self.world_mut().insert_resource(EntityWorldReactorRes::<R>::new(sys_command));
         self
     }
 
     fn react<T>(&mut self, callback: impl FnOnce(&mut ReactCommands) -> T) -> &mut Self
     {
         // Ignore returned value.
-        let _ = self.world.react(callback);
+        let _ = self.world_mut().react(callback);
         self
     }
 }

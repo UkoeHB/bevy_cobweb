@@ -1,7 +1,8 @@
 //local shortcuts
 
 //third-party shortcuts
-use bevy::ecs::system::{Command, BoxedSystem};
+use bevy::ecs::system::BoxedSystem;
+use bevy::ecs::world::Command;
 use bevy::prelude::*;
 
 //standard shortcuts
