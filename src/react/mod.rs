@@ -1,4 +1,5 @@
 //documentation
+#![allow(rustdoc::redundant_explicit_links)]
 #![doc = include_str!("REACT.md")]
 #[allow(unused_imports)]
 use crate as bevy_cobweb;

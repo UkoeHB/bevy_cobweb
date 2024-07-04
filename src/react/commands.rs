@@ -77,7 +77,7 @@ fn end_broadcast_event_with_cleanup(world: &mut World)
 /// A system command.
 ///
 /// System commands are stored on entities and must be manually scheduled with
-/// [`command.apply()`](bevy::ecs::system::Command::apply) or
+/// [`command.apply()`](bevy::ecs::world::Command::apply) or
 /// [`commands.send_system_event()`](super::ReactCommandsExt::send_system_event).
 ///
 /// You can spawn your own system command with
@@ -85,7 +85,7 @@ fn end_broadcast_event_with_cleanup(world: &mut World)
 ///
 /// All reactors are stored as system commands (i.e. systems registered with [`ReactCommands::on`]).
 ///
-/// If scheduled as a [`Command`](bevy::ecs::system::Command) from user-land, this will cause a [`reaction_tree()`] to
+/// If scheduled as a [`Command`](bevy::ecs::world::Command) from user-land, this will cause a [`reaction_tree()`] to
 /// execute, otherwise it will be processed within the already-running reaction tree.
 #[derive(Debug, Copy, Clone, Deref, Eq, PartialEq)]
 pub struct SystemCommand(pub Entity);
