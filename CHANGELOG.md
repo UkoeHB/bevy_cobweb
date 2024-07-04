@@ -1,5 +1,12 @@
 # Changelog
 
+## WIP
+
+### Changed
+
+- Optimized `World::react` method.
+
+
 ## [0.8.1]
 
 ### Fixed

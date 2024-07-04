@@ -4,7 +4,7 @@ use crate::prelude::*;
 //third-party shortcuts
 use bevy::prelude::*;
 use bevy::ecs::system::EntityCommands;
-use bevy::ecs::world::{Command, CommandQueue};
+use bevy::ecs::world::Command;
 
 //standard shortcuts
 
@@ -154,12 +154,10 @@ impl ReactWorldExt for World
 
     fn react<T>(&mut self, callback: impl FnOnce(&mut ReactCommands) -> T) -> T
     {
-        //todo: use built-in commands (bevy v0.14)
-        let mut queue = CommandQueue::default();
-        let mut c = Commands::new(&mut queue, self);
+        let mut c = self.commands();
         let mut rc = c.react();
         let result = (callback)(&mut rc);
-        queue.apply(self);
+        self.flush();
         result
     }
 
