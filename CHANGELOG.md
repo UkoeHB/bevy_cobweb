@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.1]
+
+### Fixed
+
+- Callback system cleanup now properly runs between the system and when its commands are flushed/applied.
+
+
 ## [0.8.0]
 
 - Update to Bevy v0.14.

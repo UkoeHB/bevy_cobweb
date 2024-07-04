@@ -91,6 +91,17 @@ fn multitest_system2(mut c: Commands, mut history: ResMut<TelescopeHistory>)
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
+fn invoke_echo_system(event: BroadcastEvent<usize>, mut c: Commands)
+{
+    assert!(event.read().is_some());
+    c.syscall((), move |event: BroadcastEvent<usize>| {
+        assert!(event.read().is_none());
+    });
+}
+
+//-------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------
+
 // A system command, system event, and reaction are all executed in that order even when scheduled out of order.
 #[test]
 fn command_ordering()
@@ -127,6 +138,20 @@ fn multisystem_scheduling()
     let world = app.world_mut();
 
     assert_eq!(vec![1, 2, 3, 3, 4, 4], **world.resource::<TelescopeHistory>());
+}
+
+//-------------------------------------------------------------------------------------------------------------------
+
+// Event cleanup should properly run between a system and when its commands are applied.
+#[test]
+fn cleanup_ordering()
+{
+    // setup
+    let mut app = App::new();
+    app.add_plugins(ReactPlugin)
+        .react(|rc| rc.on_persistent(broadcast::<usize>(), invoke_echo_system))
+        .update();
+    app.react(|rc| rc.broadcast(0usize));
 }
 
 //-------------------------------------------------------------------------------------------------------------------

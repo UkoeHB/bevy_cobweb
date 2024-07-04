@@ -79,10 +79,8 @@ where
         };
 
     // run the system
+    // - This automatically calls `apply_deferred`.
     let result = system.sys.run(input, world);
-
-    // apply any pending changes
-    system.sys.apply_deferred(world);
 
     // put the system back
     world.insert_resource(system);

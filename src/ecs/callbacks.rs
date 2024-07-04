@@ -233,7 +233,12 @@ where
         self.run_with_cleanup(world, input, |_| {})
     }
 
-    pub fn run_with_cleanup(&mut self, world: &mut World, input: I, cleanup: impl FnOnce(&mut World) + 'static) -> Option<O>
+    pub fn run_with_cleanup(
+        &mut self,
+        world: &mut World,
+        input: I,
+        cleanup: impl FnOnce(&mut World) + Send + Sync + 'static
+    ) -> Option<O>
     {
         let mut system = match std::mem::take(self)
         {
@@ -249,9 +254,34 @@ where
             }
             CallbackSystem::Initialized(system) => system,
         };
-        let result = system.run(input, world);
-        (cleanup)(world);
-        system.apply_deferred(world);
+
+        // run the system
+        let result = {
+            if system.is_exclusive() {
+                // Add the cleanup to run before any commands added by the system.
+                world.commands().add(move |world: &mut World| (cleanup)(world));
+                system.run(input, world)
+            } else {
+                // For non-exclusive systems we need to run them unsafe because the safe version automatically
+                // calls `apply_deferred`.
+                let world_cell = world.as_unsafe_world_cell();
+                system.update_archetype_component_access(world_cell);
+                // SAFETY:
+                // - We have exclusive access to the entire world.
+                // - `update_archetype_component_access` has been called.
+                let result = unsafe { system.run_unsafe(input, world_cell) };
+
+                // Run our custom cleanup method.
+                (cleanup)(world);
+
+                // apply any pending changes
+                system.apply_deferred(world);
+
+                result
+            }
+        };
+
+        // Save the system for reuse.
         *self = CallbackSystem::Initialized(system);
 
         Some(result)
