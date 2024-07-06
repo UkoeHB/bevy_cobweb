@@ -29,7 +29,7 @@ fn command_ordering_impl(mut c: Commands) -> Vec<usize>
     c.react().on(broadcast::<()>(),
         |event: BroadcastEvent<()>, mut history: ResMut<TelescopeHistory>|
         {
-            event.read().unwrap();
+            event.read();
             history.push(3);
         }
     );
@@ -55,13 +55,13 @@ fn multitest_prep_commands(mut c: Commands)
     let sys1 = c.spawn_system_command(
             |event: BroadcastEvent<usize>, mut history: ResMut<TelescopeHistory>|
             {
-                history.push(*event.read().unwrap());
+                history.push(*event.read());
             }
         );
     let sys2 = c.spawn_system_command(
             |event: BroadcastEvent<usize>, mut history: ResMut<TelescopeHistory>|
             {
-                history.push(*event.read().unwrap());
+                history.push(*event.read());
             }
         );
 
@@ -93,9 +93,9 @@ fn multitest_system2(mut c: Commands, mut history: ResMut<TelescopeHistory>)
 
 fn invoke_echo_system(event: BroadcastEvent<usize>, mut c: Commands)
 {
-    assert!(event.read().is_some());
+    assert!(event.try_read().is_some());
     c.syscall((), move |event: BroadcastEvent<usize>| {
-        assert!(event.read().is_none());
+        assert!(event.try_read().is_none());
     });
 }
 

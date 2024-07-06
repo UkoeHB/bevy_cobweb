@@ -7,7 +7,7 @@ use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
 //standard shortcuts
-use std::any::TypeId;
+use std::any::{type_name, TypeId};
 use std::marker::PhantomData;
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -132,7 +132,7 @@ fn example(mut c: Commands)
         insertion::<A>(),  // entity-specific: entity_insertion::<A>(target_entity)
         |event: InsertionEvent<A>|
         {
-            if let Some(entity) = event.read()
+            if let Some(entity) = event.try_read()
             {
                 println!("'A' was inserted to {:?}", entity);
             }
@@ -152,11 +152,19 @@ pub struct InsertionEvent<'w, 's, T: ReactComponent>
 
 impl<'w, 's, T: ReactComponent> InsertionEvent<'w, 's, T>
 {
-    /// Returns the entity that received a `React<T>` component insertion if the current system is
-    /// reacting to that insertion.
+    /// Returns the entity that received a `React<T>` component insertion that the system is reacting to.
     ///
     /// This will return at most one unique entity each time a reactor runs.
-    pub fn read(&self) -> Option<Entity>
+    ///
+    /// Panics if the system is not reacting to an insertion event for `T`.
+    pub fn read(&self) -> Entity
+    {
+        self.try_read()
+            .unwrap_or_else(|| panic!("failed reading insertion event for {}, there is no event", type_name::<T>()))
+    }
+
+    /// See [`Self::read`].
+    pub fn try_read(&self) -> Option<Entity>
     {
         if !self.tracker.is_reacting() { return None; }
         let EntityReactionType::Insertion(component_id) = self.tracker.reaction_type() else { return None; };
@@ -167,10 +175,10 @@ impl<'w, 's, T: ReactComponent> InsertionEvent<'w, 's, T>
 
     /// Returns `true` if there is nothing to read.
     ///
-    /// Equivalent to `event.read().is_none()`.
+    /// Equivalent to `event.try_read().is_none()`.
     pub fn is_empty(&self) -> bool
     {
-        self.read().is_none()
+        self.try_read().is_none()
     }
 }
 
@@ -190,7 +198,7 @@ fn example(mut c: Commands, query: Query<&mut React<A>>)
         mutation::<A>(),  // entity-specific: entity_mutation::<A>(target_entity)
         |event: MutationEvent<A>|
         {
-            if let Some(entity) = event.read()
+            if let Some(entity) = event.try_read()
             {
                 println!("'A' was mutated on {:?}", entity);
             }
@@ -210,11 +218,19 @@ pub struct MutationEvent<'w, 's, T: ReactComponent>
 
 impl<'w, 's, T: ReactComponent> MutationEvent<'w, 's, T>
 {
-    /// Returns the entity on which a `React<T>` component was mutated if the current system is
-    /// reacting to that mutation.
+    /// Returns the entity on which a `React<T>` component was mutated that the system is reacting to.
     ///
     /// This will return at most one unique entity each time a reactor runs.
-    pub fn read(&self) -> Option<Entity>
+    ///
+    /// Panics if the system is not reacting to a mutation event for `T`.
+    pub fn read(&self) -> Entity
+    {
+        self.try_read()
+            .unwrap_or_else(|| panic!("failed reading mutation event for {}, there is no event", type_name::<T>()))
+    }
+
+    /// See [`Self::read`].
+    pub fn try_read(&self) -> Option<Entity>
     {
         if !self.tracker.is_reacting() { return None; }
         let EntityReactionType::Mutation(component_id) = self.tracker.reaction_type() else { return None; };
@@ -225,10 +241,10 @@ impl<'w, 's, T: ReactComponent> MutationEvent<'w, 's, T>
 
     /// Returns `true` if there is nothing to read.
     ///
-    /// Equivalent to `event.read().is_none()`.
+    /// Equivalent to `event.try_read().is_none()`.
     pub fn is_empty(&self) -> bool
     {
-        self.read().is_none()
+        self.try_read().is_none()
     }
 }
 
@@ -250,7 +266,7 @@ fn example(mut c: Commands, query: Query<Entity, With<React<A>>>)
         removal::<A>(),  // entity-specific: entity_removal::<A>(target_entity)
         |event: RemovalEvent<A>|
         {
-            if let Some(entity) = event.read()
+            if let Some(entity) = event.try_read()
             {
                 println!("'A' was removed from {:?}", entity);
             }
@@ -270,11 +286,19 @@ pub struct RemovalEvent<'w, 's, T: ReactComponent>
 
 impl<'w, 's, T: ReactComponent> RemovalEvent<'w, 's, T>
 {
-    /// Returns the entity from which a `React<T>` component was removed if the current system is
-    /// reacting to that removal.
+    /// Returns the entity from which a `React<T>` component was removed that the system is reacting to.
     ///
     /// This will return at most one unique entity each time a reactor runs.
-    pub fn read(&self) -> Option<Entity>
+    ///
+    /// Panics if the system is not reacting to a removal event for `T`.
+    pub fn read(&self) -> Entity
+    {
+        self.try_read()
+            .unwrap_or_else(|| panic!("failed reading removal event for {}, there is no event", type_name::<T>()))
+    }
+
+    /// See [`Self::read`].
+    pub fn try_read(&self) -> Option<Entity>
     {
         if !self.tracker.is_reacting() { return None; }
         let EntityReactionType::Removal(component_id) = self.tracker.reaction_type() else { return None; };
@@ -285,10 +309,10 @@ impl<'w, 's, T: ReactComponent> RemovalEvent<'w, 's, T>
 
     /// Returns `true` if there is nothing to read.
     ///
-    /// Equivalent to `event.read().is_none()`.
+    /// Equivalent to `event.try_read().is_none()`.
     pub fn is_empty(&self) -> bool
     {
-        self.read().is_none()
+        self.try_read().is_none()
     }
 }
 

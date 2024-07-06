@@ -31,7 +31,7 @@ fn on_broadcast_int(mut c: Commands) -> RevokeToken
     c.react().on_revokable(broadcast::<usize>(),
         |event: BroadcastEvent<usize>, mut recorder: ResMut<TestReactRecorder>|
         {
-            recorder.0 += event.read().unwrap();
+            recorder.0 += event.read();
         }
     )
 }
@@ -41,7 +41,7 @@ fn on_broadcast_add(mut c: Commands) -> RevokeToken
     c.react().on_revokable(broadcast::<IntEvent>(),
         move |event: BroadcastEvent<IntEvent>, mut recorder: ResMut<TestReactRecorder>|
         {
-            let Some(event) = event.read() else { return; };
+            let Some(event) = event.try_read() else { return; };
             recorder.0 += event.0;
         }
     )
@@ -52,7 +52,7 @@ fn on_broadcast_proxy(In(proxy): In<Entity>, mut c: Commands) -> RevokeToken
     c.react().on_revokable(broadcast::<AutoDespawnSignal>(),
         move |event: BroadcastEvent<AutoDespawnSignal>|
         {
-            let proxy_signal = event.read().unwrap();
+            let proxy_signal = event.read();
             assert_eq!(proxy, proxy_signal.entity());
         }
     )
@@ -66,7 +66,7 @@ fn on_entity_event(In(entity): In<Entity>, mut c: Commands) -> RevokeToken
     c.react().on_revokable(entity_event::<IntEvent>(entity),
         move |event: EntityEvent<IntEvent>, mut recorder: ResMut<TestReactRecorder>|
         {
-            let Some((received_entity, event)) = event.read() else { return; };
+            let Some((received_entity, event)) = event.try_read() else { return; };
             assert_eq!(received_entity, entity);
             recorder.0 = event.0;
         }
@@ -78,7 +78,7 @@ fn on_entity_event_add(In(entity): In<Entity>, mut c: Commands) -> RevokeToken
     c.react().on_revokable(entity_event::<IntEvent>(entity),
         move |event: EntityEvent<IntEvent>, mut recorder: ResMut<TestReactRecorder>|
         {
-            let Some((received_entity, event)) = event.read() else { return; };
+            let Some((received_entity, event)) = event.try_read() else { return; };
             assert_eq!(received_entity, entity);
             recorder.0 += event.0;
         }
@@ -90,7 +90,7 @@ fn on_entity_event_proxy(In((entity, proxy)): In<(Entity, Entity)>, mut c: Comma
     c.react().on_revokable(entity_event::<AutoDespawnSignal>(entity),
         move |event: EntityEvent<AutoDespawnSignal>|
         {
-            let (event_entity, proxy_signal) = event.read().unwrap();
+            let (event_entity, proxy_signal) = event.read();
             assert_eq!(entity, event_entity);
             assert_eq!(proxy, proxy_signal.entity());
         }
@@ -107,7 +107,7 @@ fn on_entity_event_recursive(In(entity): In<Entity>, mut c: Commands) -> RevokeT
             mut recorder  : ResMut<TestReactRecorder>
         |
         {
-            let Some((received_entity, event)) = event.read() else { return; };
+            let Some((received_entity, event)) = event.try_read() else { return; };
             assert_eq!(received_entity, entity);
             recorder.0 += 1;
 
@@ -126,7 +126,7 @@ fn on_any_entity_event(In(target_entity): In<Entity>, mut c: Commands) -> Revoke
     c.react().on_revokable(any_entity_event::<IntEvent>(),
         move |event: EntityEvent<IntEvent>, mut recorder: ResMut<TestReactRecorder>|
         {
-            let Some((received_entity, event)) = event.read() else { return; };
+            let Some((received_entity, event)) = event.try_read() else { return; };
             assert_eq!(received_entity, target_entity);
             recorder.0 = event.0;
         }

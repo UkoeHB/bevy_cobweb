@@ -83,7 +83,7 @@ fn example(mut c: Commands)
         despawn(entity),
         |event: DespawnEvent|
         {
-            if let Some(entity) = event.read()
+            if let Some(entity) = event.try_read()
             {
                 println!("{:?} was despawned", entity);
             }
@@ -102,10 +102,18 @@ pub struct DespawnEvent<'w>
 
 impl<'w> DespawnEvent<'w>
 {
-    /// Returns the entity that was despawned if the current system is reacting to that despawn.
+    /// Returns the entity that was despawned that the current system is reacting to.
     ///
     /// This will return at most one unique entity each time a reactor runs.
-    pub fn read(&self) -> Option<Entity>
+    ///
+    /// Panics if the system is not reacting to a despawn.
+    pub fn read(&self) -> Entity
+    {
+        self.try_read().expect("failed reading despawn event, there is no entity")
+    }
+
+    /// See [`Self::try_read`].
+    pub fn try_read(&self) -> Option<Entity>
     {
         if !self.tracker.is_reacting() { return None; }
         Some(self.tracker.source())
@@ -116,7 +124,7 @@ impl<'w> DespawnEvent<'w>
     /// Equivalent to `event.read().is_none()`.
     pub fn is_empty(&self) -> bool
     {
-        self.read().is_none()
+        self.try_read().is_none()
     }
 }
 

@@ -72,28 +72,28 @@ fn on_any_entity_mutation(In(entity): In<Entity>, mut c: Commands) -> RevokeToke
             mut recorder: ResMut<TestReactRecorder>
         |
         {
-            if let Some(_) = insertion.read()
+            if let Some(_) = insertion.try_read()
             {
                 recorder.0 += 1;
                 assert!(mutation.is_empty());
                 assert!(removal.is_empty());
                 assert!(despawn.is_empty());
             }
-            if let Some(_) = mutation.read()
+            if let Some(_) = mutation.try_read()
             {
                 recorder.0 += 10;
                 assert!(insertion.is_empty());
                 assert!(removal.is_empty());
                 assert!(despawn.is_empty());
             }
-            if let Some(_) = removal.read()
+            if let Some(_) = removal.try_read()
             {
                 recorder.0 += 100;
                 assert!(insertion.is_empty());
                 assert!(mutation.is_empty());
                 assert!(despawn.is_empty());
             }
-            if let Some(_) = despawn.read()
+            if let Some(_) = despawn.try_read()
             {
                 recorder.0 += 1000;
                 assert!(insertion.is_empty());
@@ -116,7 +116,7 @@ fn on_mutation_recursive(mut c: Commands) -> RevokeToken
             mut recorder      : ResMut<TestReactRecorder>
         |
         {
-            let entity = match (insertion.read(), mutation.read())
+            let entity = match (insertion.try_read(), mutation.try_read())
             {
                 (Some(entity), None) => entity,
                 (None, Some(entity)) => entity,
@@ -147,7 +147,7 @@ fn register_reader_for_insertion_event(In(entity): In<Entity>, mut c: Commands) 
                 mut recorder: ResMut<TestReactRecorder>
             |
             {
-                assert_eq!(insertion.read().unwrap(), entity);
+                assert_eq!(insertion.read(), entity);
                 assert!(mutation.is_empty());
                 assert!(removal.is_empty());
                 assert!(despawn.is_empty());
@@ -169,7 +169,7 @@ fn register_reader_for_mutation_event(In(entity): In<Entity>, mut c: Commands) -
             |
             {
                 assert!(insertion.is_empty());
-                assert_eq!(mutation.read().unwrap(), entity);
+                assert_eq!(mutation.read(), entity);
                 assert!(removal.is_empty());
                 assert!(despawn.is_empty());
                 recorder.0 = 10;
@@ -191,7 +191,7 @@ fn register_reader_for_removal_event(In(entity): In<Entity>, mut c: Commands) ->
             {
                 assert!(insertion.is_empty());
                 assert!(mutation.is_empty());
-                assert_eq!(removal.read().unwrap(), entity);
+                assert_eq!(removal.read(), entity);
                 assert!(despawn.is_empty());
                 recorder.0 = 100;
             }
@@ -213,7 +213,7 @@ fn register_reader_for_despawn_event(In(entity): In<Entity>, mut c: Commands) ->
                 assert!(insertion.is_empty());
                 assert!(mutation.is_empty());
                 assert!(removal.is_empty());
-                assert_eq!(despawn.read().unwrap(), entity);
+                assert_eq!(despawn.read(), entity);
                 recorder.0 = 1000;
             }
         )

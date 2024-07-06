@@ -1,10 +1,11 @@
 # Changelog
 
-## WIP
+## [0.9.0]
 
 ### Changed
 
 - Optimized `World::react` method.
+- Split reaction reader method `.read()` into `.read()` (panicking) and `.try_read()` (returns `Option`).
 
 
 ## [0.8.1]

@@ -82,7 +82,7 @@ fn reaction_telescoping_data_visibility_impl(mut c: Commands)
                 {
                     0 =>
                     {
-                        let command = event.read().unwrap();
+                        let command = event.read();
                         commands.add(*command);
                         commands.add(null_reader);
                         count += 1;
@@ -112,7 +112,7 @@ fn reaction_telescoping_inner_reactions_impl(mut c: Commands) -> Vec<usize>
     c.react().on(broadcast::<usize>(),
             move |mut c: Commands, event: BroadcastEvent<usize>, mut history: ResMut<TelescopeHistory>|
             {
-                let data = *event.read().unwrap();
+                let data = *event.read();
                 history.push(data);
 
                 if data == 0 { return; }
@@ -122,7 +122,7 @@ fn reaction_telescoping_inner_reactions_impl(mut c: Commands) -> Vec<usize>
     c.react().on(broadcast::<usize>(),
             move |event: BroadcastEvent<usize>, mut history: ResMut<TelescopeHistory>|
             {
-                let data = *event.read().unwrap();
+                let data = *event.read();
                 history.push(data);
             }
         );

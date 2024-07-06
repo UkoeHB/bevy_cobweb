@@ -5,7 +5,7 @@ use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
 //standard shortcuts
-
+use std::any::type_name;
 
 //-------------------------------------------------------------------------------------------------------------------
 
@@ -125,9 +125,9 @@ fn example(mut c: Commands)
 {
     c.react().on(
         broadcast::<()>(),
-        |mut event: BroadcastEvent<()>|
+        |event: BroadcastEvent<()>|
         {
-            if let Some(()) = event.take()
+            if let Some(()) = event.try_read()
             {
                 println!("event received");
             }
@@ -147,10 +147,19 @@ pub struct BroadcastEvent<'w, 's, T: Send + Sync + 'static>
 
 impl<'w, 's, T: Send + Sync + 'static> BroadcastEvent<'w, 's, T>
 {
-    /// Reads broadcast event data if it exists.
+    /// Reads broadcast event data.
     ///
     /// This will return at most one unique `T` each time a system runs.
-    pub fn read(&self) -> Option<&T>
+    ///
+    /// Panics if there is no data to read.
+    pub fn read(&self) -> &T
+    {
+        self.try_read()
+            .unwrap_or_else(|| panic!("failed reading broadcast event for {}, there is no event", type_name::<T>()))
+    }
+
+    /// See [`Self::read`].
+    pub fn try_read(&self) -> Option<&T>
     {
         if !self.tracker.is_reacting() { return None; }
         let Ok(data) = self.data.get(self.tracker.data_entity()) else { return None; };
@@ -160,10 +169,10 @@ impl<'w, 's, T: Send + Sync + 'static> BroadcastEvent<'w, 's, T>
 
     /// Returns `true` if there is nothing to read.
     ///
-    /// Equivalent to `event.read().is_none()`.
+    /// Equivalent to `event.try_read().is_none()`.
     pub fn is_empty(&self) -> bool
     {
-        self.read().is_none()
+        self.try_read().is_none()
     }
 }
 
@@ -183,9 +192,9 @@ fn example(mut c: Commands)
     let entity = c.spawn_empty();
     c.react().on(
         entity_event::<()>(entity),
-        |mut event: EntityEvent<()>|
+        |event: EntityEvent<()>|
         {
-            if let Some(entity, data) = event.read()
+            if let Some(entity, data) = event.try_read()
             {
                 println!("event {:?} received for {:?}", data, entity);
             }
@@ -205,10 +214,19 @@ pub struct EntityEvent<'w, 's, T: Send + Sync + 'static>
 
 impl<'w, 's, T: Send + Sync + 'static> EntityEvent<'w, 's, T>
 {
-    /// Reads entity event data if it exists.
+    /// Reads entity event data.
     ///
     /// This will return at most one unique `T` each time a system runs.
-    pub fn read(&self) -> Option<(Entity, &T)>
+    ///
+    /// Panics if there is no data to read.
+    pub fn read(&self) -> (Entity, &T)
+    {
+        self.try_read()
+            .unwrap_or_else(|| panic!("failed reading entity event for {}, there is no event", type_name::<T>()))
+    }
+
+    /// See [`Self::read`].
+    pub fn try_read(&self) -> Option<(Entity, &T)>
     {
         if !self.tracker.is_reacting() { return None; }
         let Ok(data) = self.data.get(self.tracker.data_entity()) else { return None; };
@@ -218,10 +236,10 @@ impl<'w, 's, T: Send + Sync + 'static> EntityEvent<'w, 's, T>
 
     /// Returns `true` if there is nothing to read.
     ///
-    /// Equivalent to `event.read().is_none()`.
+    /// Equivalent to `event.try_read().is_none()`.
     pub fn is_empty(&self) -> bool
     {
-        self.read().is_none()
+        self.try_read().is_none()
     }
 }
 

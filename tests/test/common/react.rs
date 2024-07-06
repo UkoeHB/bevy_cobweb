@@ -75,7 +75,7 @@ pub fn update_test_recorder_on_insertion(
     mut recorder  : ResMut<TestReactRecorder>,
     test_entities : Query<&React<TestComponent>>,
 ){
-    recorder.0 = test_entities.get(entity.read().unwrap()).unwrap().0;
+    recorder.0 = test_entities.get(entity.read()).unwrap().0;
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -86,7 +86,7 @@ pub fn update_test_recorder_on_mutation(
     mut recorder  : ResMut<TestReactRecorder>,
     test_entities : Query<&React<TestComponent>>,
 ){
-    recorder.0 = test_entities.get(entity.read().unwrap()).unwrap().0;
+    recorder.0 = test_entities.get(entity.read()).unwrap().0;
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -103,14 +103,14 @@ pub fn update_test_recorder_with_resource(
 
 pub fn update_test_recorder_with_broadcast(event: BroadcastEvent<IntEvent>, mut recorder: ResMut<TestReactRecorder>)
 {
-    let Some(event) = event.read() else { return; };
+    let Some(event) = event.try_read() else { return; };
     recorder.0 = event.0;
 }
 //-------------------------------------------------------------------------------------------------------------------
 
 pub fn update_test_recorder_with_entity_event(event: EntityEvent<IntEvent>, mut recorder: ResMut<TestReactRecorder>)
 {
-    let Some((_, event)) = event.read() else { return; };
+    let Some((_, event)) = event.try_read() else { return; };
     recorder.0 = event.0;
 }
 
@@ -121,7 +121,7 @@ pub fn update_test_recorder_with_broadcast_and_recurse(
     event         : BroadcastEvent<IntEvent>,
     mut recorder  : ResMut<TestReactRecorder>
 ){
-    let Some(event) = event.read() else { return; };
+    let Some(event) = event.try_read() else { return; };
     recorder.0 += 1;
 
     // recurse until the event is 0
@@ -136,7 +136,7 @@ pub fn update_test_recorder_with_broadcast_and_resource(
     mut recorder : ResMut<TestReactRecorder>,
     resource     : ReactRes<TestReactRes>,
 ){
-    if let Some(event) = event.read()
+    if let Some(event) = event.try_read()
     {
         recorder.0 += event.0;
     }
