@@ -166,7 +166,7 @@ fn setup(mut c: Commands)
     c.react().on(insertion::<Health>(),
         |event: InsertionEvent<Health>, q: Query<&React<Health>>|
         {
-            let Some(entity) = event.read() else { return; };
+            let Some(entity) = event.try_read() else { return; };
             let health = q.get(entity).unwrap();
             println!("new health: {}", health.0);
         }
@@ -177,7 +177,7 @@ fn setup(mut c: Commands)
     c.react().on(entity_mutation::<Health>(entity),
         |event: InsertionEvent<Health>, q: Query<&React<Health>>|
         {
-            let Some(entity) = event.read() else { return; };
+            let Some(entity) = event.try_read() else { return; };
             let health = q.get(entity).unwrap();
             println!("updated health: {}", health.0);
         }
@@ -204,7 +204,7 @@ React to a despawn, using the [`DespawnEvent`](bevy_cobweb::prelude::DespawnEven
 c.react().on(despawn(entity),
     |entity: DespawnEvent|
     {
-        println!("entity despawned: {}", entity.read().unwrap());
+        println!("entity despawned: {}", entity.read());
     }
 );
 ```
@@ -222,7 +222,7 @@ React to the event, using the [`BroadcastEvent`](bevy_cobweb::prelude::Broadcast
 c.react().on(broadcast::<u32>(),
     |event: BroadcastEvent<u32>|
     {
-        if let Some(event) = event.read()
+        if let Some(event) = event.try_read()
         {
             println!("broadcast: {}", event);
         }
@@ -245,7 +245,7 @@ React to the event, using the [`EntityEvent`](bevy_cobweb::prelude::EntityEvent)
 c.react().on(entity_event::<u32>(entity),
     |event: EntityEvent<u32>|
     {
-        if let Some((entity, event)) = event.read()
+        if let Some((entity, event)) = event.try_read()
         {
             println!("entity: {:?}, event: {}", entity, event);
         }
@@ -303,11 +303,11 @@ impl WorldReactor for DemoReactor
         SystemCommandCallback::new(
             |insertion: InsertionEvent<A>, mutation: MutationEvent<A>|
             {
-                if let Some(_) = insertion.read()
+                if let Some(_) = insertion.try_read()
                 {
                     println!("A was inserted on an entity");
                 }
-                if let Some(_) = mutation.read()
+                if let Some(_) = mutation.try_read()
                 {
                     println!("A was mutated on an entity");
                 }
