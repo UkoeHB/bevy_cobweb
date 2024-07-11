@@ -2,7 +2,7 @@
 
 General-purpose reactivity framework for Bevy. Includes ECS utilities and core reactivity primitives (system events, reaction triggers, reactive events, and reaction tree processing).
 
-Documentation for the reactivity primitives can be found [here](src/react/REACT.md).
+Documentation for the reactivity primitives can be found in the [`react`](bevy_cobweb::react) module.
 
 
 
@@ -26,6 +26,6 @@ Documentation for the reactivity primitives can be found [here](src/react/REACT.
 
 | `bevy` | `bevy_cobweb` |
 |-------|----------------|
-| 0.14  | 0.8.0          |
+| 0.14  | 0.8.0 - master |
 | 0.13  | 0.0.3 - 0.7.2  |
 | 0.12  | 0.0.1 - 0.0.2  |
