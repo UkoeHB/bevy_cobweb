@@ -5,6 +5,7 @@ use bevy::ecs::system::BoxedSystem;
 use bevy::ecs::world::Command;
 use bevy::prelude::*;
 
+use std::borrow::BorrowMut;
 //standard shortcuts
 use std::marker::PhantomData;
 use std::sync::Arc;
@@ -256,30 +257,7 @@ where
         };
 
         // run the system
-        let result = {
-            if system.is_exclusive() {
-                // Add the cleanup to run before any commands added by the system.
-                world.commands().add(move |world: &mut World| (cleanup)(world));
-                system.run(input, world)
-            } else {
-                // For non-exclusive systems we need to run them unsafe because the safe version automatically
-                // calls `apply_deferred`.
-                let world_cell = world.as_unsafe_world_cell();
-                system.update_archetype_component_access(world_cell);
-                // SAFETY:
-                // - We have exclusive access to the entire world.
-                // - `update_archetype_component_access` has been called.
-                let result = unsafe { system.run_unsafe(input, world_cell) };
-
-                // Run our custom cleanup method.
-                (cleanup)(world);
-
-                // apply any pending changes
-                system.apply_deferred(world);
-
-                result
-            }
-        };
+        let result = Self::run_initialized_system(world, system.borrow_mut(), input, cleanup);
 
         // Save the system for reuse.
         *self = CallbackSystem::Initialized(system);
@@ -330,6 +308,38 @@ where
         {
             CallbackSystem::Initialized(_) => true,
             _ => false
+        }
+    }
+
+    /// Runs a system with cleanup that occurs between running the system and applying deferred commands.
+    pub fn run_initialized_system(
+        world: &mut World,
+        system: &mut dyn System<In = I, Out = O>,
+        input: I,
+        cleanup: impl FnOnce(&mut World) + Send + Sync + 'static
+    ) -> O
+    {
+        if system.is_exclusive() {
+            // Add the cleanup to run before any commands added by the system.
+            world.commands().add(move |world: &mut World| (cleanup)(world));
+            system.run(input, world)
+        } else {
+            // For non-exclusive systems we need to run them unsafe because the safe version automatically
+            // calls `apply_deferred`.
+            let world_cell = world.as_unsafe_world_cell();
+            system.update_archetype_component_access(world_cell);
+            // SAFETY:
+            // - We have exclusive access to the entire world.
+            // - `update_archetype_component_access` has been called.
+            let result = unsafe { system.run_unsafe(input, world_cell) };
+
+            // Run our custom cleanup method.
+            (cleanup)(world);
+
+            // apply any pending changes
+            system.apply_deferred(world);
+
+            result
         }
     }
 }

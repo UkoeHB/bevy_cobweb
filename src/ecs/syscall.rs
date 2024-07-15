@@ -70,6 +70,25 @@ where
     O: Send + Sync + 'static,
     S: IntoSystem<I, O, Marker> + Send + Sync + 'static,
 {
+    syscall_with_validation(world, input, system, |_|{})
+}
+
+//-------------------------------------------------------------------------------------------------------------------
+
+/// Same as [`syscall`] except the `validation` function is called the first time the system is run.
+///
+/// The validation function can be used to check for resources and print friendly error messages.
+pub fn syscall_with_validation<I, O, S, Marker>(
+    world: &mut World,
+    input: I,
+    system: S,
+    validation: fn(&mut World)
+) -> O
+where
+    I: Send + Sync + 'static,
+    O: Send + Sync + 'static,
+    S: IntoSystem<I, O, Marker> + Send + Sync + 'static,
+{
     // get the initialized system
     let mut system =
         match world.remove_resource::<InitializedSystem<I, O, S>>()
@@ -77,6 +96,7 @@ where
             Some(system) => system,
             None =>
             {
+                (validation)(world);
                 let mut sys = IntoSystem::into_system(system);
                 sys.initialize(world);
                 InitializedSystem::<I, O, S>{ sys: Box::new(sys), _phantom: PhantomData::<S>{} }
@@ -122,8 +142,22 @@ pub trait WorldSyscallExt
         O: Send + Sync + 'static,
         S: IntoSystem<I, O, Marker> + Send + Sync + 'static;
 
+    /// See [`syscall_with_validation`].
+    fn syscall_with_validation<I, O, S, Marker>(&mut self, input: I, system: S, validation: fn(&mut World)) -> O
+    where
+        I: Send + Sync + 'static,
+        O: Send + Sync + 'static,
+        S: IntoSystem<I, O, Marker> + Send + Sync + 'static;
+
     /// Similar to [`syscall`] except the system is not cached for reuse.
     fn syscall_once<I, O, S, Marker>(&mut self, input: I, system: S) -> O
+    where
+        I: Send + Sync + 'static,
+        O: Send + Sync + 'static,
+        S: IntoSystem<I, O, Marker> + Send + Sync + 'static;
+
+    /// Similar to [`syscall_with_validation`] except the system is not cached for reuse.
+    fn syscall_once_with_validation<I, O, S, Marker>(&mut self, input: I, system: S, validation: fn(&mut World)) -> O
     where
         I: Send + Sync + 'static,
         O: Send + Sync + 'static,
@@ -141,12 +175,33 @@ impl WorldSyscallExt for World
         syscall(self, input, system)
     }
 
+    fn syscall_with_validation<I, O, S, Marker>(&mut self, input: I, system: S, validation: fn(&mut World)) -> O
+    where
+        I: Send + Sync + 'static,
+        O: Send + Sync + 'static,
+        S: IntoSystem<I, O, Marker> + Send + Sync + 'static
+    {
+        syscall_with_validation(self, input, system, validation)
+    }
+
     fn syscall_once<I, O, S, Marker>(&mut self, input: I, system: S) -> O
     where
         I: Send + Sync + 'static,
         O: Send + Sync + 'static,
         S: IntoSystem<I, O, Marker> + Send + Sync + 'static
     {
+        let mut sys = IntoSystem::into_system(system);
+        sys.initialize(self);
+        sys.run(input, self)
+    }
+
+    fn syscall_once_with_validation<I, O, S, Marker>(&mut self, input: I, system: S, validation: fn(&mut World)) -> O
+    where
+        I: Send + Sync + 'static,
+        O: Send + Sync + 'static,
+        S: IntoSystem<I, O, Marker> + Send + Sync + 'static
+    {
+        (validation)(self);
         let mut sys = IntoSystem::into_system(system);
         sys.initialize(self);
         sys.run(input, self)
@@ -164,8 +219,20 @@ pub trait CommandsSyscallExt
         I: Send + Sync + 'static,
         S: IntoSystem<I, (), Marker> + Send + Sync + 'static;
 
+    /// See [`syscall_with_validation`].
+    fn syscall_with_validation<I, S, Marker>(&mut self, input: I, system: S, validation: fn(&mut World))
+    where
+        I: Send + Sync + 'static,
+        S: IntoSystem<I, (), Marker> + Send + Sync + 'static;
+
     /// Similar to [`syscall`] except the system is not cached for reuse.
     fn syscall_once<I, S, Marker>(&mut self, input: I, system: S)
+    where
+        I: Send + Sync + 'static,
+        S: IntoSystem<I, (), Marker> + Send + Sync + 'static;
+
+    /// Similar to [`syscall_with_validation`] except the system is not cached for reuse.
+    fn syscall_once_with_validation<I, S, Marker>(&mut self, input: I, system: S, validation: fn(&mut World))
     where
         I: Send + Sync + 'static,
         S: IntoSystem<I, (), Marker> + Send + Sync + 'static;
@@ -181,12 +248,28 @@ impl CommandsSyscallExt for Commands<'_, '_>
         self.add(move |world: &mut World| { world.syscall(input, system); });
     }
 
+    fn syscall_with_validation<I, S, Marker>(&mut self, input: I, system: S, validation: fn(&mut World))
+    where
+        I: Send + Sync + 'static,
+        S: IntoSystem<I, (), Marker> + Send + Sync + 'static
+    {
+        self.add(move |world: &mut World| { world.syscall_with_validation(input, system, validation); });
+    }
+
     fn syscall_once<I, S, Marker>(&mut self, input: I, system: S)
     where
         I: Send + Sync + 'static,
         S: IntoSystem<I, (), Marker> + Send + Sync + 'static
     {
         self.add(move |world: &mut World| { world.syscall_once(input, system); });
+    }
+
+    fn syscall_once_with_validation<I, S, Marker>(&mut self, input: I, system: S, validation: fn(&mut World))
+    where
+        I: Send + Sync + 'static,
+        S: IntoSystem<I, (), Marker> + Send + Sync + 'static
+    {
+        self.add(move |world: &mut World| { world.syscall_once_with_validation(input, system, validation); });
     }
 }
 
@@ -200,12 +283,28 @@ impl CommandsSyscallExt for EntityCommands<'_>
         self.commands().syscall(input, system);
     }
 
+    fn syscall_with_validation<I, S, Marker>(&mut self, input: I, system: S, validation: fn(&mut World))
+    where
+        I: Send + Sync + 'static,
+        S: IntoSystem<I, (), Marker> + Send + Sync + 'static
+    {
+        self.commands().syscall_with_validation(input, system, validation);
+    }
+
     fn syscall_once<I, S, Marker>(&mut self, input: I, system: S)
     where
         I: Send + Sync + 'static,
         S: IntoSystem<I, (), Marker> + Send + Sync + 'static
     {
         self.commands().syscall_once(input, system);
+    }
+
+    fn syscall_once_with_validation<I, S, Marker>(&mut self, input: I, system: S, validation: fn(&mut World))
+    where
+        I: Send + Sync + 'static,
+        S: IntoSystem<I, (), Marker> + Send + Sync + 'static
+    {
+        self.commands().syscall_once_with_validation(input, system, validation);
     }
 }
 

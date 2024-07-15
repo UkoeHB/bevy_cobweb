@@ -5,6 +5,8 @@
 ### Added
 
 - Added `syscall_once` for when you only need to run a system once.
+- Added `syscall_with_validation` and `syscall_once_with_validation` for validating syscalls the first time they are run.
+- Added error message when accessing `ReactCommands` before `ReactPlugin` has been added.
 
 
 ## [0.10.0]

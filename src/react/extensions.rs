@@ -67,12 +67,12 @@ impl ReactAppExt for App
         self.setup_auto_despawn();
 
         // Add starting triggers.
-        CallbackSystem::new(
+        self.world_mut().syscall_once((),
             move |mut c: Commands, reactor: Reactor<R>|
             {
                 reactor.add_starting_triggers(&mut c, triggers);
             }
-        ).run(self.world_mut(), ());
+        );
         self
     }
 

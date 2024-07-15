@@ -10,6 +10,21 @@ use bevy::prelude::*;
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
+fn validate_rc(world: &mut World)
+{
+    if !(
+        world.contains_resource::<ReactCache>() &&
+        world.contains_resource::<AutoDespawner>()
+    )
+    {
+        panic!("failed accessing ReactCommands, ReactPlugin is missing; you may need to reorder your \
+            plugins so ReactPlugin is added sooner");
+    }
+}
+
+//-------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------
+
 fn register_reactors<T: ReactionTriggerBundle>(
     In((triggers, syscommand, mode)): In<(T, SystemCommand, ReactorMode)>,
     mut commands: Commands,
@@ -173,7 +188,7 @@ impl<'w, 's> ReactCommands<'w, 's>
     {
         let Some(mut entity_commands) = self.commands.get_entity(entity) else { return; };
         entity_commands.try_insert( React{ entity, component } );
-        self.commands.syscall(entity, ReactCache::schedule_insertion_reaction::<C>);
+        self.commands.syscall_with_validation(entity, ReactCache::schedule_insertion_reaction::<C>, validate_rc);
     }
 
     /// Sends a broadcasted event.
@@ -181,7 +196,7 @@ impl<'w, 's> ReactCommands<'w, 's>
     /// - Reactors can read the event with the [`BroadcastEvent`] system parameter.
     pub fn broadcast<E: Send + Sync + 'static>(&mut self, event: E)
     {
-        self.commands.syscall(event, ReactCache::schedule_broadcast_reaction::<E>);
+        self.commands.syscall_with_validation(event, ReactCache::schedule_broadcast_reaction::<E>, validate_rc);
     }
 
     /// Sends an entity-targeted event.
@@ -189,7 +204,11 @@ impl<'w, 's> ReactCommands<'w, 's>
     /// - Reactors can read the event with the [`EntityEvent`] system parameter.
     pub fn entity_event<E: Send + Sync + 'static>(&mut self, entity: Entity, event: E)
     {
-        self.commands.syscall((entity, event), ReactCache::schedule_entity_event_reaction::<E>);
+        self.commands.syscall_with_validation(
+            (entity, event),
+            ReactCache::schedule_entity_event_reaction::<E>,
+            validate_rc
+        );
     }
 
     /// Triggers resource mutation reactions.
@@ -197,13 +216,13 @@ impl<'w, 's> ReactCommands<'w, 's>
     /// Useful for initializing state after a reactor is registered.
     pub fn trigger_resource_mutation<R: ReactResource + Send + Sync + 'static>(&mut self)
     {
-        self.commands.syscall((), ReactCache::schedule_resource_mutation_reaction::<R>);
+        self.commands.syscall_with_validation((), ReactCache::schedule_resource_mutation_reaction::<R>, validate_rc);
     }
 
     /// Revokes a reactor.
     pub fn revoke(&mut self, token: RevokeToken)
     {
-        self.commands.syscall(token, revoke_reactor);
+        self.commands.syscall_with_validation(token, revoke_reactor, validate_rc);
     }
 
     /// Registers a reactor triggered by ECS changes.
@@ -286,7 +305,7 @@ impl<'w, 's> ReactCommands<'w, 's>
         mode        : ReactorMode,
     ) -> Option<RevokeToken>
     {
-        self.commands.syscall((triggers, sys_command, mode), register_reactors);
+        self.commands.syscall_with_validation((triggers, sys_command, mode), register_reactors, validate_rc);
         match mode
         {
             ReactorMode::Revokable => Some(RevokeToken::new_from(sys_command, triggers)),
@@ -316,7 +335,7 @@ impl<'w, 's> ReactCommands<'w, 's>
         let syscommand = SystemCommand(entity);
         let mode = ReactorMode::Revokable;
         let revoke_token = RevokeToken::new_from(syscommand, triggers);
-        self.commands.syscall((triggers, syscommand, mode), register_reactors);
+        self.commands.syscall_with_validation((triggers, syscommand, mode), register_reactors, validate_rc);
 
         // wrap reactor in a system that will be called once, then clean itself up
         let revoke_token_clone = revoke_token.clone();
@@ -324,9 +343,7 @@ impl<'w, 's> ReactCommands<'w, 's>
         {
             let mut system = IntoSystem::into_system(reactor);
             system.initialize(world);
-            system.run((), world);
-            cleanup.run(world);
-            system.apply_deferred(world);
+            CallbackSystem::<(), ()>::run_initialized_system(world, &mut system, (), move |w| cleanup.run(w));
             world.get_entity_mut(entity).map(|e| e.despawn());
             world.syscall(revoke_token_clone, revoke_reactor_triggers);
         });
