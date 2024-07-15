@@ -1,6 +1,6 @@
 # Changelog
 
-## WIP
+## [0.10.1]
 
 ### Added
 
@@ -8,6 +8,7 @@
 - Added `syscall_with_validation` and `syscall_once_with_validation` for validating syscalls the first time they are run.
 - Added error message when accessing `ReactCommands` before `ReactPlugin` has been added.
 - Added `RawCallbackSystem` as a system-runner helper that doesn't require boxing the system. Used this to optimize system command spawning.
+- Added perf warning for when a large number of reactors are registered that are triggered by a specific entity.
 
 
 ## [0.10.0]

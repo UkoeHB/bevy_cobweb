@@ -12,7 +12,8 @@ use std::sync::Arc;
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
-const ENTITY_REACTORS_STATIC_SIZE: usize = 4;
+const ENTITY_REACTORS_STATIC_SIZE: usize = 6;
+const ENTITY_REACTORS_WARNING_SIZE: usize = 50;
 
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
@@ -60,6 +61,12 @@ impl EntityReactors
     pub(crate) fn insert(&mut self, rtype: EntityReactionType, handle: ReactorHandle)
     {
         self.reactors.push((rtype, handle));
+
+        if self.reactors.len() > ENTITY_REACTORS_WARNING_SIZE {
+            warn_once!("more than {ENTITY_REACTORS_WARNING_SIZE} reactors were registered targeting an entity, \
+                which may impact performance; consider using a resource for 'reaction hubs' instead; this warning \
+                only prints once");
+        }
     }
 
     pub(crate) fn remove(&mut self, rtype: EntityReactionType, reactor_id: SystemCommand)
