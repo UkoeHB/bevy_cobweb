@@ -341,7 +341,7 @@ impl<'w, 's> ReactCommands<'w, 's>
         let revoke_token_clone = revoke_token.clone();
         let mut once_reactor = Some(move |world: &mut World, cleanup: SystemCommandCleanup|
         {
-            let mut callback = RawCallbackSystem::<(), (), S::System>::new(reactor);
+            let mut callback = RawCallbackSystem::new(reactor);
             callback.run_with_cleanup(world, (), move |w| cleanup.run(w));
             world.get_entity_mut(entity).map(|e| e.despawn());
             world.syscall(revoke_token_clone, revoke_reactor_triggers);

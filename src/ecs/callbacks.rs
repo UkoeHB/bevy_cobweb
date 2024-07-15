@@ -373,9 +373,9 @@ where
     O: Send + Sync + 'static,
     S: System<In = I, Out = O> + Send + Sync + 'static
 {
-    pub fn new<II, OO, Marker, SS>(system: SS) -> RawCallbackSystem<II, OO, SS::System>
+    pub fn new<Marker, IS>(system: IS) -> Self
     where
-        SS: IntoSystem<II, OO, Marker> + Send + Sync + 'static,
+        IS: IntoSystem<I, O, Marker, System = S> + Send + Sync + 'static,
     {
         RawCallbackSystem::New(IntoSystem::into_system(system))
     }
