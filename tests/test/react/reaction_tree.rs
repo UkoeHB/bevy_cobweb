@@ -156,3 +156,20 @@ fn cleanup_ordering()
 }
 
 //-------------------------------------------------------------------------------------------------------------------
+
+// If reactions infinitely recurse then it should panic.
+#[test]
+#[should_panic]
+fn infinite_recursion()
+{
+    // setup
+    let mut app = App::new();
+    app.add_plugins(ReactPlugin)
+        .react(|rc| rc.on_persistent(broadcast::<usize>(), |mut c: Commands| {
+            c.react().broadcast(0usize);
+        }))
+        .update();
+    app.react(|rc| rc.broadcast(0usize));
+}
+
+//-------------------------------------------------------------------------------------------------------------------

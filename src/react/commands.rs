@@ -92,9 +92,9 @@ pub struct SystemCommand(pub Entity);
 
 impl SystemCommand
 {
-    pub(crate) fn run(self, world: &mut World)
+    pub(crate) fn run(self, world: &mut World, recursion: usize) -> usize
     {
-        syscommand_runner(world, self, SystemCommandCleanup::default());
+        syscommand_runner(world, self, SystemCommandCleanup::default(), recursion)
     }
 }
 
@@ -137,10 +137,10 @@ pub(crate) struct EventCommand
 impl EventCommand
 {
     /// Runs this event command on the world.
-    pub(crate) fn run(self, world: &mut World)
+    pub(crate) fn run(self, world: &mut World, recursion: usize) -> usize
     {
         world.resource_mut::<SystemEventAccessTracker>().start(self.data_entity);
-        syscommand_runner(world, self.system, SystemCommandCleanup::new(end_system_event));
+        syscommand_runner(world, self.system, SystemCommandCleanup::new(end_system_event), recursion)
     }
 }
 
@@ -224,23 +224,23 @@ pub(crate) enum ReactionCommand
 impl ReactionCommand
 {
     /// Runs the reaction on the world.
-    pub(crate) fn run(self, world: &mut World)
+    pub(crate) fn run(self, world: &mut World, recursion: usize) -> usize
     {
         match self
         {
             Self::Resource{ reactor } =>
             {
-                syscommand_runner(world, reactor, SystemCommandCleanup::default());
+                syscommand_runner(world, reactor, SystemCommandCleanup::default(), recursion)
             }
             Self::EntityReaction{ reaction_source, reaction_type, reactor } =>
             {
                 world.resource_mut::<EntityReactionAccessTracker>().start(reactor, reaction_source, reaction_type);
-                syscommand_runner(world, reactor, SystemCommandCleanup::new(end_entity_reaction));
+                syscommand_runner(world, reactor, SystemCommandCleanup::new(end_entity_reaction), recursion)
             }
             Self::Despawn{ reaction_source, reactor, handle } =>
             {
                 world.resource_mut::<DespawnAccessTracker>().start(reaction_source, handle);
-                syscommand_runner(world, reactor, SystemCommandCleanup::new(end_despawn_reaction));
+                syscommand_runner(world, reactor, SystemCommandCleanup::new(end_despawn_reaction), recursion)
             }
             Self::EntityEvent{ target, data_entity, reactor, last_reader } =>
             {
@@ -252,13 +252,13 @@ impl ReactionCommand
                 );
                 world.resource_mut::<EventAccessTracker>().start(data_entity);
                 let cleanup = if last_reader { end_entity_event_with_cleanup } else { end_entity_event };
-                syscommand_runner(world, reactor, SystemCommandCleanup::new(cleanup));
+                syscommand_runner(world, reactor, SystemCommandCleanup::new(cleanup), recursion)
             }
             Self::BroadcastEvent{ data_entity, reactor, last_reader } =>
             {
                 world.resource_mut::<EventAccessTracker>().start(data_entity);
                 let cleanup = if last_reader { end_broadcast_event_with_cleanup } else { end_broadcast_event };
-                syscommand_runner(world, reactor, SystemCommandCleanup::new(cleanup));
+                syscommand_runner(world, reactor, SystemCommandCleanup::new(cleanup), recursion)
             }
         }
     }

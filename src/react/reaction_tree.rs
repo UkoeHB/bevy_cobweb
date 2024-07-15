@@ -10,6 +10,11 @@ use bevy::prelude::*;
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
+const RECURSION_LIMIT: usize = 100_000;
+
+//-------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------
+
 fn garbage_collect_entities(world: &mut World)
 {
     while let Some(entity) = world.resource::<AutoDespawner>().try_recv()
@@ -26,8 +31,18 @@ fn garbage_collect_entities(world: &mut World)
 /// System commands scheduled by this system will be run recursively.
 ///
 /// Pre-existing system commands will be temporarily removed then reinserted once the internal recursion is finished.
-pub(crate) fn syscommand_runner(world: &mut World, command: SystemCommand, cleanup: SystemCommandCleanup)
+pub(crate) fn syscommand_runner(
+    world: &mut World,
+    command: SystemCommand,
+    cleanup: SystemCommandCleanup,
+    mut recursion: usize
+) -> usize
 {
+    if recursion > RECURSION_LIMIT
+    {
+        panic!("reaction tree exceeded recursion limit of {RECURSION_LIMIT}, there may be an infinite loop");
+    }
+
     // cleanup
     garbage_collect_entities(world);
 
@@ -44,21 +59,21 @@ pub(crate) fn syscommand_runner(world: &mut World, command: SystemCommand, clean
     else
     {
         (cleanup_on_abort)(world);
-        return;
+        return recursion;
     };
     let Some(mut system_command) = entity_mut.get_mut::<SystemCommandStorage>()
     else
     {
         tracing::error!(?command, "system command component is missing on extract");
         (cleanup_on_abort)(world);
-        return;
+        return recursion;
     };
     let Some(mut callback) = system_command.take()
     else
     {
         tracing::warn!(?command, "system command missing");
         (cleanup_on_abort)(world);
-        return;
+        return recursion;
     };
 
     // remove existing system commands temporarily
@@ -66,6 +81,7 @@ pub(crate) fn syscommand_runner(world: &mut World, command: SystemCommand, clean
 
     // run the system command
     callback.run(world, cleanup);
+    recursion += 1;
 
     // cleanup
     // - We do this before reinserting the callback in case the callback garbage collected itself.
@@ -101,11 +117,13 @@ pub(crate) fn syscommand_runner(world: &mut World, command: SystemCommand, clean
     //   loop will only act on commands added by the system command for this scope.
     while let Some(next_command) = world.resource_mut::<CobwebCommandQueue<SystemCommand>>().pop_front()
     {
-        next_command.run(world);
+        recursion = next_command.run(world, recursion);
     }
 
     // reinsert previously-existing system commands
     world.resource_mut::<CobwebCommandQueue<SystemCommand>>().append(preexisting_syscommands);
+
+    recursion
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -130,6 +148,7 @@ pub fn reaction_tree(world: &mut World)
     schedule_removal_and_despawn_reactors(world);
 
     // Run the tree.
+    let mut recursion = 0;
     'r: loop
     {
         'e: loop
@@ -137,7 +156,7 @@ pub fn reaction_tree(world: &mut World)
             // run all system commands recursively
             while let Some(next_command) = world.resource_mut::<CobwebCommandQueue<SystemCommand>>().pop_front()
             {
-                next_command.run(world);
+                recursion = next_command.run(world, recursion);
             }
 
             // new events go to the front
@@ -145,7 +164,7 @@ pub fn reaction_tree(world: &mut World)
 
             // run one system event
             let Some(next_event) = event_queue.pop_front() else { break 'e; };
-            next_event.run(world);
+            recursion = next_event.run(world, recursion);
         }
 
         // new reactions go to the front
@@ -153,7 +172,7 @@ pub fn reaction_tree(world: &mut World)
 
         // run one reaction
         let Some(next_reaction) = reaction_queue.pop_front() else { break 'r; };
-        next_reaction.run(world);
+        recursion = next_reaction.run(world, recursion);
     }
 
     world.resource_mut::<CobwebCommandQueue<EventCommand>>().append(event_queue);
