@@ -7,6 +7,7 @@
 - Added `syscall_once` for when you only need to run a system once.
 - Added `syscall_with_validation` and `syscall_once_with_validation` for validating syscalls the first time they are run.
 - Added error message when accessing `ReactCommands` before `ReactPlugin` has been added.
+- Added `RawCallbackSystem` as a system-runner helper that doesn't require boxing the system. Used this to optimize system command spawning.
 
 
 ## [0.10.0]

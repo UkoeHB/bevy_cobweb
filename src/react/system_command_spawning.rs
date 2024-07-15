@@ -56,7 +56,7 @@ impl SystemCommandCallback
     where
         S: IntoSystem<(), (), M> + Send + Sync + 'static
     {
-        let mut callback = CallbackSystem::new(system);
+        let mut callback = RawCallbackSystem::<(), (), S::System>::new(system);
         let command = move |world: &mut World, cleanup: SystemCommandCleanup|
         {
             callback.run_with_cleanup(world, (), move |world: &mut World| cleanup.run(world));

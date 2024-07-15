@@ -324,10 +324,10 @@ impl<'w, 's> ReactCommands<'w, 's>
     /// // The reactor will run on the first mutation of either MyRes or MyComponent.
     /// rcommands.once((resource_mutation::<MyRes>(), mutation::<MyComponent>()), my_reactor_system);
     /// ```
-    pub fn once<M>(
+    pub fn once<M, S: IntoSystem<(), (), M> + Send + Sync + 'static>(
         &mut self,
         triggers : impl ReactionTriggerBundle,
-        reactor  : impl IntoSystem<(), (), M> + Send + Sync + 'static
+        reactor  : S
     ) -> RevokeToken
     {
         // register reactors
@@ -341,9 +341,8 @@ impl<'w, 's> ReactCommands<'w, 's>
         let revoke_token_clone = revoke_token.clone();
         let mut once_reactor = Some(move |world: &mut World, cleanup: SystemCommandCleanup|
         {
-            let mut system = IntoSystem::into_system(reactor);
-            system.initialize(world);
-            CallbackSystem::<(), ()>::run_initialized_system(world, &mut system, (), move |w| cleanup.run(w));
+            let mut callback = RawCallbackSystem::<(), (), S::System>::new(reactor);
+            callback.run_with_cleanup(world, (), move |w| cleanup.run(w));
             world.get_entity_mut(entity).map(|e| e.despawn());
             world.syscall(revoke_token_clone, revoke_reactor_triggers);
         });

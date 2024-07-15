@@ -201,7 +201,48 @@ impl<T: Send + Sync + 'static, I, O> SysCall<T, I, O>
 
 //-------------------------------------------------------------------------------------------------------------------
 
+/// Runs a system with cleanup that occurs between running the system and applying deferred commands.
+///
+/// This function assumes `system` has already been initialized in the world.
+pub fn run_initialized_system<I, O>(
+    world: &mut World,
+    system: &mut dyn System<In = I, Out = O>,
+    input: I,
+    cleanup: impl FnOnce(&mut World) + Send + Sync + 'static
+) -> O
+where
+    I: Send + Sync + 'static,
+    O: Send + Sync + 'static
+{
+    if system.is_exclusive() {
+        // Add the cleanup to run before any commands added by the system.
+        world.commands().add(move |world: &mut World| (cleanup)(world));
+        system.run(input, world)
+    } else {
+        // For non-exclusive systems we need to run them unsafe because the safe version automatically
+        // calls `apply_deferred`.
+        let world_cell = world.as_unsafe_world_cell();
+        system.update_archetype_component_access(world_cell);
+        // SAFETY:
+        // - We have exclusive access to the entire world.
+        // - `update_archetype_component_access` has been called.
+        let result = unsafe { system.run_unsafe(input, world_cell) };
+
+        // Run our custom cleanup method.
+        (cleanup)(world);
+
+        // apply any pending changes
+        system.apply_deferred(world);
+
+        result
+    }
+}
+
+//-------------------------------------------------------------------------------------------------------------------
+
 /// Represents a system callback.
+///
+/// See [`RawCallbackSystem`] for a wrapper around raw systems.
 #[derive(Default, Component)]
 pub enum CallbackSystem<I, O>
 {
@@ -257,7 +298,7 @@ where
         };
 
         // run the system
-        let result = Self::run_initialized_system(world, system.borrow_mut(), input, cleanup);
+        let result = run_initialized_system(world, system.borrow_mut(), input, cleanup);
 
         // Save the system for reuse.
         *self = CallbackSystem::Initialized(system);
@@ -310,36 +351,91 @@ where
             _ => false
         }
     }
+}
 
-    /// Runs a system with cleanup that occurs between running the system and applying deferred commands.
-    pub fn run_initialized_system(
+//-------------------------------------------------------------------------------------------------------------------
+
+/// Represents a system callback.
+///
+/// See [`CallbackSystem`] for a wrapper around boxed systems.
+#[derive(Default)]
+pub enum RawCallbackSystem<I, O, S: System<In = I, Out = O>>
+{
+    #[default]
+    Empty,
+    New(S),
+    Initialized(S),
+}
+
+impl<I, O, S> RawCallbackSystem<I, O, S>
+where
+    I: Send + Sync + 'static,
+    O: Send + Sync + 'static,
+    S: System<In = I, Out = O> + Send + Sync + 'static
+{
+    pub fn new<II, OO, Marker, SS>(system: SS) -> RawCallbackSystem<II, OO, SS::System>
+    where
+        SS: IntoSystem<II, OO, Marker> + Send + Sync + 'static,
+    {
+        RawCallbackSystem::New(IntoSystem::into_system(system))
+    }
+
+    pub fn initialize(&mut self, world: &mut World)
+    {
+        let RawCallbackSystem::New(system) = self else { return; };
+        system.initialize(world);
+    }
+
+    pub fn run(&mut self, world: &mut World, input: I) -> O
+    {
+        self.run_with_cleanup(world, input, |_| {})
+    }
+
+    pub fn run_with_cleanup(
+        &mut self,
         world: &mut World,
-        system: &mut dyn System<In = I, Out = O>,
         input: I,
         cleanup: impl FnOnce(&mut World) + Send + Sync + 'static
     ) -> O
     {
-        if system.is_exclusive() {
-            // Add the cleanup to run before any commands added by the system.
-            world.commands().add(move |world: &mut World| (cleanup)(world));
-            system.run(input, world)
-        } else {
-            // For non-exclusive systems we need to run them unsafe because the safe version automatically
-            // calls `apply_deferred`.
-            let world_cell = world.as_unsafe_world_cell();
-            system.update_archetype_component_access(world_cell);
-            // SAFETY:
-            // - We have exclusive access to the entire world.
-            // - `update_archetype_component_access` has been called.
-            let result = unsafe { system.run_unsafe(input, world_cell) };
+        let mut system = match std::mem::take(self)
+        {
+            RawCallbackSystem::Empty =>
+            {
+                panic!("tried running an empty RawCallbackSystem");
+            }
+            RawCallbackSystem::New(mut system) =>
+            {
+                system.initialize(world);
+                system
+            }
+            RawCallbackSystem::Initialized(system) => system,
+        };
 
-            // Run our custom cleanup method.
-            (cleanup)(world);
+        // run the system
+        let result = run_initialized_system(world, &mut system, input, cleanup);
 
-            // apply any pending changes
-            system.apply_deferred(world);
+        // Save the system for reuse.
+        *self = RawCallbackSystem::Initialized(system);
 
-            result
+        result
+    }
+
+    pub fn is_new(&self) -> bool
+    {
+        match &self
+        {
+            RawCallbackSystem::New(_) => true,
+            _ => false
+        }
+    }
+
+    pub fn is_initialized(&self) -> bool
+    {
+        match &self
+        {
+            RawCallbackSystem::Initialized(_) => true,
+            _ => false
         }
     }
 }
