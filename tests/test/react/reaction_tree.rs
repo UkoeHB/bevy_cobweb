@@ -173,3 +173,28 @@ fn infinite_recursion()
 }
 
 //-------------------------------------------------------------------------------------------------------------------
+
+// #[derive(Resource, Default)]
+// struct RecursionCount(usize);
+// #[derive(Event)]
+// struct Test;
+// const MAX_RECURSION_COUNT: usize = 1_000_000;
+// // For perf test comparison between observers and reaction trees.
+// #[test]
+// fn infinite_recursion_observers()
+// {
+//     // setup
+//     let mut app = App::new();
+//     app.init_resource::<RecursionCount>();
+//     app.world_mut().observe(|_: Trigger<Test>, mut r: ResMut<RecursionCount>| {
+//         r.0 += 1;
+//     });
+
+//     while app.world().resource::<RecursionCount>().0 <= MAX_RECURSION_COUNT
+//     {
+//         app.world_mut().trigger(Test);
+//         app.world_mut().flush();
+//     }
+// }
+
+//-------------------------------------------------------------------------------------------------------------------
