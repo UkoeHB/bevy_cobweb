@@ -24,13 +24,18 @@ where
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
-/// Executes a system on some data then apply the system's deferred commands.
+/// Executes a system on some data then applies the system's deferred commands.
 ///
-/// # WARNING
+/// The system will be cached for reuse. Subsequent calls to `syscall` with the same system will reuse the
+/// original system's state. Using `syscall` on a closure that captures data is *not* recommended.
+///
+/// Use [`WorldSyscallExt::syscall_once`] if you only need to call a system once.
+///
+/// ## WARNING
 /// If a system is called recursively, the Local system parameters of all but the outer-most invocation will not
 /// persist.
 ///
-/// # Examples
+/// ## Examples
 ///
 /// ```
 /// use bevy_cobweb::prelude::*;
@@ -116,6 +121,13 @@ pub trait WorldSyscallExt
         I: Send + Sync + 'static,
         O: Send + Sync + 'static,
         S: IntoSystem<I, O, Marker> + Send + Sync + 'static;
+
+    /// Similar to [`syscall`] except the system is not cached for reuse.
+    fn syscall_once<I, O, S, Marker>(&mut self, input: I, system: S) -> O
+    where
+        I: Send + Sync + 'static,
+        O: Send + Sync + 'static,
+        S: IntoSystem<I, O, Marker> + Send + Sync + 'static;
 }
 
 impl WorldSyscallExt for World
@@ -128,6 +140,17 @@ impl WorldSyscallExt for World
     {
         syscall(self, input, system)
     }
+
+    fn syscall_once<I, O, S, Marker>(&mut self, input: I, system: S) -> O
+    where
+        I: Send + Sync + 'static,
+        O: Send + Sync + 'static,
+        S: IntoSystem<I, O, Marker> + Send + Sync + 'static
+    {
+        let mut sys = IntoSystem::into_system(system);
+        sys.initialize(self);
+        sys.run(input, self)
+    }
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -137,6 +160,12 @@ pub trait CommandsSyscallExt
 {
     /// See [`syscall`].
     fn syscall<I, S, Marker>(&mut self, input: I, system: S)
+    where
+        I: Send + Sync + 'static,
+        S: IntoSystem<I, (), Marker> + Send + Sync + 'static;
+
+    /// Similar to [`syscall`] except the system is not cached for reuse.
+    fn syscall_once<I, S, Marker>(&mut self, input: I, system: S)
     where
         I: Send + Sync + 'static,
         S: IntoSystem<I, (), Marker> + Send + Sync + 'static;
@@ -151,6 +180,14 @@ impl CommandsSyscallExt for Commands<'_, '_>
     {
         self.add(move |world: &mut World| { world.syscall(input, system); });
     }
+
+    fn syscall_once<I, S, Marker>(&mut self, input: I, system: S)
+    where
+        I: Send + Sync + 'static,
+        S: IntoSystem<I, (), Marker> + Send + Sync + 'static
+    {
+        self.add(move |world: &mut World| { world.syscall_once(input, system); });
+    }
 }
 
 impl CommandsSyscallExt for EntityCommands<'_>
@@ -161,6 +198,14 @@ impl CommandsSyscallExt for EntityCommands<'_>
         S: IntoSystem<I, (), Marker> + Send + Sync + 'static
     {
         self.commands().syscall(input, system);
+    }
+
+    fn syscall_once<I, S, Marker>(&mut self, input: I, system: S)
+    where
+        I: Send + Sync + 'static,
+        S: IntoSystem<I, (), Marker> + Send + Sync + 'static
+    {
+        self.commands().syscall_once(input, system);
     }
 }
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## WIP
+
+### Added
+
+- Added `syscall_once` for when you only need to run a system once.
+
+
 ## [0.10.0]
 
 ### Changed
