@@ -1,5 +1,16 @@
 # Changelog
 
+## WIP
+
+### Changed
+
+- Adjusted reaction reader APIs. Instead of `read()` and `try_read()`, use `entity()` and `get()` for entity-only readers.
+
+### Added
+
+- Added `entity` and `get_entity` methods to the `EntityEvent` reader.
+
+
 ## [0.9.0]
 
 ### Changed

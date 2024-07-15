@@ -137,6 +137,7 @@ fn multisystem_scheduling()
         .update();
     let world = app.world_mut();
 
+    //todo: if this fails in bevy v0.15, it's because of system ordering
     assert_eq!(vec![1, 2, 3, 3, 4, 4], **world.resource::<TelescopeHistory>());
 }
 

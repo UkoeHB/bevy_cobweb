@@ -71,22 +71,22 @@ pub fn update_test_recorder_with_component(
 
 /// Copy test component to recorder
 pub fn update_test_recorder_on_insertion(
-    entity        : InsertionEvent<TestComponent>,
+    event         : InsertionEvent<TestComponent>,
     mut recorder  : ResMut<TestReactRecorder>,
     test_entities : Query<&React<TestComponent>>,
 ){
-    recorder.0 = test_entities.get(entity.read()).unwrap().0;
+    recorder.0 = test_entities.get(event.entity()).unwrap().0;
 }
 
 //-------------------------------------------------------------------------------------------------------------------
 
 /// Copy test component to recorder
 pub fn update_test_recorder_on_mutation(
-    entity        : MutationEvent<TestComponent>,
+    event         : MutationEvent<TestComponent>,
     mut recorder  : ResMut<TestReactRecorder>,
     test_entities : Query<&React<TestComponent>>,
 ){
-    recorder.0 = test_entities.get(entity.read()).unwrap().0;
+    recorder.0 = test_entities.get(event.entity()).unwrap().0;
 }
 
 //-------------------------------------------------------------------------------------------------------------------

@@ -234,6 +234,20 @@ impl<'w, 's, T: Send + Sync + 'static> EntityEvent<'w, 's, T>
         Some(data.read())
     }
 
+    /// Gets the target entity of the event.
+    ///
+    /// Panics if there is no event.
+    pub fn entity(&self) -> Entity
+    {
+        self.read().0
+    }
+
+    /// See [`Self::entity`].
+    pub fn get_entity(&self) -> Option<Entity>
+    {
+        self.try_read().map(|(e, _)| e)
+    }
+
     /// Returns `true` if there is nothing to read.
     ///
     /// Equivalent to `event.try_read().is_none()`.
