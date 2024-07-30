@@ -42,6 +42,12 @@ impl<C: ReactComponent> React<C>
         &mut self.component
     }
 
+    /// Allows manually triggering mutation reactions when in an exclusive context.
+    pub fn trigger_mutation(entity: Entity, world: &mut World)
+    {
+        world.syscall(entity, ReactCache::schedule_mutation_reaction::<C>);
+    }
+
     /// Mutably accesses the component without triggering reactions.
     pub fn get_noreact(&mut self) -> &mut C
     {

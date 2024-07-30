@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.10.2]
+
+### Added
+
+- Added `React::trigger_mutation` method for triggering mutations in an exclusive context.
+
 ## [0.10.1]
 
 ### Added
