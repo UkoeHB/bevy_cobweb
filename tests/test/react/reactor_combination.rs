@@ -103,8 +103,15 @@ fn reaction_telescoping_data_visibility_impl(mut c: Commands)
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
-/// Here there are two reactors to broadcasts of `usize`. The first reactor will broadcast a new event recursively
-/// until the event data reaches zero. The second reactor should be telescoped 'outside' the first reactor.
+/// Here there are two reactors to broadcasts of `usize`.
+/// 
+/// - The initial broadcast will schedule reactor 1 and reactor 2.
+/// - Reactor 1 will run once, triggering itself and reactor 2.
+/// - Reactor 1's recursive trigger will be displaced *after* reactor 2.
+/// - Reactor 2 will run.
+/// - Reactor 1 will run again, triggering itself and reactor 2.
+/// - Etc.
+/// - At the end, reactor 2 will run for the initial broadcast.
 ///
 /// Returns the expected event history after the reaction tree is processed.
 fn reaction_telescoping_inner_reactions_impl(mut c: Commands) -> Vec<usize>
@@ -129,7 +136,7 @@ fn reaction_telescoping_inner_reactions_impl(mut c: Commands) -> Vec<usize>
 
     c.react().broadcast(3usize);
 
-    vec![3, 2, 1, 0, 0, 1, 2, 3]
+    vec![3, 2, 2, 1, 1, 0, 0, 3]
 }
 
 //-------------------------------------------------------------------------------------------------------------------

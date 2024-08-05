@@ -43,7 +43,6 @@ impl SystemCommandCleanup
 ///
 /// The callback should own the actual system that you want to run. The [`SystemCommandCleanup`] callback must be invoked
 /// between running your system and calling `apply_deferred` on that system.
-//todo: wrap the callback in a trait that lets you reassign the injected callback if it is the same type
 pub struct SystemCommandCallback
 {
     inner: Box<dyn FnMut(&mut World, SystemCommandCleanup) + Send + Sync + 'static>,

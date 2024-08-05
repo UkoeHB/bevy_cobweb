@@ -22,13 +22,29 @@ pub(crate) struct DespawnAccessTracker
     ///
     /// This will be dropped after the reactor runs, allowing it to be cleaned up automatically.
     reactor_handle: Option<ReactorHandle>,
+
+    /// Reaction information cached for when the reaction system actually runs.
+    prepared: Vec<(SystemCommand, Entity, ReactorHandle)>,
 }
 
 impl DespawnAccessTracker
 {
-    /// Sets metadata for the current entity reaction.
-    pub(crate) fn start(&mut self, source: Entity, handle: ReactorHandle)
+    /// Caches metadata for an entity reaction.
+    pub(crate) fn prepare(&mut self, reactor: SystemCommand, source: Entity, handle: ReactorHandle)
     {
+        self.prepared.push((reactor, source, handle));
+    }
+
+    /// Sets metadata for the current entity reaction.
+    pub(crate) fn start(&mut self, reactor: SystemCommand)
+    {
+        let Some(pos) = self.prepared.iter().position(|(s, _, _)| *s == reactor) else {
+            tracing::error!("prepared despawn entity reaction is missing {:?}", reactor);
+            debug_assert!(false);
+            return;
+        };
+        let (_, source, handle) = self.prepared.swap_remove(pos);
+
         self.currently_reacting = true;
         self.reaction_source = source;
         self.reactor_handle = Some(handle);
@@ -62,6 +78,7 @@ impl Default for DespawnAccessTracker
             currently_reacting: false,
             reaction_source: Entity::from_raw(0u32),
             reactor_handle: None,
+            prepared: Vec::default(),
         }
     }
 }

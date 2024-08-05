@@ -340,6 +340,14 @@ fn multiple_broadcast_noninterference()
 #[test]
 fn broadcast_data_is_dropped()
 {
+    // prepare tracing
+    /*
+    let subscriber = tracing_subscriber::FmtSubscriber::builder()
+        .with_max_level(tracing::Level::TRACE)
+        .finish();
+    tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
+    */
+
     // setup
     let mut app = App::new();
     app.add_plugins(ReactPlugin);
@@ -376,7 +384,7 @@ fn broadcast_event_cleanup_on_no_run()
     // send event without any listeners
     assert!(world.get_entity(proxy_entity).is_some());
     world.syscall(signal, broadcast_signal_proxy);
-    reaction_tree(world);  //garbabe collect the entity
+    garbage_collect_entities(world);  //garbabe collect the entity
     assert!(world.get_entity(proxy_entity).is_none());
 }
 
@@ -563,7 +571,7 @@ fn entity_event_cleanup_on_no_run()
     // send event
     assert!(world.get_entity(proxy_entity).is_some());
     world.syscall((test_entity, signal), send_signal_proxy);
-    reaction_tree(world);  //garbabe collect the entity
+    garbage_collect_entities(world);  //garbabe collect the entity
     assert!(world.get_entity(proxy_entity).is_none());
 }
 

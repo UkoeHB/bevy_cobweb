@@ -27,16 +27,15 @@ impl Drop for AutoDespawnSignalInner
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
-fn auto_despawn(mut commands: Commands, despawner: Res<AutoDespawner>)
+/// Drains [`AutoDespawner`] and recursively despawns entities that were auto-despawned.
+pub fn garbage_collect_entities(world: &mut World)
 {
-    while let Some(entity) = despawner.try_recv()
+    while let Some(entity) = world.resource::<AutoDespawner>().try_recv()
     {
-        let Some(entity_commands) = commands.get_entity(entity) else { continue; };
-        entity_commands.despawn_recursive();
+        world.get_entity_mut(entity).map(|e| e.despawn_recursive());
     }
 }
 
-//-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
 /// Creates [`AutoDespawnSignal`]s.
@@ -116,7 +115,7 @@ impl AutoDespawnAppExt for App
     {
         if self.world().contains_resource::<AutoDespawner>() { return self; }
         self.insert_resource(AutoDespawner::new())
-            .add_systems(Last, auto_despawn.in_set(AutoDespawnSet))
+            .add_systems(Last, garbage_collect_entities.in_set(AutoDespawnSet))
     }
 }
 

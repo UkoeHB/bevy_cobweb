@@ -1,6 +1,6 @@
 # Reactivity Primitives
 
-Reactivity is built on system commands, system events, a core reactivity API, and a custom scheduling algorithm.
+Reactivity is built on system commands, system events, a core reactivity API, and a custom system runner.
 
 
 ## System Commands
@@ -10,7 +10,7 @@ All reactors are [`SystemCommands`](bevy_cobweb::prelude::SystemCommand).
 
 ### Spawning Systems
 
-Systems can be spawned as [`SystemCommands`](bevy_cobweb::prelude::SystemCommand) with [`Commands::spawn_system_command`](bevy_cobweb::prelude::ReactCommandsExt::spawn_system_command). System commands are similar to Bevy one-shot systems, however the actual system is wrapped in a closure that takes `World` and a [`SystemCommandCleanup`](bevy_cobweb::prelude::SystemCommandCleanup) as input. See [Scheduling](#scheduling) for more details.
+Systems can be spawned as [`SystemCommands`](bevy_cobweb::prelude::SystemCommand) with [`Commands::spawn_system_command`](bevy_cobweb::prelude::ReactCommandsExt::spawn_system_command). System commands are similar to Bevy one-shot systems, however the actual system is wrapped in a closure that takes `World` and a [`SystemCommandCleanup`](bevy_cobweb::prelude::SystemCommandCleanup) as input. See [Custom command runner](#Custom-command-runner) for more details.
 
 Example:
 ```rust
@@ -25,7 +25,7 @@ let syscommand = commands.spawn_system_command(
 
 ### Running System Commands
 
-A [`SystemCommand`](bevy_cobweb::prelude::SystemCommand) can be manually run by scheduling it as a Bevy `Command`. Scheduling a system command will cause a reaction tree to run (see [Scheduling](#scheduling)).
+A [`SystemCommand`](bevy_cobweb::prelude::SystemCommand) can be manually run by scheduling it as a Bevy `Command`.
 
 ```rust
 commands.add(syscommand);
@@ -35,7 +35,7 @@ commands.add(syscommand);
 
 ## System Events
 
-You can send data directly to a system spawned as a [`SystemCommand`](bevy_cobweb::prelude::SystemCommand) by sending it a system event.
+You can send data directly to a system spawned as a [`SystemCommand`](bevy_cobweb::prelude::SystemCommand) by sending it a system event. The biggest advantage here is being able to move data into a system.
 
 For example, using the [`SystemEvent`](bevy_cobweb::prelude::SystemEvent) system parameter to consume the event data:
 ```rust
@@ -53,8 +53,6 @@ let syscommand = commands.spawn_system_command(
 commands.send_system_event(syscommand, vec![0, 18, 42]);
 ```
 
-Sending a system event will cause a reaction tree to run (see [Scheduling](#scheduling)).
-
 
 
 ## Reactivity API
@@ -63,7 +61,7 @@ ECS reactivity is only implemented for [`ReactResource`](bevy_cobweb::prelude::R
 
 We use `ReactResource`/`ReactComponent` instead of Bevy change detection in order to achieve precise, responsive, recursive reactions with an ergonomic API. Bevy implemented [observers and hooks](https://github.com/bevyengine/bevy/pull/10839) in v0.14, however there is no hook for resource or component mutation. We may use observers under the hood to improve performance in some areas, but overall we expect the current `bevy_cobweb` API to stay the same indefinitely. Note that Bevy observers currently run around 6-10x faster than `bevy_cobweb` reactors, although this is a difference of `300ns` vs `50ns` per reaction which is insignificant for common workloads (e.g. UI interactions, low/medium-frequency resource updates, etc.). For workloads on the hot path we recommend using normal Bevy systems.
 
-A reactor will run in the first `apply_deferred` after its reaction trigger is detected. If a reactor triggers other reactors, they will run immediately after the initial reactor in a telescoping fashion until the entire tree of reactions terminates. Recursive reactions are fully supported. For more details see [Scheduling](#scheduling).
+Reactors are run in-line in the Bevy `Commands` execution flow, which means they will naturally telescope if reactions are triggered from inside other reactors. For more details see [Custom command runner](#Custom-command-runner).
 
 
 ### Registering Reactors
@@ -256,7 +254,7 @@ c.react().on(entity_event::<u32>(entity),
 
 ### One-off Reactors
 
-If you only want a reactor to run once, use [`ReactCommands::once`]:
+If you only want a reactor to run at most once, use [`ReactCommands::once`]:
 ```rust
 let entity = c.spawn(Player);
 c.react().once(broadcast::<ResetEverything>(),
@@ -276,7 +274,7 @@ Reactors are stateful boxed Bevy systems, so it is useful to manage their memory
     - See [`ReactCommands::on_persistent`](bevy_cobweb::prelude::ReactCommands::on_persistent), which returns a [`SystemCommand`](bevy_cobweb::prelude::SystemCommand).
 - [`ReactorMode::Cleanup`](bevy_cobweb::prelude::ReactorMode::Cleanup): The reactor will be cleaned up if it has no triggers, including if it started with [`despawn`](bevy_cobweb::prelude::despawn) triggers and all despawns have fired.
     - See [`ReactCommands::on`](bevy_cobweb::prelude::ReactCommands::on).
-- [`ReactorMode::Revokable`](bevy_cobweb::prelude::ReactorMode::Revokable): The reactor will be cleaned up if it has no triggers, including if it starts with [`despawn`](bevy_cobweb::prelude::despawn) triggers and all despawns have fired. Otherwise, you can revoke it manually with its [`RevokeToken`](bevy_cobweb::prelude::RevokeToken).
+- [`ReactorMode::Revokable`](bevy_cobweb::prelude::ReactorMode::Revokable): The reactor will be cleaned up if it has no triggers, including if it starts with [`despawn`](bevy_cobweb::prelude::despawn) triggers and all despawns have fired. Otherwise, you can revoke it manually with its [`RevokeToken`](bevy_cobweb::prelude::RevokeToken) and [`ReactCommands::revoke`](bevy_cobweb::prelude::ReactCommands::revoke).
     - See [`ReactCommands::on_revokable`](bevy_cobweb::prelude::ReactCommands::on_revokable), which returns a [`RevokeToken`](bevy_cobweb::prelude::RevokeToken).
 
 
@@ -392,71 +390,28 @@ impl Plugin for ExamplePlugin
 
 
 
-## Scheduling
+## Custom command runner
 
-In order to support recursive reactions and system events, `bevy_cobweb` extends Bevy's simple `Commands` feature by adding additional command-like scheduling, resulting in a 4-tier structure. Processing all of those tiers requires a custom scheduling algorithm, which we discuss below.
+We use a custom system command runner to run `bevy_cobweb` reactors and system commands. This allows us to insert cleanup logic between when the system runs and when its internally deferred commands are executed.
 
+In the current design we include entity garbage collection and component-removal and despawn reactor scheduling within the system command runner.
 
-### Commands
-
-Conceptually, the four tiers are as follows:
-
-1. Inner-system commands (`Commands`): Single-system ECS mutations and system-specific deferred logic.
-1. System commands ([`SystemCommand`](bevy_cobweb::prelude::SystemCommand)): Execution of a single system. One [`SystemCommand`](bevy_cobweb::prelude::SystemCommand) can schedule further system commands, which can be considered 'extensions' of their parent in a functional-programming sense.
-1. System events (`EventCommand`): Sending data to a system which triggers it to run. System events scheduled by other system events are then considered follow-up actions, rather than extensions of the originating event.
-1. Reactions (`ReactionCommand`): ECS mutations or reactive events that trigger a system to run. A single reaction may result in a single system running, a cascade of system commands, or a cascade of system commands followed by a series of system events. Reactions may also trigger other reactions, which will run after the previous reaction has fully resolved itself (after all system commands and events have been recursively processed).
-
-Each tier expands in a telescoping fashion. When one `Command` is done running, all commands queued by that `Command` are immediately executed before any previous commands, and so on for the other tiers.
-
-**Telescoping Caveat**
-
-Reaction trees are often triggered within normal Bevy systems by ECS mutations/events/etc. These trees will therefore run at a specific point in the command queues of the normal Bevy systems that trigger them, rather than waiting until the end of the queue.
-
-
-### Innovations
-
-There are two important innovations that the `bevy_cobweb` command-resolver algorithm introduces.
-- **Rearranged `apply_deferred`**:
-    - **The problem**: Any Bevy system can have internally deferred logic that is saved in system parameters. After a system runs, that deferred logic can be applied by calling `system.apply_deferred(&mut world)`. The problem with this is if the deferred logic includes triggers to run the same system again (e.g. because of reactivity), an error will occur because the system is currently in use.
-    - **The solution**: To solve this, `bevy_cobweb` only uses `apply_deferred` to apply the first command tier. Everything else is executed after the system has been returned to the world.
-- **Injected cleanup**: In `bevy_cobweb` you access reactive event data with the [`InsertionEvent`](bevy_cobweb::prelude::InsertionEvent), [`MutationEvent`](bevy_cobweb::prelude::MutationEvent), [`RemovalEvent`](bevy_cobweb::prelude::RemovalEvent), [`DespawnEvent`](bevy_cobweb::prelude::DespawnEvent), [`BroadcastEvent`](bevy_cobweb::prelude::BroadcastEvent), [`EntityEvent`](bevy_cobweb::prelude::EntityEvent), and [`SystemEvent`](bevy_cobweb::prelude::SystemEvent) system parameters. In order to properly set the underlying data of these parameters such that future system calls won't accidentally have access to that data, our strategy is to insert the data to custom resources and entities immediately before running [`SystemCommands`](bevy_cobweb::prelude::SystemCommand) and then remove that data immediately after the system has run but before calling `apply_deferred`. We do this with an injected cleanup callback in the system runner ([`SystemCommandCleanup`](bevy_cobweb::prelude::SystemCommandCleanup)).
-
-
-### Scheduler Algorithm
-
-The scheduler has two pieces. Note that all systems in this context are custom one-shot systems stored on entities.
-
-In order to rearrange `apply_deferred` as described, all system commands, system events, and reactions are queued within internal `CobwebCommandQueue` resources.
-
-**1. System command runner**
-
-At the lowest level is the system command runner, which executes a single scheduled system command. All Bevy `Commands` and system commands created by the system that is run will be resolved here.
-
+1. Garbage collect [`AutoDespawner`](bevy_cobweb::prelude::AutoDespawner) entities and schedule component-removal and despawn reactions.
 1. Remove the target system command from the `World`.
     1. If the system is missing, run the cleanup callback and return.
-1. Remove pre-existing pending system commands.
 1. Run the system command. Internally this does the following:
     1. Run the system on the world: `system.run((), world)`.
     1. Invoke the cleanup callback.
     1. Apply deferred: `system.apply_deferred(world)`.
+1. Garbage collect [`AutoDespawner`](bevy_cobweb::prelude::AutoDespawner) entities. Including this ensures if a system command garbage collected itself, the insertion-point will be gone so the system state will be dropped.
 1. Reinsert the system command into the `World`.
-1. Take pending system commands and run them with this system runner. Doing this will automatically cause system command telescoping.
-1. Replace pre-existing pending system commands that were removed.
+1. Garbage collect [`AutoDespawner`](bevy_cobweb::prelude::AutoDespawner) entities and schedule component-removal and despawn reactions.
 
-**2. Reaction tree**
+- **Injected cleanup**: In `bevy_cobweb` you access reactive event data with the [`InsertionEvent`](bevy_cobweb::prelude::InsertionEvent), [`MutationEvent`](bevy_cobweb::prelude::MutationEvent), [`RemovalEvent`](bevy_cobweb::prelude::RemovalEvent), [`DespawnEvent`](bevy_cobweb::prelude::DespawnEvent), [`BroadcastEvent`](bevy_cobweb::prelude::BroadcastEvent), [`EntityEvent`](bevy_cobweb::prelude::EntityEvent), and [`SystemEvent`](bevy_cobweb::prelude::SystemEvent) system parameters. In order to properly set the underlying data of these parameters such that future system calls won't accidentally have access to that data, our strategy is to insert the data to custom resources and entities immediately before running [`SystemCommands`](bevy_cobweb::prelude::SystemCommand) and then remove that data immediately after the system has run but before calling `apply_deferred`. We do this with an injected cleanup callback in the system runner ([`SystemCommandCleanup`](bevy_cobweb::prelude::SystemCommandCleanup)).
 
-Whenever a system command, system event, or reaction is scheduled, we schedule a normal Bevy `Command` that launches a reaction tree. The reaction tree will early-out if a reaction tree is already being processed.
 
-The reaction tree will fully execute all recursive system commands, system events, and reactions before returning. The algorithm is as follows:
+### Recursive system commands
 
-1. Set the reaction tree flag to prevent the tree from being recursively executed.
-1. Remove existing system events and reactions.
-1. Loop until there are no pending system commands, system events, or reactions.
-    1. Loop until there are no pending system commands or system events.
-        1. Loop until there are no pending system commands.
-            1. Pop one system command from the queue and run it with the system runner. This will internally telescope.
-        1. Remove pending system events and push them to the front of the system events queue.
-        1. Pop one system event from the queue and run it.
-    1. Remove pending reactions and push them to the front of the reactions queue.
-    1. Pop one reaction from the queue and run it.
-1. Unset the reaction tree flag now that everything has been processed.
+It is allowed for a system command to recursively schedule itself to run (or e.g. for a reactor to trigger itself), *however* recursive systems *do not* run in-line with other commands. Instead we extract them into a queue and run them after their duplicate ancestor has been re-inserted to its entity.
+
+In general, it is not recommended to use recursive system commands because the control flow becomes very convoluted, which makes code fragile and bug-prone.

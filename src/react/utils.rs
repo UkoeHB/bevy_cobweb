@@ -24,10 +24,11 @@ const ENTITY_REACTORS_WARNING_SIZE: usize = 50;
 /// normal systems that don't trigger other reactions.
 pub fn schedule_removal_and_despawn_reactors(world: &mut World)
 {
-    let mut cache = world.remove_resource::<ReactCache>().unwrap();
-    cache.schedule_removal_reactions(world);
-    cache.schedule_despawn_reactions(world);
-    world.insert_resource(cache);
+    world.resource_scope(|world: &mut World, mut cache: Mut<ReactCache>| {
+        cache.schedule_removal_reactions(world);
+        cache.schedule_despawn_reactions(world);
+    });
+    world.flush();
 }
 
 //-------------------------------------------------------------------------------------------------------------------

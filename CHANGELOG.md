@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.0]
+
+## Changed
+
+- Major rework of reaction trees. System commands, system events, and reactions now run in-line in the normal Bevy command flow. Only recursively invoked system commands are 'rearranged' to run outside the scope of their predecessors' deferred commands.
+
+
 ## [0.10.2]
 
 ### Added

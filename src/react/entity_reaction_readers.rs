@@ -57,13 +57,29 @@ pub(crate) struct EntityReactionAccessTracker
     reaction_source: Entity,
     /// The type of the most recent entity reaction trigger.
     reaction_type: EntityReactionType,
+
+    /// Reaction information cached for when the reaction system actually runs.
+    prepared: Vec<(SystemCommand, Entity, EntityReactionType)>,
 }
 
 impl EntityReactionAccessTracker
 {
-    /// Sets metadata for the current entity reaction.
-    pub(crate) fn start(&mut self, system: SystemCommand, source: Entity, reaction: EntityReactionType)
+    /// Caches metadata for an entity reaction.
+    pub(crate) fn prepare(&mut self, system: SystemCommand, source: Entity, reaction: EntityReactionType)
     {
+        self.prepared.push((system, source, reaction));
+    }
+
+    /// Sets metadata for the current entity reaction.
+    pub(crate) fn start(&mut self, reactor: SystemCommand)
+    {
+        let Some(pos) = self.prepared.iter().position(|(s, _, _)| *s == reactor) else {
+            tracing::error!("prepared entity reaction is missing {:?}", reactor);
+            debug_assert!(false);
+            return;
+        };
+        let (system, source, reaction) = self.prepared.swap_remove(pos);
+
         debug_assert!(!self.currently_reacting);
         self.currently_reacting = true;
         self.system = system;
@@ -111,6 +127,7 @@ impl Default for EntityReactionAccessTracker
             system: SystemCommand(Entity::PLACEHOLDER),
             reaction_source: Entity::PLACEHOLDER,
             reaction_type: EntityReactionType::Insertion(TypeId::of::<()>()),
+            prepared: Vec::default(),
         }
     }
 }

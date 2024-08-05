@@ -486,7 +486,8 @@ fn test_entity_removal()
     // no immediate reaction
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
     // check for removals (reaction)
-    reaction_tree(world);
+    garbage_collect_entities(world);
+    schedule_removal_and_despawn_reactors(world);
     assert_eq!(world.resource::<TestReactRecorder>().0, usize::MAX);
 
     // removal of already removed (no reaction)
@@ -531,7 +532,8 @@ fn component_removal()
     // no immediate reaction
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
     // check for removals (reaction)
-    reaction_tree(world);
+    garbage_collect_entities(world);
+    schedule_removal_and_despawn_reactors(world);
     assert_eq!(world.resource::<TestReactRecorder>().0, usize::MAX);
  
     // removal of already removed (no reaction)
@@ -544,7 +546,8 @@ fn component_removal()
     // no immediate reaction
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
     // check for removals (reaction)
-    reaction_tree(world);
+    garbage_collect_entities(world);
+    schedule_removal_and_despawn_reactors(world);
     assert_eq!(world.resource::<TestReactRecorder>().0, usize::MAX);
 }
 
@@ -576,7 +579,8 @@ fn entity_despawn()
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // check for despawns (no reaction before despawn)
-    reaction_tree(world);
+    garbage_collect_entities(world);
+    schedule_removal_and_despawn_reactors(world);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // despawn (reaction)
@@ -584,7 +588,8 @@ fn entity_despawn()
     // no immediate reaction
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
     // check for despawns (reaction)
-    reaction_tree(world);
+    garbage_collect_entities(world);
+    schedule_removal_and_despawn_reactors(world);
     assert_eq!(world.resource::<TestReactRecorder>().0, usize::MAX);
 
     // despawn other entity (no reaction)
@@ -625,7 +630,8 @@ fn entity_despawn_multiple_reactors()
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // check for despawns (no reaction before despawn)
-    reaction_tree(world);
+    garbage_collect_entities(world);
+    schedule_removal_and_despawn_reactors(world);
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
 
     // despawn (reaction)
@@ -633,7 +639,8 @@ fn entity_despawn_multiple_reactors()
     // no immediate reaction
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
     // check for despawns (reaction)
-    reaction_tree(world);
+    garbage_collect_entities(world);
+    schedule_removal_and_despawn_reactors(world);
     assert_eq!(world.resource::<TestReactRecorder>().0, usize::MAX / 2);
 
     // despawn other entity (no reaction)
@@ -670,7 +677,8 @@ fn component_removal_by_despawn()
     // no immediate reaction
     assert_eq!(world.resource::<TestReactRecorder>().0, 0);
     // check for removals (reaction)
-    reaction_tree(world);
+    garbage_collect_entities(world);
+    schedule_removal_and_despawn_reactors(world);
     assert_eq!(world.resource::<TestReactRecorder>().0, usize::MAX);
 }
 
@@ -680,6 +688,14 @@ fn component_removal_by_despawn()
 #[test]
 fn entity_reaction_reader_exclusion()
 {
+    // prepare tracing
+    /*
+    let subscriber = tracing_subscriber::FmtSubscriber::builder()
+        .with_max_level(tracing::Level::TRACE)
+        .finish();
+    tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
+    */
+
     // setup
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
@@ -705,12 +721,14 @@ fn entity_reaction_reader_exclusion()
 
     // removal should not panic
     world.syscall(test_entity, remove_from_test_entity);
-    reaction_tree(world);
+    garbage_collect_entities(world);
+    schedule_removal_and_despawn_reactors(world);
     assert_eq!(world.resource::<TestReactRecorder>().0, 100);
 
     // despawn should not panic
     world.despawn(test_entity);
-    reaction_tree(world);
+    garbage_collect_entities(world);
+    schedule_removal_and_despawn_reactors(world);
     assert_eq!(world.resource::<TestReactRecorder>().0, 1000);
 }
 
@@ -758,7 +776,8 @@ fn despawn_reactor_cleanup()
     // despawn the test entity, which should cause the reactor to run and then be dropped, which will despawn the proxy
     world.despawn(test_entity);
     assert!(world.get_entity(proxy_entity).is_some());
-    reaction_tree(world);
+    garbage_collect_entities(world);
+    schedule_removal_and_despawn_reactors(world);
     assert!(world.get_entity(proxy_entity).is_none());
 }
 
@@ -783,7 +802,8 @@ fn despawn_reactor_no_cleanup()
     // despawn the test entity, which should cause the reactor to run and then be dropped, which will despawn the proxy
     world.despawn(test_entity);
     assert!(world.get_entity(proxy_entity).is_some());
-    reaction_tree(world);
+    garbage_collect_entities(world);
+    schedule_removal_and_despawn_reactors(world);
     assert!(world.get_entity(proxy_entity).is_some());
 }
 

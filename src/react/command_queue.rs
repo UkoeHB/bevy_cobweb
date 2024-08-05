@@ -51,7 +51,7 @@ impl<T: Send + Sync + 'static> CobwebCommandQueue<T>
     }
 
     /// Pushes a list of cobweb commands to the end of the command queue then returns the inner queue.
-    pub(crate) fn append_and_remove(&mut self, mut new: VecDeque<T>) -> VecDeque<T>
+    pub(crate) fn _append_and_remove(&mut self, mut new: VecDeque<T>) -> VecDeque<T>
     {
         if new.len() > 0
         {

@@ -112,14 +112,6 @@ fn revoke_reactor(
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
-fn revoke_reactor_triggers(In(revoke_token): In<RevokeToken>, mut c: Commands)
-{
-    c.react().revoke(revoke_token);
-}
-
-//-------------------------------------------------------------------------------------------------------------------
-//-------------------------------------------------------------------------------------------------------------------
-
 /// Setting for controlling how reactors are cleaned up.
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum ReactorMode
@@ -344,7 +336,7 @@ impl<'w, 's> ReactCommands<'w, 's>
             let mut callback = RawCallbackSystem::new(reactor);
             callback.run_with_cleanup(world, (), move |w| cleanup.run(w));
             world.get_entity_mut(entity).map(|e| e.despawn());
-            world.syscall(revoke_token_clone, revoke_reactor_triggers);
+            world.react(|rc| rc.revoke(revoke_token_clone));
         });
         let once_system = move |world: &mut World, cleanup: SystemCommandCleanup|
         {

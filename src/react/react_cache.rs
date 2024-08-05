@@ -84,7 +84,7 @@ impl RemovalChecker
 
 /// Schedules reactions to an entity mutation.
 fn schedule_entity_reaction_impl(
-    queue           : &mut CobwebCommandQueue<ReactionCommand>,
+    buffer          : &mut Vec<ReactionCommand>,
     reaction_source : Entity,
     reaction_type   : EntityReactionType,
     entity_reactors : &EntityReactors
@@ -94,7 +94,7 @@ fn schedule_entity_reaction_impl(
 
     for reactor in entity_reactors.iter_rtype(reaction_type)
     {
-        queue.push(
+        buffer.push(
                 ReactionCommand::EntityReaction{
                     reaction_source,
                     reaction_type,
@@ -110,11 +110,8 @@ fn schedule_entity_reaction_impl(
 #[derive(Resource)]
 pub(crate) struct ReactCache
 {
-    /// flag that records whether a reaction tree is currently running
-    in_reaction_tree: bool,
-
-    /// query to get read-access to entity reactors
-    entity_reactors_query: Option<QueryState<&'static EntityReactors>>,
+    /// Cached buffer for collecting reaction commands.
+    reaction_commands_buffer: Vec<ReactionCommand>,
 
     /// Per-component reactors
     component_reactors: HashMap<TypeId, ComponentReactors>,
@@ -145,22 +142,6 @@ pub(crate) struct ReactCache
 
 impl ReactCache
 {
-    /// Starts a reaction tree.
-    /// 
-    /// Returns `false` if we are already in a reaction tree.
-    pub(crate) fn start_reaction_tree(&mut self) -> bool
-    {
-        if self.in_reaction_tree { return false; }
-        self.in_reaction_tree = true;
-        true
-    }
-
-    /// Ends a reaction tree.
-    pub(crate) fn end_reaction_tree(&mut self)
-    {
-        self.in_reaction_tree = false;
-    }
-
     pub(crate) fn despawn_sender(&self) -> Sender<Entity>
     {
         self.despawn_sender.clone()
@@ -346,9 +327,8 @@ impl ReactCache
     /// Queues reactions to a component insertion on an entity.
     pub(crate) fn schedule_insertion_reaction<C: ReactComponent>(
         In(entity)      : In<Entity>,
-        cache           : Res<ReactCache>,
+        mut cache       : ResMut<ReactCache>,
         mut commands    : Commands,
-        mut queue       : ResMut<CobwebCommandQueue<ReactionCommand>>,
         entity_reactors : Query<&EntityReactors>,
     ){
         let rtype = EntityReactionType::Insertion(TypeId::of::<C>());
@@ -356,7 +336,11 @@ impl ReactCache
         // entity-specific reactors
         if let Ok(entity_reactors) = entity_reactors.get(entity)
         {
-            let _ = schedule_entity_reaction_impl(&mut queue, entity, rtype, &entity_reactors);
+            let _ = schedule_entity_reaction_impl(&mut cache.reaction_commands_buffer, entity, rtype, &entity_reactors);
+        }
+
+        for command in cache.reaction_commands_buffer.drain(..) {
+            commands.add(command);
         }
 
         // entity-agnostic component reactors
@@ -364,7 +348,7 @@ impl ReactCache
         {
             for handle in handlers.insertion_callbacks.iter()
             {
-                queue.push(
+                commands.add(
                         ReactionCommand::EntityReaction{
                             reaction_source : entity,
                             reaction_type   : rtype,
@@ -373,17 +357,13 @@ impl ReactCache
                     );
             }
         }
-
-        // reaction tree
-        commands.add(reaction_tree);
     }
 
     /// Queues reactions to a component mutation on an entity.
     pub(crate) fn schedule_mutation_reaction<C: ReactComponent>(
         In(entity)      : In<Entity>,
-        cache           : Res<ReactCache>,
+        mut cache       : ResMut<ReactCache>,
         mut commands    : Commands,
-        mut queue       : ResMut<CobwebCommandQueue<ReactionCommand>>,
         entity_reactors : Query<&EntityReactors>,
     ){
         let rtype = EntityReactionType::Mutation(TypeId::of::<C>());
@@ -391,7 +371,11 @@ impl ReactCache
         // entity-specific reactors
         if let Ok(entity_reactors) = entity_reactors.get(entity)
         {
-            let _ = schedule_entity_reaction_impl(&mut queue, entity, rtype, &entity_reactors);
+            let _ = schedule_entity_reaction_impl(&mut cache.reaction_commands_buffer, entity, rtype, &entity_reactors);
+        }
+
+        for command in cache.reaction_commands_buffer.drain(..) {
+            commands.add(command);
         }
 
         // entity-agnostic component reactors
@@ -399,7 +383,7 @@ impl ReactCache
         {
             for handle in handlers.mutation_callbacks.iter()
             {
-                queue.push(
+                commands.add(
                         ReactionCommand::EntityReaction{
                             reaction_source : entity,
                             reaction_type   : rtype,
@@ -408,9 +392,6 @@ impl ReactCache
                     );
             }
         }
-
-        // reaction tree
-        commands.add(reaction_tree);
     }
 
     /// Schedules component removal reactors.
@@ -418,8 +399,7 @@ impl ReactCache
     {
         // extract cached
         let mut buffer = self.removal_buffer.take().unwrap_or_else(|| Vec::default());
-        let mut query  = self.entity_reactors_query.take().unwrap_or_else(|| world.query::<&EntityReactors>());
-        let mut queue  = world.remove_resource::<CobwebCommandQueue<ReactionCommand>>().unwrap();
+        let mut commands_buff = std::mem::take(&mut self.reaction_commands_buffer);
 
         // process all removal checkers
         for checker in &mut self.removal_checkers
@@ -433,21 +413,26 @@ impl ReactCache
             for entity in buffer.iter()
             {
                 // entity-specific component reactors
-                if let Ok(entity_reactors) = query.get(world, *entity)
+                if let Some(entity_reactors) = world.get_mut::<EntityReactors>(*entity)
                 {
                     schedule_entity_reaction_impl(
-                            &mut queue,
+                            &mut commands_buff,
                             *entity,
                             rtype,
                             &entity_reactors
                         );
                 }
 
+                // Need to do this in a separate step due to borrow checker on world mut access.
+                for command in commands_buff.drain(..) {
+                    world.commands().add(command);
+                }
+
                 // entity-agnostic component reactors
                 let Some(reactors) = self.component_reactors.get(&checker.component_id) else { continue; };
                 for handle in reactors.removal_callbacks.iter()
                 {
-                    queue.push(
+                    world.commands().add(
                             ReactionCommand::EntityReaction{
                                 reaction_source : *entity,
                                 reaction_type   : rtype,
@@ -460,10 +445,7 @@ impl ReactCache
 
         // return cached
         self.removal_buffer = Some(buffer);
-        self.entity_reactors_query = Some(query);
-        world.insert_resource(queue);
-
-        // note: `reaction_tree` is not scheduled here because removals/despawns are handled separately
+        self.reaction_commands_buffer = commands_buff;
     }
 
     /// Queues reactions to an entity event.
@@ -471,7 +453,6 @@ impl ReactCache
         In((target, event)) : In<(Entity, E)>,
         mut commands        : Commands,
         cache               : Res<ReactCache>,
-        mut queue           : ResMut<CobwebCommandQueue<ReactionCommand>>,
         entity_reactors     : Query<&EntityReactors>,
     ){
         // get reactors
@@ -485,21 +466,18 @@ impl ReactCache
         if num == 0 { return; }
 
         // prep entity data
-        let data_entity = commands.spawn(EntityEventData::new(target, event)).id();
+        let data_entity = commands.spawn((DataEntityCounter::new(num), EntityEventData::new(target, event))).id();
 
         // entity-specific reactors
-        let mut count = 0;
         if let Ok(entity_reactors) = entity_reactors
         {
             for reactor in entity_reactors.iter_rtype(reaction_type)
             {
-                count += 1;
-                queue.push(
+                commands.add(
                         ReactionCommand::EntityEvent{
                             target,
                             data_entity,
                             reactor,
-                            last_reader: count == num,
                         }
                     );
             }            
@@ -511,26 +489,20 @@ impl ReactCache
             // queue reactors
             for handle in handlers.iter()
             {
-                count += 1;
-                queue.push(
+                commands.add(
                     ReactionCommand::EntityEvent{
                         target,
                         data_entity,
                         reactor: handle.sys_command(),
-                        last_reader: count == num,
                     }
                 );
             }
         }
-
-        // reaction tree
-        commands.add(reaction_tree);
     }
 
     /// Queues reactions to tracked despawns.
     pub(crate) fn schedule_despawn_reactions(&mut self, world: &mut World)
     {
-        let mut queue = world.resource_mut::<CobwebCommandQueue<ReactionCommand>>();
         while let Ok(despawned_entity) = self.despawn_receiver.try_recv()
         {
             let Some(mut despawn_reactors) = self.despawn_reactors.remove(&despawned_entity) else { continue; };
@@ -538,7 +510,7 @@ impl ReactCache
             // queue despawn callbacks
             for handle in despawn_reactors.drain(..)
             {
-                queue.push(
+                world.commands().add(
                         ReactionCommand::Despawn{
                             reaction_source : despawned_entity,
                             reactor         : handle.sys_command(),
@@ -547,30 +519,22 @@ impl ReactCache
                     );
             }
         }
-
-        // note: `reaction_tree` is not scheduled here because removals/despawns are handled separately
     }
 
     /// Queues reactions to a resource mutation.
     pub(crate) fn schedule_resource_mutation_reaction<R: ReactResource>(
         cache        : Res<ReactCache>,
         mut commands : Commands,
-        mut queue    : ResMut<CobwebCommandQueue<ReactionCommand>>,
     ){
         let Some(handlers) = cache.resource_reactors.get(&TypeId::of::<R>()) else { return; };
 
         // queue reactors
         for handle in handlers.iter()
         {
-            queue.push(
-                ReactionCommand::Resource{
-                    reactor: handle.sys_command(),
-                }
+            commands.add(
+                ReactionCommand::Resource{ reactor: handle.sys_command() }
             );
         }
-
-        // reaction tree
-        commands.add(reaction_tree);
     }
 
     /// Queues reactions to a broadcasted event.
@@ -578,7 +542,6 @@ impl ReactCache
         In(event)    : In<E>,
         cache        : Res<ReactCache>,
         mut commands : Commands,
-        mut queue    : ResMut<CobwebCommandQueue<ReactionCommand>>,
     ){
         let Some(handlers) = cache.broadcast_reactors.get(&TypeId::of::<E>()) else { return; };
 
@@ -587,22 +550,15 @@ impl ReactCache
         if num == 0 { return; }
 
         // prep event data
-        let data_entity = commands.spawn(BroadcastEventData::new(event)).id();
+        let data_entity = commands.spawn((DataEntityCounter::new(num), BroadcastEventData::new(event))).id();
 
         // queue reactors
-        for (idx, handle) in handlers.iter().enumerate()
+        for handle in handlers.iter()
         {
-            queue.push(
-                ReactionCommand::BroadcastEvent{
-                    data_entity,
-                    reactor     : handle.sys_command(),
-                    last_reader : idx + 1 == num,
-                }
+            commands.add(
+                ReactionCommand::BroadcastEvent{ data_entity, reactor: handle.sys_command() }
             );
         }
-
-        // reaction tree
-        commands.add(reaction_tree);
     }
 }
 
@@ -614,8 +570,7 @@ impl Default for ReactCache
         let (despawn_sender, despawn_receiver) = crossbeam::channel::unbounded();
 
         Self{
-            in_reaction_tree      : false,
-            entity_reactors_query : None,
+            reaction_commands_buffer : Vec::default(),
             component_reactors    : HashMap::default(),
             tracked_removals      : HashSet::default(),
             removal_checkers      : Vec::new(),

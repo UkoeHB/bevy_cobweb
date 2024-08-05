@@ -1,4 +1,5 @@
 //local shortcuts
+use crate::prelude::SystemCommand;
 
 //third-party shortcuts
 use bevy::ecs::system::SystemParam;
@@ -17,13 +18,29 @@ pub(crate) struct SystemEventAccessTracker
     currently_reacting: bool,
     /// The entity where system event data is stored.
     data_entity: Entity,
+
+    /// Information cached for when the system actually runs.
+    prepared: Vec<(SystemCommand, Entity)>,
 }
 
 impl SystemEventAccessTracker
 {
-    /// Sets the 'is reacting' flag.
-    pub(crate) fn start(&mut self, data_entity: Entity)
+    /// Caches metadata for a system event.
+    pub(crate) fn prepare(&mut self, system: SystemCommand, data_entity: Entity)
     {
+        self.prepared.push((system, data_entity));
+    }
+
+    /// Sets metadata for the current entity reaction.
+    pub(crate) fn start(&mut self, reactor: SystemCommand)
+    {
+        let Some(pos) = self.prepared.iter().position(|(s, _)| *s == reactor) else {
+            tracing::error!("prepared system event is missing {:?}", reactor);
+            debug_assert!(false);
+            return;
+        };
+        let (_, data_entity) = self.prepared.swap_remove(pos);
+
         debug_assert!(!self.currently_reacting);
         self.currently_reacting = true;
         self.data_entity = data_entity;
@@ -58,6 +75,7 @@ impl Default for SystemEventAccessTracker
         Self{
             currently_reacting: false,
             data_entity: Entity::from_raw(0u32),
+            prepared: Vec::default(),
         }
     }
 }

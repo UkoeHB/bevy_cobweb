@@ -44,7 +44,7 @@ fn command_ordering_impl(mut c: Commands) -> Vec<usize>
     );
     c.add(parent);
 
-    vec![1, 2, 3]
+    vec![3, 2, 1]
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -102,7 +102,7 @@ fn invoke_echo_system(event: BroadcastEvent<usize>, mut c: Commands)
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
-// A system command, system event, and reaction are all executed in that order even when scheduled out of order.
+// A system command, system event, and reaction are all executed in that order.
 #[test]
 fn command_ordering()
 {
