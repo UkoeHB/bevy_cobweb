@@ -157,10 +157,8 @@ fn cleanup_ordering()
 
 //-------------------------------------------------------------------------------------------------------------------
 
-// If reactions infinitely recurse then it should panic.
-// - Disabled because it takes a long time.
+// If reactions infinitely recurse then it will stack overflow.
 // #[test]
-// #[should_panic]
 // fn infinite_recursion()
 // {
 //     // setup
