@@ -32,6 +32,7 @@ impl<T: WorldReactor> WorldReactorRes<T>
 ///
 /// Reactors with no starting triggers are registered with [`ReactAppExt::add_reactor`].
 /// Reactors with starting triggers are registered with [`ReactAppExt::add_reactor_with`].
+/// Reactors with *only* starting triggers can be registered with [`ReactAppExt::add_simple_reactor`].
 ///
 /// The reactor can be accessed with the [`Reactor`] system param.
 ///

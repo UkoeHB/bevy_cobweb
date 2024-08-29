@@ -1,8 +1,15 @@
 # Changelog
 
+## [0.11.1]
+
+### Added
+
+- `App::add_simple_reactor` extension method as shorthand for registering a persistent reactor.
+
+
 ## [0.11.0]
 
-## Changed
+### Changed
 
 - Major rework of reaction trees. System commands, system events, and reactions now run in-line in the normal Bevy command flow. Only recursively invoked system commands are 'rearranged' to run outside the scope of their predecessors' deferred commands.
 

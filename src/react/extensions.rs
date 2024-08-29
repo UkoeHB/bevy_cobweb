@@ -26,6 +26,20 @@ pub trait ReactAppExt
     /// The reactor be accessed with the [`Reactor`] system param.
     fn add_reactor_with<R: WorldReactor>(&mut self, reactor: R, triggers: R::StartingTriggers) -> &mut Self;
 
+    /// Adds a [`WorldReactor`] to the app with *only* starting triggers.
+    ///
+    /// Equivalent to:
+    /*
+    ```rust
+    app.react(|rc| rc.on_persistent(triggers, reactor));
+    ```
+    */
+    fn add_simple_reactor<M>(
+        &mut self,
+        triggers: impl ReactionTriggerBundle,
+        reactor: impl IntoSystem<(), (), M> + Send + Sync + 'static
+    ) -> &mut Self;
+
     /// Adds an [`EntityWorldReactor`] to the app.
     ///
     /// The reactor can be accessed with the [`EntityReactor`] system param.
@@ -74,6 +88,23 @@ impl ReactAppExt for App
             }
         );
         self
+    }
+
+    fn add_simple_reactor<M>(
+        &mut self,
+        triggers: impl ReactionTriggerBundle,
+        reactor: impl IntoSystem<(), (), M> + Send + Sync + 'static
+    ) -> &mut Self
+    {
+        // Make sure app is ready to use ReactCommands.
+        if !self.world().contains_resource::<ReactCache>()
+        {
+            self.init_resource::<ReactCache>();
+        }
+        self.setup_auto_despawn();
+
+        // Add reactor.
+        self.react(|rc| rc.on_persistent(triggers, reactor))
     }
 
     fn add_entity_reactor<R: EntityWorldReactor>(&mut self, reactor: R) -> &mut Self
