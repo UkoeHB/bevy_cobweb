@@ -30,9 +30,9 @@ impl<T: WorldReactor> WorldReactorRes<T>
 
 /// Trait for persistent reactors that are registered in the world.
 ///
-/// Reactors with no starting triggers are registered with [`ReactAppExt::add_reactor`].
-/// Reactors with starting triggers are registered with [`ReactAppExt::add_reactor_with`].
-/// Reactors with *only* starting triggers can be registered with [`ReactAppExt::add_simple_reactor`].
+/// Reactors with no starting triggers are registered with [`ReactAppExt::add_world_reactor`].
+/// Reactors with starting triggers are registered with [`ReactAppExt::add_world_reactor_with`].
+/// Reactors with *only* starting triggers can be registered with [`ReactAppExt::add_reactor`].
 ///
 /// The reactor can be accessed with the [`Reactor`] system param.
 ///
@@ -65,14 +65,14 @@ impl Plugin for AddReactorPlugin
 {
     fn build(&mut self)
     {
-        self.add_reactor(MyReactor);
+        self.add_world_reactor(MyReactor);
     }
 }
 ```
 */
 pub trait WorldReactor: Send + Sync + 'static
 {
-    /// Triggers that must be added when adding the reactor to your app with [`ReactAppExt::add_reactor_with].
+    /// Triggers that must be added when adding the reactor to your app with [`ReactAppExt::add_world_reactor_with].
     type StartingTriggers: ReactionTriggerBundle;
     /// Triggers that can be added to the reactor with [`Reactor::add`].
     type Triggers: ReactionTriggerBundle;
@@ -103,7 +103,7 @@ impl<'w, T: WorldReactor> Reactor<'w, T>
         else
         {
             tracing::warn!("failed adding starting triggers, world reactor {:?} is missing; add it to your app with \
-                ReactAppExt::add_reactor", type_name::<T>());
+                ReactAppExt::add_world_reactor", type_name::<T>());
             return false;
         };
 
@@ -120,7 +120,7 @@ impl<'w, T: WorldReactor> Reactor<'w, T>
         else
         {
             tracing::warn!("failed adding triggers, world reactor {:?} is missing; add it to your app with \
-                ReactAppExt::add_reactor", type_name::<T>());
+                ReactAppExt::add_world_reactor", type_name::<T>());
             return false;
         };
 
@@ -137,7 +137,7 @@ impl<'w, T: WorldReactor> Reactor<'w, T>
         else
         {
             tracing::warn!("failed removing triggers, world reactor {:?} is missing; add it to your app with \
-                ReactAppExt::add_reactor", type_name::<T>());
+                ReactAppExt::add_world_reactor", type_name::<T>());
             return false;
         };
 
@@ -155,7 +155,7 @@ impl<'w, T: WorldReactor> Reactor<'w, T>
         else
         {
             tracing::warn!("failed running world reactor {:?} because it is missing; add it to your app with \
-                ReactAppExt::add_reactor", type_name::<T>());
+                ReactAppExt::add_world_reactor", type_name::<T>());
             return false;
         };
 

@@ -150,7 +150,7 @@ impl<'w, T: EntityWorldReactor> EntityReactor<'w, T>
         else
         {
             tracing::warn!("failed adding listener, entity world reactor {:?} is missing; add it to your app with \
-                ReactAppExt::add_reactor", type_name::<T>());
+                ReactAppExt::add_world_reactor", type_name::<T>());
             return false;
         };
 
@@ -176,7 +176,7 @@ impl<'w, T: EntityWorldReactor> EntityReactor<'w, T>
         else
         {
             tracing::warn!("failed removing triggers, entity world reactor {:?} is missing; add it to your app with \
-                ReactAppExt::add_reactor", type_name::<T>());
+                ReactAppExt::add_world_reactor", type_name::<T>());
             return false;
         };
 

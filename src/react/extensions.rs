@@ -14,18 +14,6 @@ use bevy::ecs::world::Command;
 /// Extends `App` with reactivity helpers.
 pub trait ReactAppExt
 {
-    /// Adds a [`WorldReactor`] to the app.
-    ///
-    /// The reactor can be accessed with the [`Reactor`] system param.
-    fn add_reactor<R>(&mut self, reactor: R) -> &mut Self
-    where
-        R: WorldReactor<StartingTriggers = ()>;
-
-    /// Adds a [`WorldReactor`] to the app with starting triggers.
-    ///
-    /// The reactor be accessed with the [`Reactor`] system param.
-    fn add_reactor_with<R: WorldReactor>(&mut self, reactor: R, triggers: R::StartingTriggers) -> &mut Self;
-
     /// Adds a [`WorldReactor`] to the app with *only* starting triggers.
     ///
     /// Equivalent to:
@@ -34,24 +22,49 @@ pub trait ReactAppExt
     app.react(|rc| rc.on_persistent(triggers, reactor));
     ```
     */
-    fn add_simple_reactor<M>(
+    fn add_reactor<M>(
         &mut self,
         triggers: impl ReactionTriggerBundle,
         reactor: impl IntoSystem<(), (), M> + Send + Sync + 'static
     ) -> &mut Self;
-
+    /// Adds a [`WorldReactor`] to the app.
+    ///
+    /// The reactor can be accessed with the [`Reactor`] system param.
+    fn add_world_reactor<R>(&mut self, reactor: R) -> &mut Self
+    where
+        R: WorldReactor<StartingTriggers = ()>;
+    /// Adds a [`WorldReactor`] to the app with starting triggers.
+    ///
+    /// The reactor be accessed with the [`Reactor`] system param.
+    fn add_world_reactor_with<R: WorldReactor>(&mut self, reactor: R, triggers: R::StartingTriggers) -> &mut Self;
     /// Adds an [`EntityWorldReactor`] to the app.
     ///
     /// The reactor can be accessed with the [`EntityReactor`] system param.
     fn add_entity_reactor<R: EntityWorldReactor>(&mut self, reactor: R) -> &mut Self;
-
     /// Provides access to [`ReactCommands`].
     fn react<T>(&mut self, callback: impl FnOnce(&mut ReactCommands) -> T) -> &mut Self;
 }
 
 impl ReactAppExt for App
 {
-    fn add_reactor<R>(&mut self, reactor: R) -> &mut Self
+    fn add_reactor<M>(
+        &mut self,
+        triggers: impl ReactionTriggerBundle,
+        reactor: impl IntoSystem<(), (), M> + Send + Sync + 'static
+    ) -> &mut Self
+    {
+        // Make sure app is ready to use ReactCommands.
+        if !self.world().contains_resource::<ReactCache>()
+        {
+            self.init_resource::<ReactCache>();
+        }
+        self.setup_auto_despawn();
+
+        // Add reactor.
+        self.react(|rc| rc.on_persistent(triggers, reactor))
+    }
+
+    fn add_world_reactor<R>(&mut self, reactor: R) -> &mut Self
     where
         R: WorldReactor<StartingTriggers = ()>
     {
@@ -64,7 +77,7 @@ impl ReactAppExt for App
         self
     }
 
-    fn add_reactor_with<R: WorldReactor>(&mut self, reactor: R, triggers: R::StartingTriggers) -> &mut Self
+    fn add_world_reactor_with<R: WorldReactor>(&mut self, reactor: R, triggers: R::StartingTriggers) -> &mut Self
     {
         if self.world().contains_resource::<WorldReactorRes<R>>()
         {
@@ -88,23 +101,6 @@ impl ReactAppExt for App
             }
         );
         self
-    }
-
-    fn add_simple_reactor<M>(
-        &mut self,
-        triggers: impl ReactionTriggerBundle,
-        reactor: impl IntoSystem<(), (), M> + Send + Sync + 'static
-    ) -> &mut Self
-    {
-        // Make sure app is ready to use ReactCommands.
-        if !self.world().contains_resource::<ReactCache>()
-        {
-            self.init_resource::<ReactCache>();
-        }
-        self.setup_auto_despawn();
-
-        // Add reactor.
-        self.react(|rc| rc.on_persistent(triggers, reactor))
     }
 
     fn add_entity_reactor<R: EntityWorldReactor>(&mut self, reactor: R) -> &mut Self
@@ -277,7 +273,7 @@ pub trait ReactEntityCommandsExt
     fn react(&mut self) -> ReactCommands<'_, '_>;
 
     /// Registers the current entity with an [`EntityWorldReactor`].
-    fn add_reactor<T: EntityWorldReactor>(&mut self, data: T::Local);
+    fn add_world_reactor<T: EntityWorldReactor>(&mut self, data: T::Local);
 }
 
 impl<'a> ReactEntityCommandsExt for EntityCommands<'a>
@@ -287,7 +283,7 @@ impl<'a> ReactEntityCommandsExt for EntityCommands<'a>
         ReactCommands{ commands: self.commands() }
     }
 
-    fn add_reactor<T: EntityWorldReactor>(&mut self, data: T::Local)
+    fn add_world_reactor<T: EntityWorldReactor>(&mut self, data: T::Local)
     {
         let id = self.id();
         self.commands().syscall((id, data),

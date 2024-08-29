@@ -319,7 +319,7 @@ Add the reactor to your app:
 ```rust
 fn setup(app: &mut App)
 {
-    app.add_reactor_with(DemoReactor, mutation::<A>());
+    app.add_world_reactor_with(DemoReactor, mutation::<A>());
 }
 ```
 

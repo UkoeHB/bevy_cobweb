@@ -150,7 +150,7 @@ fn cleanup_ordering()
     // setup
     let mut app = App::new();
     app.add_plugins(ReactPlugin)
-        .react(|rc| rc.on_persistent(broadcast::<usize>(), invoke_echo_system))
+        .add_reactor(broadcast::<usize>(), invoke_echo_system)
         .update();
     app.react(|rc| rc.broadcast(0usize));
 }
@@ -164,9 +164,9 @@ fn cleanup_ordering()
 //     // setup
 //     let mut app = App::new();
 //     app.add_plugins(ReactPlugin)
-//         .react(|rc| rc.on_persistent(broadcast::<usize>(), |mut c: Commands| {
+//         .add_reactor(broadcast::<usize>(), |mut c: Commands| {
 //             c.react().broadcast(0usize);
-//         }))
+//         })
 //         .update();
 //     app.react(|rc| rc.broadcast(0usize));
 // }

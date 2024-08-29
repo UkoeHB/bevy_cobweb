@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.0]
+
+### Changed
+
+- Rename `add_simple_reactor -> add_world_reactor`, `add_world_reactor -> add_world_reactor`, `add_world_reactor_with -> add_world_reactor_with`.
+
+
 ## [0.11.1]
 
 ### Added
