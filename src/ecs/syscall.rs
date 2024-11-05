@@ -40,16 +40,16 @@ where
 /// ```
 /// use bevy_cobweb::prelude::*;
 /// use bevy::prelude::*;
-/// 
+///
 /// // normal system: takes an input and sets a local
 /// fn test_system(In(input): In<u16>, mut local: Local<u16>)
 /// {
 ///     assert_eq!(input, *local);
 ///     *local += 1;
 /// }
-/// 
+///
 /// let mut world = World::new();
-/// 
+///
 /// world.syscall(0u16, test_system);
 /// world.syscall(1u16, test_system);  //Local is preserved
 ///
@@ -58,9 +58,9 @@ where
 /// {
 ///     input * 2
 /// }
-/// 
+///
 /// let mut world = World::new();
-/// 
+///
 /// assert_eq!(world.syscall(1u16, test_function), 2u16);
 /// ```
 ///
@@ -245,7 +245,7 @@ impl CommandsSyscallExt for Commands<'_, '_>
         I: Send + Sync + 'static,
         S: IntoSystem<I, (), Marker> + Send + Sync + 'static
     {
-        self.add(move |world: &mut World| { world.syscall(input, system); });
+        self.queue(move |world: &mut World| { world.syscall(input, system); });
     }
 
     fn syscall_with_validation<I, S, Marker>(&mut self, input: I, system: S, validation: fn(&mut World))
@@ -253,7 +253,7 @@ impl CommandsSyscallExt for Commands<'_, '_>
         I: Send + Sync + 'static,
         S: IntoSystem<I, (), Marker> + Send + Sync + 'static
     {
-        self.add(move |world: &mut World| { world.syscall_with_validation(input, system, validation); });
+        self.queue(move |world: &mut World| { world.syscall_with_validation(input, system, validation); });
     }
 
     fn syscall_once<I, S, Marker>(&mut self, input: I, system: S)
@@ -261,7 +261,7 @@ impl CommandsSyscallExt for Commands<'_, '_>
         I: Send + Sync + 'static,
         S: IntoSystem<I, (), Marker> + Send + Sync + 'static
     {
-        self.add(move |world: &mut World| { world.syscall_once(input, system); });
+        self.queue(move |world: &mut World| { world.syscall_once(input, system); });
     }
 
     fn syscall_once_with_validation<I, S, Marker>(&mut self, input: I, system: S, validation: fn(&mut World))
@@ -269,7 +269,7 @@ impl CommandsSyscallExt for Commands<'_, '_>
         I: Send + Sync + 'static,
         S: IntoSystem<I, (), Marker> + Send + Sync + 'static
     {
-        self.add(move |world: &mut World| { world.syscall_once_with_validation(input, system, validation); });
+        self.queue(move |world: &mut World| { world.syscall_once_with_validation(input, system, validation); });
     }
 }
 

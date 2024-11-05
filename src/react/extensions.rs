@@ -260,7 +260,7 @@ impl<'w, 's> ReactCommandsExt for Commands<'w, 's>
     fn send_system_event<T: Send + Sync + 'static>(&mut self, command: SystemCommand, event: T)
     {
         let data_entity = self.spawn(SystemEventData::new(event)).id();
-        self.add(EventCommand{ system: command, data_entity });
+        self.queue(EventCommand{ system: command, data_entity });
     }
 }
 

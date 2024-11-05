@@ -216,7 +216,7 @@ where
 {
     if system.is_exclusive() {
         // Add the cleanup to run before any commands added by the system.
-        world.commands().add(move |world: &mut World| (cleanup)(world));
+        world.commands().queue(move |world: &mut World| (cleanup)(world));
         system.run(input, world)
     } else {
         // For non-exclusive systems we need to run them unsafe because the safe version automatically
@@ -447,7 +447,7 @@ where
 /// Returns `false` if the entity doesn't exist or the callback is not present on the entity.
 pub fn try_callback<C: Send + Sync + 'static>(world: &mut World, entity: Entity) -> bool
 {
-    let Some(entity_mut) = world.get_entity_mut(entity) else { return false; };
+    let Ok(entity_mut) = world.get_entity_mut(entity) else { return false; };
     let Some(cb) = entity_mut.get::<Callback<C>>() else { return false; };
     cb.clone().apply(world);
     true
@@ -463,7 +463,7 @@ where
     C: Send + Sync + 'static,
     V: Send + Sync + 'static
 {
-    let Some(entity_mut) = world.get_entity_mut(entity) else { return false; };
+    let Ok(entity_mut) = world.get_entity_mut(entity) else { return false; };
     let Some(cb) = entity_mut.get::<CallbackWith<C, V>>() else { return false; };
     cb.call_with(value).apply(world);
     true

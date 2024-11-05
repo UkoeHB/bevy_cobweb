@@ -26,7 +26,7 @@ impl ComponentReactors
     {
         self.insertion_callbacks.is_empty() &&
         self.mutation_callbacks.is_empty()  &&
-        self.removal_callbacks.is_empty()  
+        self.removal_callbacks.is_empty()
     }
 }
 
@@ -425,14 +425,14 @@ impl ReactCache
 
                 // Need to do this in a separate step due to borrow checker on world mut access.
                 for command in commands_buff.drain(..) {
-                    world.commands().add(command);
+                    world.commands().queue(command);
                 }
 
                 // entity-agnostic component reactors
                 let Some(reactors) = self.component_reactors.get(&checker.component_id) else { continue; };
                 for handle in reactors.removal_callbacks.iter()
                 {
-                    world.commands().add(
+                    world.commands().queue(
                             ReactionCommand::EntityReaction{
                                 reaction_source : *entity,
                                 reaction_type   : rtype,
@@ -480,7 +480,7 @@ impl ReactCache
                             reactor,
                         }
                     );
-            }            
+            }
         }
 
         // Entity-agnostic reactors
@@ -510,7 +510,7 @@ impl ReactCache
             // queue despawn callbacks
             for handle in despawn_reactors.drain(..)
             {
-                world.commands().add(
+                world.commands().queue(
                         ReactionCommand::Despawn{
                             reaction_source : despawned_entity,
                             reactor         : handle.sys_command(),

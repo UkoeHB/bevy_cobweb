@@ -39,7 +39,7 @@ fn command_ordering_impl(mut c: Commands) -> Vec<usize>
         {
             c.react().broadcast(());
             c.react().commands().send_system_event(event_command, ());
-            c.react().commands().add(system_command);
+            c.react().commands().queue(system_command);
         }
     );
     c.add(parent);
