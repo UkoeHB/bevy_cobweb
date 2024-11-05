@@ -159,7 +159,7 @@ impl<'w, T: WorldReactor> Reactor<'w, T>
             return false;
         };
 
-        commands.add(inner.sys_command);
+        commands.queue(inner.sys_command);
         true
     }
 }

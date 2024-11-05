@@ -207,16 +207,16 @@ impl<T: Send + Sync + 'static, I, O> SysCall<T, I, O>
 pub fn run_initialized_system<I, O>(
     world: &mut World,
     system: &mut dyn System<In = I, Out = O>,
-    input: I,
+    input: <I as SystemInput>::Inner<'_>,
     cleanup: impl FnOnce(&mut World) + Send + Sync + 'static
 ) -> O
 where
-    I: Send + Sync + 'static,
+    I: Send + Sync + SystemInput + 'static,
     O: Send + Sync + 'static
 {
     if system.is_exclusive() {
         // Add the cleanup to run before any commands added by the system.
-        world.commands().add(move |world: &mut World| (cleanup)(world));
+        world.commands().queue(move |world: &mut World| (cleanup)(world));
         system.run(input, world)
     } else {
         // For non-exclusive systems we need to run them unsafe because the safe version automatically
@@ -254,7 +254,7 @@ pub enum CallbackSystem<I, O>
 
 impl<I, O> CallbackSystem<I, O>
 where
-    I: Send + Sync + 'static,
+    I: Send + Sync + SystemInput + 'static,
     O: Send + Sync + 'static,
 {
     pub fn new<Marker, S>(system: S) -> Self
@@ -270,7 +270,7 @@ where
         system.initialize(world);
     }
 
-    pub fn run(&mut self, world: &mut World, input: I) -> Option<O>
+    pub fn run(&mut self, world: &mut World, input: <I as SystemInput>::Inner<'_>) -> Option<O>
     {
         self.run_with_cleanup(world, input, |_| {})
     }
@@ -278,7 +278,7 @@ where
     pub fn run_with_cleanup(
         &mut self,
         world: &mut World,
-        input: I,
+        input: <I as SystemInput>::Inner<'_>,
         cleanup: impl FnOnce(&mut World) + Send + Sync + 'static
     ) -> Option<O>
     {
@@ -369,7 +369,7 @@ pub enum RawCallbackSystem<I, O, S: System<In = I, Out = O>>
 
 impl<I, O, S> RawCallbackSystem<I, O, S>
 where
-    I: Send + Sync + 'static,
+    I: Send + Sync + SystemInput + 'static,
     O: Send + Sync + 'static,
     S: System<In = I, Out = O> + Send + Sync + 'static
 {
@@ -386,7 +386,7 @@ where
         system.initialize(world);
     }
 
-    pub fn run(&mut self, world: &mut World, input: I) -> O
+    pub fn run(&mut self, world: &mut World, input: <I as SystemInput>::Inner<'_>) -> O
     {
         self.run_with_cleanup(world, input, |_| {})
     }
@@ -394,7 +394,7 @@ where
     pub fn run_with_cleanup(
         &mut self,
         world: &mut World,
-        input: I,
+        input: <I as SystemInput>::Inner<'_>,
         cleanup: impl FnOnce(&mut World) + Send + Sync + 'static
     ) -> O
     {
@@ -447,7 +447,7 @@ where
 /// Returns `false` if the entity doesn't exist or the callback is not present on the entity.
 pub fn try_callback<C: Send + Sync + 'static>(world: &mut World, entity: Entity) -> bool
 {
-    let Some(entity_mut) = world.get_entity_mut(entity) else { return false; };
+    let Ok(entity_mut) = world.get_entity_mut(entity) else { return false; };
     let Some(cb) = entity_mut.get::<Callback<C>>() else { return false; };
     cb.clone().apply(world);
     true
@@ -463,7 +463,7 @@ where
     C: Send + Sync + 'static,
     V: Send + Sync + 'static
 {
-    let Some(entity_mut) = world.get_entity_mut(entity) else { return false; };
+    let Ok(entity_mut) = world.get_entity_mut(entity) else { return false; };
     let Some(cb) = entity_mut.get::<CallbackWith<C, V>>() else { return false; };
     cb.call_with(value).apply(world);
     true

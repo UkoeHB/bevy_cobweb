@@ -10,9 +10,7 @@ readme = "README.md"
 repository = "https://github.com/UkoeHB/bevy_cobweb"
 
 [workspace]
-members = [
-    "bevy_cobweb_derive",
-]
+members = ["bevy_cobweb_derive"]
 
 [lib]
 path = "src/lib.rs"
@@ -29,12 +27,12 @@ all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
-bevy           = { version = "0.14", default-features = false }
-crossbeam      = { version = "0.8" }
-fxhash         = { version = "0.2" }
-itertools      = { version = "0.13" }
-smallvec       = { version = "1.13", features = ["drain_filter"] }
-tracing        = { version = "0.1.27" }
+bevy = { version = "0.15.0-rc.2", default-features = false }
+crossbeam = { version = "0.8" }
+fxhash = { version = "0.2" }
+itertools = { version = "0.13" }
+smallvec = { version = "1.13", features = ["drain_filter"] }
+tracing = { version = "0.1.27" }
 
 bevy_cobweb_derive = { path = "bevy_cobweb_derive", version = "0.1.0" }
 

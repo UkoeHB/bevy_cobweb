@@ -26,7 +26,7 @@ impl ComponentReactors
     {
         self.insertion_callbacks.is_empty() &&
         self.mutation_callbacks.is_empty()  &&
-        self.removal_callbacks.is_empty()  
+        self.removal_callbacks.is_empty()
     }
 }
 
@@ -340,7 +340,7 @@ impl ReactCache
         }
 
         for command in cache.reaction_commands_buffer.drain(..) {
-            commands.add(command);
+            commands.queue(command);
         }
 
         // entity-agnostic component reactors
@@ -348,7 +348,7 @@ impl ReactCache
         {
             for handle in handlers.insertion_callbacks.iter()
             {
-                commands.add(
+                commands.queue(
                         ReactionCommand::EntityReaction{
                             reaction_source : entity,
                             reaction_type   : rtype,
@@ -375,7 +375,7 @@ impl ReactCache
         }
 
         for command in cache.reaction_commands_buffer.drain(..) {
-            commands.add(command);
+            commands.queue(command);
         }
 
         // entity-agnostic component reactors
@@ -383,7 +383,7 @@ impl ReactCache
         {
             for handle in handlers.mutation_callbacks.iter()
             {
-                commands.add(
+                commands.queue(
                         ReactionCommand::EntityReaction{
                             reaction_source : entity,
                             reaction_type   : rtype,
@@ -425,14 +425,14 @@ impl ReactCache
 
                 // Need to do this in a separate step due to borrow checker on world mut access.
                 for command in commands_buff.drain(..) {
-                    world.commands().add(command);
+                    world.commands().queue(command);
                 }
 
                 // entity-agnostic component reactors
                 let Some(reactors) = self.component_reactors.get(&checker.component_id) else { continue; };
                 for handle in reactors.removal_callbacks.iter()
                 {
-                    world.commands().add(
+                    world.commands().queue(
                             ReactionCommand::EntityReaction{
                                 reaction_source : *entity,
                                 reaction_type   : rtype,
@@ -473,14 +473,14 @@ impl ReactCache
         {
             for reactor in entity_reactors.iter_rtype(reaction_type)
             {
-                commands.add(
+                commands.queue(
                         ReactionCommand::EntityEvent{
                             target,
                             data_entity,
                             reactor,
                         }
                     );
-            }            
+            }
         }
 
         // Entity-agnostic reactors
@@ -489,7 +489,7 @@ impl ReactCache
             // queue reactors
             for handle in handlers.iter()
             {
-                commands.add(
+                commands.queue(
                     ReactionCommand::EntityEvent{
                         target,
                         data_entity,
@@ -510,7 +510,7 @@ impl ReactCache
             // queue despawn callbacks
             for handle in despawn_reactors.drain(..)
             {
-                world.commands().add(
+                world.commands().queue(
                         ReactionCommand::Despawn{
                             reaction_source : despawned_entity,
                             reactor         : handle.sys_command(),
@@ -531,7 +531,7 @@ impl ReactCache
         // queue reactors
         for handle in handlers.iter()
         {
-            commands.add(
+            commands.queue(
                 ReactionCommand::Resource{ reactor: handle.sys_command() }
             );
         }
@@ -555,7 +555,7 @@ impl ReactCache
         // queue reactors
         for handle in handlers.iter()
         {
-            commands.add(
+            commands.queue(
                 ReactionCommand::BroadcastEvent{ data_entity, reactor: handle.sys_command() }
             );
         }

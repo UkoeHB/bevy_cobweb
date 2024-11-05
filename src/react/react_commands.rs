@@ -335,7 +335,7 @@ impl<'w, 's> ReactCommands<'w, 's>
         {
             let mut callback = RawCallbackSystem::new(reactor);
             callback.run_with_cleanup(world, (), move |w| cleanup.run(w));
-            world.get_entity_mut(entity).map(|e| e.despawn());
+            world.get_entity_mut(entity).ok().map(|e| e.despawn());
             world.react(|rc| rc.revoke(revoke_token_clone));
         });
         let once_system = move |world: &mut World, cleanup: SystemCommandCleanup|

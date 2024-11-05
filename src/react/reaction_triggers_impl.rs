@@ -96,7 +96,7 @@ fn register_despawn_reactor(
         move |world, mut cache: Mut<ReactCache>|
         {
             // Check if the entity is still alive.
-            let Some(mut entity_mut) = world.get_entity_mut(entity) else { return; };
+            let Ok(mut entity_mut) = world.get_entity_mut(entity) else { return; };
 
             // Register the reactor.
             cache.register_despawn_reactor(entity, handle);

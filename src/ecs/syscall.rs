@@ -13,7 +13,7 @@ use std::marker::PhantomData;
 #[derive(Resource)]
 struct InitializedSystem<I, O, S>
 where
-    I: Send + Sync + 'static,
+    I: Send + Sync + SystemInput + 'static,
     O: Send + Sync + 'static,
     S: Send + Sync + 'static
 {
@@ -40,16 +40,16 @@ where
 /// ```
 /// use bevy_cobweb::prelude::*;
 /// use bevy::prelude::*;
-/// 
+///
 /// // normal system: takes an input and sets a local
 /// fn test_system(In(input): In<u16>, mut local: Local<u16>)
 /// {
 ///     assert_eq!(input, *local);
 ///     *local += 1;
 /// }
-/// 
+///
 /// let mut world = World::new();
-/// 
+///
 /// world.syscall(0u16, test_system);
 /// world.syscall(1u16, test_system);  //Local is preserved
 ///
@@ -58,15 +58,15 @@ where
 /// {
 ///     input * 2
 /// }
-/// 
+///
 /// let mut world = World::new();
-/// 
+///
 /// assert_eq!(world.syscall(1u16, test_function), 2u16);
 /// ```
 ///
-pub fn syscall<I, O, S, Marker>(world: &mut World, input: I, system: S) -> O
+pub fn syscall<I, O, S, Marker>(world: &mut World, input: <I as bevy::prelude::SystemInput>::Inner<'_>, system: S) -> O
 where
-    I: Send + Sync + 'static,
+    I: Send + Sync + SystemInput + 'static,
     O: Send + Sync + 'static,
     S: IntoSystem<I, O, Marker> + Send + Sync + 'static,
 {
@@ -80,12 +80,12 @@ where
 /// The validation function can be used to check for resources and print friendly error messages.
 pub fn syscall_with_validation<I, O, S, Marker>(
     world: &mut World,
-    input: I,
+    input: <I as bevy::prelude::SystemInput>::Inner<'_>,
     system: S,
     validation: fn(&mut World)
 ) -> O
 where
-    I: Send + Sync + 'static,
+    I: Send + Sync + SystemInput + 'static,
     O: Send + Sync + 'static,
     S: IntoSystem<I, O, Marker> + Send + Sync + 'static,
 {
@@ -120,11 +120,11 @@ where
 /// This is intended to wrap `Fn` systems. Do not use it if you have a `FnOnce` callback, for example when
 /// adding a one-off callback via `Command::add()`, because the input value and system will be unnecessarily cloned.
 pub fn prep_fncall<I, O, Marker>(
-    input  : I,
+    input  : <I as bevy::prelude::SystemInput>::Inner<'static>,
     system : impl IntoSystem<I, O, Marker> + Send + Sync + 'static + Clone
 ) -> impl Fn(&mut World) -> O + Send + Sync + 'static
 where
-    I: Send + Sync + 'static + Clone,
+    I: Send + Sync + SystemInput + 'static + Clone, <I as bevy::prelude::SystemInput>::Inner<'static>: Send, <I as bevy::prelude::SystemInput>::Inner<'static>: Sync, <I as bevy::prelude::SystemInput>::Inner<'static>: Clone,
     O: Send + Sync + 'static,
 {
     move |world: &mut World| syscall(world, input.clone(), system.clone())
@@ -136,57 +136,57 @@ where
 pub trait WorldSyscallExt
 {
     /// See [`syscall`].
-    fn syscall<I, O, S, Marker>(&mut self, input: I, system: S) -> O
+    fn syscall<I, O, S, Marker>(&mut self, input:  <I as bevy::prelude::SystemInput>::Inner<'static>, system: S) -> O
     where
-        I: Send + Sync + 'static,
+        I: Send + Sync + SystemInput + 'static,
         O: Send + Sync + 'static,
         S: IntoSystem<I, O, Marker> + Send + Sync + 'static;
 
     /// See [`syscall_with_validation`].
-    fn syscall_with_validation<I, O, S, Marker>(&mut self, input: I, system: S, validation: fn(&mut World)) -> O
+    fn syscall_with_validation<I, O, S, Marker>(&mut self, input:  <I as bevy::prelude::SystemInput>::Inner<'static>, system: S, validation: fn(&mut World)) -> O
     where
-        I: Send + Sync + 'static,
+        I: Send + Sync + SystemInput + 'static,
         O: Send + Sync + 'static,
         S: IntoSystem<I, O, Marker> + Send + Sync + 'static;
 
     /// Similar to [`syscall`] except the system is not cached for reuse.
-    fn syscall_once<I, O, S, Marker>(&mut self, input: I, system: S) -> O
+    fn syscall_once<I, O, S, Marker>(&mut self, input:  <I as bevy::prelude::SystemInput>::Inner<'static>, system: S) -> O
     where
-        I: Send + Sync + 'static,
+        I: Send + Sync + SystemInput + 'static,
         O: Send + Sync + 'static,
         S: IntoSystem<I, O, Marker> + Send + Sync + 'static;
 
     /// Similar to [`syscall_with_validation`] except the system is not cached for reuse.
-    fn syscall_once_with_validation<I, O, S, Marker>(&mut self, input: I, system: S, validation: fn(&mut World)) -> O
+    fn syscall_once_with_validation<I, O, S, Marker>(&mut self, input:  <I as bevy::prelude::SystemInput>::Inner<'static>, system: S, validation: fn(&mut World)) -> O
     where
-        I: Send + Sync + 'static,
+        I: Send + Sync + SystemInput + 'static,
         O: Send + Sync + 'static,
         S: IntoSystem<I, O, Marker> + Send + Sync + 'static;
 }
 
 impl WorldSyscallExt for World
 {
-    fn syscall<I, O, S, Marker>(&mut self, input: I, system: S) -> O
+    fn syscall<I, O, S, Marker>(&mut self, input:  <I as bevy::prelude::SystemInput>::Inner<'static>, system: S) -> O
     where
-        I: Send + Sync + 'static,
+        I: Send + Sync + SystemInput + 'static,
         O: Send + Sync + 'static,
         S: IntoSystem<I, O, Marker> + Send + Sync + 'static
     {
         syscall(self, input, system)
     }
 
-    fn syscall_with_validation<I, O, S, Marker>(&mut self, input: I, system: S, validation: fn(&mut World)) -> O
+    fn syscall_with_validation<I, O, S, Marker>(&mut self, input: <I as bevy::prelude::SystemInput>::Inner<'static>, system: S, validation: fn(&mut World)) -> O
     where
-        I: Send + Sync + 'static,
+        I: Send + Sync + SystemInput + 'static,
         O: Send + Sync + 'static,
         S: IntoSystem<I, O, Marker> + Send + Sync + 'static
     {
         syscall_with_validation(self, input, system, validation)
     }
 
-    fn syscall_once<I, O, S, Marker>(&mut self, input: I, system: S) -> O
+    fn syscall_once<I, O, S, Marker>(&mut self, input: <I as bevy::prelude::SystemInput>::Inner<'static>, system: S) -> O
     where
-        I: Send + Sync + 'static,
+        I: Send + Sync + SystemInput + 'static,
         O: Send + Sync + 'static,
         S: IntoSystem<I, O, Marker> + Send + Sync + 'static
     {
@@ -195,9 +195,9 @@ impl WorldSyscallExt for World
         sys.run(input, self)
     }
 
-    fn syscall_once_with_validation<I, O, S, Marker>(&mut self, input: I, system: S, validation: fn(&mut World)) -> O
+    fn syscall_once_with_validation<I, O, S, Marker>(&mut self, input: <I as bevy::prelude::SystemInput>::Inner<'static>, system: S, validation: fn(&mut World)) -> O
     where
-        I: Send + Sync + 'static,
+        I: Send + Sync + SystemInput + 'static,
         O: Send + Sync + 'static,
         S: IntoSystem<I, O, Marker> + Send + Sync + 'static
     {
@@ -214,94 +214,94 @@ impl WorldSyscallExt for World
 pub trait CommandsSyscallExt
 {
     /// See [`syscall`].
-    fn syscall<I, S, Marker>(&mut self, input: I, system: S)
+    fn syscall<I, S, Marker>(&mut self, input:  <I as bevy::prelude::SystemInput>::Inner<'static>, system: S)
     where
-        I: Send + Sync + 'static,
+        I: Send + Sync + SystemInput + 'static, <I as bevy::prelude::SystemInput>::Inner<'static>: Send, <I as bevy::prelude::SystemInput>::Inner<'static>: Sync,
         S: IntoSystem<I, (), Marker> + Send + Sync + 'static;
 
     /// See [`syscall_with_validation`].
-    fn syscall_with_validation<I, S, Marker>(&mut self, input: I, system: S, validation: fn(&mut World))
+    fn syscall_with_validation<I, S, Marker>(&mut self, input:  <I as bevy::prelude::SystemInput>::Inner<'static>, system: S, validation: fn(&mut World))
     where
-        I: Send + Sync + 'static,
+        I: Send + Sync + SystemInput + 'static, <I as bevy::prelude::SystemInput>::Inner<'static>: Send, <I as bevy::prelude::SystemInput>::Inner<'static>: Sync,
         S: IntoSystem<I, (), Marker> + Send + Sync + 'static;
 
     /// Similar to [`syscall`] except the system is not cached for reuse.
-    fn syscall_once<I, S, Marker>(&mut self, input: I, system: S)
+    fn syscall_once<I, S, Marker>(&mut self, input:  <I as bevy::prelude::SystemInput>::Inner<'static>, system: S)
     where
-        I: Send + Sync + 'static,
+        I: Send + Sync + SystemInput + 'static, <I as bevy::prelude::SystemInput>::Inner<'static>: Send, <I as bevy::prelude::SystemInput>::Inner<'static>: Sync,
         S: IntoSystem<I, (), Marker> + Send + Sync + 'static;
 
     /// Similar to [`syscall_with_validation`] except the system is not cached for reuse.
-    fn syscall_once_with_validation<I, S, Marker>(&mut self, input: I, system: S, validation: fn(&mut World))
+    fn syscall_once_with_validation<I, S, Marker>(&mut self, input:  <I as bevy::prelude::SystemInput>::Inner<'static>, system: S, validation: fn(&mut World))
     where
-        I: Send + Sync + 'static,
+        I: Send + Sync + SystemInput + 'static, <I as bevy::prelude::SystemInput>::Inner<'static>: Send, <I as bevy::prelude::SystemInput>::Inner<'static>: Sync,
         S: IntoSystem<I, (), Marker> + Send + Sync + 'static;
 }
 
 impl CommandsSyscallExt for Commands<'_, '_>
 {
-    fn syscall<I, S, Marker>(&mut self, input: I, system: S)
+    fn syscall<I, S, Marker>(&mut self, input:  <I as bevy::prelude::SystemInput>::Inner<'static>, system: S)
     where
-        I: Send + Sync + 'static,
+        I: Send + Sync + SystemInput + 'static, <I as bevy::prelude::SystemInput>::Inner<'static>: Send, <I as bevy::prelude::SystemInput>::Inner<'static>: Sync,
         S: IntoSystem<I, (), Marker> + Send + Sync + 'static
     {
-        self.add(move |world: &mut World| { world.syscall(input, system); });
+        self.queue(move |world: &mut World| { world.syscall(input, system); });
     }
 
-    fn syscall_with_validation<I, S, Marker>(&mut self, input: I, system: S, validation: fn(&mut World))
+    fn syscall_with_validation<I, S, Marker>(&mut self, input:  <I as bevy::prelude::SystemInput>::Inner<'static>, system: S, validation: fn(&mut World))
     where
-        I: Send + Sync + 'static,
+        I: Send + Sync + SystemInput + 'static, <I as bevy::prelude::SystemInput>::Inner<'static>: Send, <I as bevy::prelude::SystemInput>::Inner<'static>: Sync,
         S: IntoSystem<I, (), Marker> + Send + Sync + 'static
     {
-        self.add(move |world: &mut World| { world.syscall_with_validation(input, system, validation); });
+        self.queue(move |world: &mut World| { world.syscall_with_validation(input, system, validation); });
     }
 
-    fn syscall_once<I, S, Marker>(&mut self, input: I, system: S)
+    fn syscall_once<I, S, Marker>(&mut self, input:  <I as bevy::prelude::SystemInput>::Inner<'static>, system: S)
     where
-        I: Send + Sync + 'static,
+        I: Send + Sync + SystemInput + 'static, <I as bevy::prelude::SystemInput>::Inner<'static>: Send, <I as bevy::prelude::SystemInput>::Inner<'static>: Sync,
         S: IntoSystem<I, (), Marker> + Send + Sync + 'static
     {
-        self.add(move |world: &mut World| { world.syscall_once(input, system); });
+        self.queue(move |world: &mut World| { world.syscall_once(input, system); });
     }
 
-    fn syscall_once_with_validation<I, S, Marker>(&mut self, input: I, system: S, validation: fn(&mut World))
+    fn syscall_once_with_validation<I, S, Marker>(&mut self, input:  <I as bevy::prelude::SystemInput>::Inner<'static>, system: S, validation: fn(&mut World))
     where
-        I: Send + Sync + 'static,
+        I: Send + Sync + SystemInput + 'static, <I as bevy::prelude::SystemInput>::Inner<'static>: Send, <I as bevy::prelude::SystemInput>::Inner<'static>: Sync,
         S: IntoSystem<I, (), Marker> + Send + Sync + 'static
     {
-        self.add(move |world: &mut World| { world.syscall_once_with_validation(input, system, validation); });
+        self.queue(move |world: &mut World| { world.syscall_once_with_validation(input, system, validation); });
     }
 }
 
 impl CommandsSyscallExt for EntityCommands<'_>
 {
-    fn syscall<I, S, Marker>(&mut self, input: I, system: S)
+    fn syscall<I, S, Marker>(&mut self, input:  <I as bevy::prelude::SystemInput>::Inner<'static>, system: S)
     where
-        I: Send + Sync + 'static,
+        I: Send + Sync + SystemInput + 'static, <I as bevy::prelude::SystemInput>::Inner<'static>: Send, <I as bevy::prelude::SystemInput>::Inner<'static>: Sync,
         S: IntoSystem<I, (), Marker> + Send + Sync + 'static
     {
         self.commands().syscall(input, system);
     }
 
-    fn syscall_with_validation<I, S, Marker>(&mut self, input: I, system: S, validation: fn(&mut World))
+    fn syscall_with_validation<I, S, Marker>(&mut self, input:  <I as bevy::prelude::SystemInput>::Inner<'static>, system: S, validation: fn(&mut World))
     where
-        I: Send + Sync + 'static,
+        I: Send + Sync + SystemInput + 'static, <I as bevy::prelude::SystemInput>::Inner<'static>: Send, <I as bevy::prelude::SystemInput>::Inner<'static>: Sync,
         S: IntoSystem<I, (), Marker> + Send + Sync + 'static
     {
         self.commands().syscall_with_validation(input, system, validation);
     }
 
-    fn syscall_once<I, S, Marker>(&mut self, input: I, system: S)
+    fn syscall_once<I, S, Marker>(&mut self, input:  <I as bevy::prelude::SystemInput>::Inner<'static>, system: S)
     where
-        I: Send + Sync + 'static,
+        I: Send + Sync + SystemInput + 'static, <I as bevy::prelude::SystemInput>::Inner<'static>: Send, <I as bevy::prelude::SystemInput>::Inner<'static>: Sync,
         S: IntoSystem<I, (), Marker> + Send + Sync + 'static
     {
         self.commands().syscall_once(input, system);
     }
 
-    fn syscall_once_with_validation<I, S, Marker>(&mut self, input: I, system: S, validation: fn(&mut World))
+    fn syscall_once_with_validation<I, S, Marker>(&mut self, input:  <I as bevy::prelude::SystemInput>::Inner<'static>, system: S, validation: fn(&mut World))
     where
-        I: Send + Sync + 'static,
+        I: Send + Sync + SystemInput + 'static, <I as bevy::prelude::SystemInput>::Inner<'static>: Send, <I as bevy::prelude::SystemInput>::Inner<'static>: Sync,
         S: IntoSystem<I, (), Marker> + Send + Sync + 'static
     {
         self.commands().syscall_once_with_validation(input, system, validation);

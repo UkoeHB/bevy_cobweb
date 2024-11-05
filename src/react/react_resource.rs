@@ -300,7 +300,7 @@ impl<'w, 's> ReactResCommandsExt for Commands<'w, 's>
 {
     fn init_react_resource<R: ReactResource + FromWorld>(&mut self)
     {
-        self.add(|world: &mut World| world.init_react_resource::<R>());
+        self.queue(|world: &mut World| world.init_react_resource::<R>());
     }
 
     fn insert_react_resource<R: ReactResource>(&mut self, value: R)
@@ -315,4 +315,3 @@ impl<'w, 's> ReactResCommandsExt for Commands<'w, 's>
 }
 
 //-------------------------------------------------------------------------------------------------------------------
-
