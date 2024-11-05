@@ -83,14 +83,14 @@ fn reaction_telescoping_data_visibility_impl(mut c: Commands)
                     0 =>
                     {
                         let command = event.read();
-                        commands.add(*command);
-                        commands.add(null_reader);
+                        commands.queue(*command);
+                        commands.queue(null_reader);
                         count += 1;
                     }
                     _ =>
                     {
                         assert!(event.is_empty());
-                        commands.add(null_reader);
+                        commands.queue(null_reader);
                     }
                 }
             }

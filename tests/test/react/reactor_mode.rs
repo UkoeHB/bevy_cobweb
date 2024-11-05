@@ -29,13 +29,13 @@ fn persistent_reactor_lives_without_triggers()
     );
 
     // reactor should not be garbage collected
-    assert!(world.get_entity(*sys_command).is_some());
+    assert!(world.get_entity(*sys_command).is_ok());
     garbage_collect_entities(world);
     schedule_removal_and_despawn_reactors(world);
-    assert!(world.get_entity(*sys_command).is_some());
+    assert!(world.get_entity(*sys_command).is_ok());
     garbage_collect_entities(world);
     schedule_removal_and_despawn_reactors(world);
-    assert!(world.get_entity(*sys_command).is_some());
+    assert!(world.get_entity(*sys_command).is_ok());
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -61,14 +61,14 @@ fn persistent_reactor_lives_with_despawn_triggers_finished()
     );
 
     // reactor should not be garbage collected
-    assert!(world.get_entity(*sys_command).is_some());
+    assert!(world.get_entity(*sys_command).is_ok());
     garbage_collect_entities(world);
     schedule_removal_and_despawn_reactors(world);
-    assert!(world.get_entity(*sys_command).is_some());
+    assert!(world.get_entity(*sys_command).is_ok());
     world.despawn(target);
     garbage_collect_entities(world);
     schedule_removal_and_despawn_reactors(world);
-    assert!(world.get_entity(*sys_command).is_some());
+    assert!(world.get_entity(*sys_command).is_ok());
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -94,14 +94,14 @@ fn persistent_reactor_lives_with_entity_triggers_despawned()
     );
 
     // reactor should not be garbage collected
-    assert!(world.get_entity(*sys_command).is_some());
+    assert!(world.get_entity(*sys_command).is_ok());
     garbage_collect_entities(world);
     schedule_removal_and_despawn_reactors(world);
-    assert!(world.get_entity(*sys_command).is_some());
+    assert!(world.get_entity(*sys_command).is_ok());
     world.despawn(target);
     garbage_collect_entities(world);
     schedule_removal_and_despawn_reactors(world);
-    assert!(world.get_entity(*sys_command).is_some());
+    assert!(world.get_entity(*sys_command).is_ok());
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -155,7 +155,7 @@ fn persistent_reactor_acquires_more_triggers()
     world.despawn(target2);
     garbage_collect_entities(world);
     schedule_removal_and_despawn_reactors(world);
-    assert!(world.get_entity(*sys_command).is_some());
+    assert!(world.get_entity(*sys_command).is_ok());
 
     // event should be received
     assert_eq!(count.load(Ordering::Relaxed), 1);
@@ -183,10 +183,10 @@ fn cleanup_reactor_dies_without_triggers()
     );
 
     // reactor should be garbage collected
-    assert!(world.get_entity(*sys_command).is_some());
+    assert!(world.get_entity(*sys_command).is_ok());
     garbage_collect_entities(world);
     schedule_removal_and_despawn_reactors(world);
-    assert!(world.get_entity(*sys_command).is_none());
+    assert!(world.get_entity(*sys_command).is_err());
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -214,14 +214,14 @@ fn cleanup_reactor_dies_with_despawn_triggers_finished()
     );
 
     // reactor should be garbage collected
-    assert!(world.get_entity(*sys_command).is_some());
+    assert!(world.get_entity(*sys_command).is_ok());
     garbage_collect_entities(world);
     schedule_removal_and_despawn_reactors(world);
-    assert!(world.get_entity(*sys_command).is_some());
+    assert!(world.get_entity(*sys_command).is_ok());
     world.despawn(target);
     garbage_collect_entities(world);
     schedule_removal_and_despawn_reactors(world);
-    assert!(world.get_entity(*sys_command).is_none());
+    assert!(world.get_entity(*sys_command).is_err());
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -249,14 +249,14 @@ fn cleanup_reactor_dies_with_entity_triggers_despawned()
     );
 
     // reactor should be garbage collected
-    assert!(world.get_entity(*sys_command).is_some());
+    assert!(world.get_entity(*sys_command).is_ok());
     garbage_collect_entities(world);
     schedule_removal_and_despawn_reactors(world);
-    assert!(world.get_entity(*sys_command).is_some());
+    assert!(world.get_entity(*sys_command).is_ok());
     world.despawn(target);
     garbage_collect_entities(world);
     schedule_removal_and_despawn_reactors(world);
-    assert!(world.get_entity(*sys_command).is_none());
+    assert!(world.get_entity(*sys_command).is_err());
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -279,10 +279,10 @@ fn revokable_reactor_dies_without_triggers()
     );
 
     // reactor should be garbage collected
-    assert!(world.get_entity(*SystemCommand::from(token.clone())).is_some());
+    assert!(world.get_entity(*SystemCommand::from(token.clone())).is_ok());
     garbage_collect_entities(world);
     schedule_removal_and_despawn_reactors(world);
-    assert!(world.get_entity(*SystemCommand::from(token)).is_none());
+    assert!(world.get_entity(*SystemCommand::from(token)).is_err());
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -308,14 +308,14 @@ fn revokable_reactor_dies_with_despawn_triggers_finished()
     );
 
     // reactor should be garbage collected
-    assert!(world.get_entity(*SystemCommand::from(token.clone())).is_some());
+    assert!(world.get_entity(*SystemCommand::from(token.clone())).is_ok());
     garbage_collect_entities(world);
     schedule_removal_and_despawn_reactors(world);
-    assert!(world.get_entity(*SystemCommand::from(token.clone())).is_some());
+    assert!(world.get_entity(*SystemCommand::from(token.clone())).is_ok());
     world.despawn(target);
     garbage_collect_entities(world);
     schedule_removal_and_despawn_reactors(world);
-    assert!(world.get_entity(*SystemCommand::from(token)).is_none());
+    assert!(world.get_entity(*SystemCommand::from(token)).is_err());
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -341,14 +341,14 @@ fn revokable_reactor_dies_with_entity_triggers_despawned()
     );
 
     // reactor should be garbage collected
-    assert!(world.get_entity(*SystemCommand::from(token.clone())).is_some());
+    assert!(world.get_entity(*SystemCommand::from(token.clone())).is_ok());
     garbage_collect_entities(world);
     schedule_removal_and_despawn_reactors(world);
-    assert!(world.get_entity(*SystemCommand::from(token.clone())).is_some());
+    assert!(world.get_entity(*SystemCommand::from(token.clone())).is_ok());
     world.despawn(target);
     garbage_collect_entities(world);
     schedule_removal_and_despawn_reactors(world);
-    assert!(world.get_entity(*SystemCommand::from(token)).is_none());
+    assert!(world.get_entity(*SystemCommand::from(token)).is_err());
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -372,10 +372,10 @@ fn revokable_reactor_dies_when_revoked()
 
     // reactor should be alive
     let reactor_entity = *SystemCommand::from(token.clone());
-    assert!(world.get_entity(reactor_entity).is_some());
+    assert!(world.get_entity(reactor_entity).is_ok());
     garbage_collect_entities(world);
     schedule_removal_and_despawn_reactors(world);
-    assert!(world.get_entity(reactor_entity).is_some());
+    assert!(world.get_entity(reactor_entity).is_ok());
 
     // revoke the reactor
     world.syscall((),
@@ -386,10 +386,10 @@ fn revokable_reactor_dies_when_revoked()
     );
 
     // reactor should be garbage collected
-    assert!(world.get_entity(reactor_entity).is_some());
+    assert!(world.get_entity(reactor_entity).is_ok());
     garbage_collect_entities(world);
     schedule_removal_and_despawn_reactors(world);
-    assert!(world.get_entity(reactor_entity).is_none());
+    assert!(world.get_entity(reactor_entity).is_err());
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -413,10 +413,10 @@ fn revokable_reactor_dies_when_revoked_with_multiple_tokens()
 
     // reactor should be alive
     let sys_command = SystemCommand::from(token1.clone());
-    assert!(world.get_entity(*sys_command).is_some());
+    assert!(world.get_entity(*sys_command).is_ok());
     garbage_collect_entities(world);
     schedule_removal_and_despawn_reactors(world);
-    assert!(world.get_entity(*sys_command).is_some());
+    assert!(world.get_entity(*sys_command).is_ok());
 
     // add another trigger
     let token2 = world.syscall((),
@@ -428,10 +428,10 @@ fn revokable_reactor_dies_when_revoked_with_multiple_tokens()
     assert_eq!(sys_command, SystemCommand::from(token2.clone()));
 
     // reactor should be alive
-    assert!(world.get_entity(*sys_command).is_some());
+    assert!(world.get_entity(*sys_command).is_ok());
     garbage_collect_entities(world);
     schedule_removal_and_despawn_reactors(world);
-    assert!(world.get_entity(*sys_command).is_some());
+    assert!(world.get_entity(*sys_command).is_ok());
 
     // revoke the first reactor
     world.syscall((),
@@ -442,10 +442,10 @@ fn revokable_reactor_dies_when_revoked_with_multiple_tokens()
     );
 
     // reactor should be garbage collected
-    assert!(world.get_entity(*sys_command).is_some());
+    assert!(world.get_entity(*sys_command).is_ok());
     garbage_collect_entities(world);
     schedule_removal_and_despawn_reactors(world);
-    assert!(world.get_entity(*sys_command).is_none());
+    assert!(world.get_entity(*sys_command).is_err());
 
     // revoke the second reactor
     world.syscall((),
@@ -456,10 +456,10 @@ fn revokable_reactor_dies_when_revoked_with_multiple_tokens()
     );
 
     // there should be no effect
-    assert!(world.get_entity(*sys_command).is_none());
+    assert!(world.get_entity(*sys_command).is_err());
     garbage_collect_entities(world);
     schedule_removal_and_despawn_reactors(world);
-    assert!(world.get_entity(*sys_command).is_none());
+    assert!(world.get_entity(*sys_command).is_err());
 }
 
 //-------------------------------------------------------------------------------------------------------------------

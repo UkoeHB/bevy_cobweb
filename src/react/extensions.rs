@@ -132,7 +132,7 @@ pub trait ReactWorldExt
     /// Systems are not initialized until they are first run.
     ///
     /// Returns the system command id that will eventually reference the spawned system.
-    /// To run the system, schedule it with `commands.add(system_command)`.
+    /// To run the system, schedule it with `commands.queue(system_command)`.
     fn spawn_system_command<S, M>(&mut self, system: S) -> SystemCommand
     where
         S: IntoSystem<(), (), M> + Send + Sync + 'static;
@@ -140,7 +140,7 @@ pub trait ReactWorldExt
     /// Schedules a [`SystemCommand`] to be spawned from a pre-defined callback.
     ///
     /// Returns the system command id that will eventually reference the spawned system.
-    /// To run the system, schedule it with `commands.add(system_command)`.
+    /// To run the system, schedule it with `commands.queue(system_command)`.
     fn spawn_system_command_from(&mut self, callback: SystemCommandCallback) -> SystemCommand;
 
     /// Provides access to [`ReactCommands`].
@@ -218,7 +218,7 @@ pub trait ReactCommandsExt
     /// Systems are not initialized until they are first run.
     ///
     /// Returns the system command id that will eventually reference the spawned system.
-    /// To run the system, schedule it with `commands.add(system_command)`.
+    /// To run the system, schedule it with `commands.queue(system_command)`.
     fn spawn_system_command<S, M>(&mut self, system: S) -> SystemCommand
     where
         S: IntoSystem<(), (), M> + Send + Sync + 'static;
@@ -226,7 +226,7 @@ pub trait ReactCommandsExt
     /// Schedules a [`SystemCommand`] to be spawned from a pre-defined callback.
     ///
     /// Returns the system command id that will eventually reference the spawned system.
-    /// To run the system, schedule it with `commands.add(system_command)`.
+    /// To run the system, schedule it with `commands.queue(system_command)`.
     fn spawn_system_command_from(&mut self, callback: SystemCommandCallback) -> SystemCommand;
 
     /// Schedules a system event targeting a given [`SystemCommand`].

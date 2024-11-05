@@ -28,7 +28,7 @@ let syscommand = commands.spawn_system_command(
 A [`SystemCommand`](bevy_cobweb::prelude::SystemCommand) can be manually run by scheduling it as a Bevy `Command`.
 
 ```rust
-commands.add(syscommand);
+commands.queue(syscommand);
 ```
 
 

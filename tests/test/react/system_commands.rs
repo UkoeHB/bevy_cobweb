@@ -19,7 +19,7 @@ fn basic_system_command_impl(In(val): In<usize>, mut commands: Commands)
             recorder.0 = val;
         }
     );
-    commands.add(command);
+    commands.queue(command);
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -37,16 +37,16 @@ fn system_command_telescoping_impl(mut commands: Commands) -> Vec<usize>
         move |mut commands: Commands, mut history: ResMut<TelescopeHistory>|
         {
             history.push(2);
-            commands.add(command1);
-            commands.add(command1);
+            commands.queue(command1);
+            commands.queue(command1);
         }
     );
     let command3 = commands.spawn_system_command(
         move |mut commands: Commands, mut history: ResMut<TelescopeHistory>|
         {
             history.push(3);
-            commands.add(command2);
-            commands.add(command2);
+            commands.queue(command2);
+            commands.queue(command2);
         }
     );
 
@@ -54,12 +54,12 @@ fn system_command_telescoping_impl(mut commands: Commands) -> Vec<usize>
         move |mut commands: Commands, mut history: ResMut<TelescopeHistory>|
         {
             history.push(0);
-            commands.add(command1);
-            commands.add(command2);
-            commands.add(command3);
+            commands.queue(command1);
+            commands.queue(command2);
+            commands.queue(command3);
         }
     );
-    commands.add(parent);
+    commands.queue(parent);
 
     vec![0, 1, 2, 1, 1, 3, 2, 1, 1, 2, 1, 1]
 }
@@ -77,7 +77,7 @@ fn system_command_recursion_impl(mut commands: Commands) -> Vec<usize>
                 Some(inner) =>
                 {
                     history.push(1);
-                    commands.add(inner);
+                    commands.queue(inner);
                 }
                 None =>
                 {
@@ -92,10 +92,10 @@ fn system_command_recursion_impl(mut commands: Commands) -> Vec<usize>
         {
             history.push(0);
             **saved = Some(command1);
-            commands.add(command1);
+            commands.queue(command1);
         }
     );
-    commands.add(parent);
+    commands.queue(parent);
 
     vec![0, 1, 2]
 }

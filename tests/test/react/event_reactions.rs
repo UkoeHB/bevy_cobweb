@@ -156,7 +156,7 @@ fn send_multiple_broadcasts(In(data): In<Vec<usize>>, mut commands: Commands)
             }
         }
     );
-    commands.add(events);
+    commands.queue(events);
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -174,7 +174,7 @@ fn send_multiple_entity_events(In((entity, data)): In<(Entity, Vec<usize>)>, mut
             }
         }
     );
-    commands.add(events);
+    commands.queue(events);
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -361,9 +361,9 @@ fn broadcast_data_is_dropped()
     world.syscall(proxy_entity, on_broadcast_proxy);
 
     // send event (reaction)
-    assert!(world.get_entity(proxy_entity).is_some());
+    assert!(world.get_entity(proxy_entity).is_ok());
     world.syscall(signal, broadcast_signal_proxy);
-    assert!(world.get_entity(proxy_entity).is_none());
+    assert!(world.get_entity(proxy_entity).is_err());
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -382,10 +382,10 @@ fn broadcast_event_cleanup_on_no_run()
     let signal = world.resource::<AutoDespawner>().prepare(proxy_entity);
 
     // send event without any listeners
-    assert!(world.get_entity(proxy_entity).is_some());
+    assert!(world.get_entity(proxy_entity).is_ok());
     world.syscall(signal, broadcast_signal_proxy);
     garbage_collect_entities(world);  //garbabe collect the entity
-    assert!(world.get_entity(proxy_entity).is_none());
+    assert!(world.get_entity(proxy_entity).is_err());
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -547,9 +547,9 @@ fn entity_event_data_is_dropped()
     world.syscall((test_entity, proxy_entity), on_entity_event_proxy);
 
     // send event (reaction)
-    assert!(world.get_entity(proxy_entity).is_some());
+    assert!(world.get_entity(proxy_entity).is_ok());
     world.syscall((test_entity, signal), send_signal_proxy);
-    assert!(world.get_entity(proxy_entity).is_none());
+    assert!(world.get_entity(proxy_entity).is_err());
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -569,10 +569,10 @@ fn entity_event_cleanup_on_no_run()
     let signal = world.resource::<AutoDespawner>().prepare(proxy_entity);
 
     // send event
-    assert!(world.get_entity(proxy_entity).is_some());
+    assert!(world.get_entity(proxy_entity).is_ok());
     world.syscall((test_entity, signal), send_signal_proxy);
     garbage_collect_entities(world);  //garbabe collect the entity
-    assert!(world.get_entity(proxy_entity).is_none());
+    assert!(world.get_entity(proxy_entity).is_err());
 }
 
 //-------------------------------------------------------------------------------------------------------------------

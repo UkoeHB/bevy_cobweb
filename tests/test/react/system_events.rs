@@ -33,7 +33,7 @@ fn basic_system_events_impl(mut commands: Commands) -> Vec<usize>
             commands.send_system_event(command2, 2usize);
         }
     );
-    commands.add(parent);
+    commands.queue(parent);
 
     vec![1, 2]
 }
@@ -58,7 +58,7 @@ fn system_event_noninterference_impl(mut commands: Commands) -> Vec<usize>
             commands.send_system_event(command1, 3usize);
         }
     );
-    commands.add(parent);
+    commands.queue(parent);
 
     vec![1, 2, 3]
 }
@@ -84,12 +84,12 @@ fn system_event_telescoping_impl(mut commands: Commands) -> Vec<usize>
             mut saved    : ResMut<SavedSystemCommand>
         |
         {
-            commands.add(command1);
+            commands.queue(command1);
             match saved.take()
             {
                 Some(inner) =>
                 {
-                    commands.add(inner);
+                    commands.queue(inner);
                     history.push(2);
                 }
                 None =>
@@ -106,11 +106,11 @@ fn system_event_telescoping_impl(mut commands: Commands) -> Vec<usize>
         {
             history.push(0);
             saved.0 = Some(command2);
-            commands.add(command1);
+            commands.queue(command1);
             commands.send_system_event(command2, ());
         }
     );
-    commands.add(parent);
+    commands.queue(parent);
 
     vec![0, 1, 2, 1, 3, 1]
 }
@@ -146,7 +146,7 @@ fn system_event_recursion_impl(mut commands: Commands) -> Vec<usize>
             commands.send_system_event(command1, 3usize);
         }
     );
-    commands.add(parent);
+    commands.queue(parent);
 
     vec![3, 2, 1, 0]
 }
@@ -179,7 +179,7 @@ fn send_proxy_entity_system_event_and_ignore(In(signal): In<AutoDespawnSignal>, 
 fn send_proxy_entity_system_event_to_nonexistent(In(signal): In<AutoDespawnSignal>, mut commands: Commands)
 {
     let command1 = commands.spawn_system_command(|| { });
-    commands.add(move |world: &mut World| { world.despawn(*command1); });
+    commands.queue(move |world: &mut World| { world.despawn(*command1); });
     commands.send_system_event(command1, signal);
 }
 
@@ -268,7 +268,7 @@ fn system_event_data_is_dropped_on_take()
 
     // send signal via system event
     world.syscall(signal, send_proxy_entity_system_event_and_take);
-    assert!(world.get_entity(proxy_entity).is_none());
+    assert!(world.get_entity(proxy_entity).is_err());
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -287,7 +287,7 @@ fn system_event_data_is_dropped_on_ignore()
 
     // send signal via system event
     world.syscall(signal, send_proxy_entity_system_event_and_ignore);
-    assert!(world.get_entity(proxy_entity).is_none());
+    assert!(world.get_entity(proxy_entity).is_err());
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -307,7 +307,7 @@ fn system_event_cleanup_on_no_run()
 
     // send signal via system event
     world.syscall(signal, send_proxy_entity_system_event_to_nonexistent);
-    assert!(world.get_entity(proxy_entity).is_none());
+    assert!(world.get_entity(proxy_entity).is_err());
 }
 
 //-------------------------------------------------------------------------------------------------------------------

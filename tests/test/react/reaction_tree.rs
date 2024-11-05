@@ -42,7 +42,7 @@ fn command_ordering_impl(mut c: Commands) -> Vec<usize>
             c.react().commands().queue(system_command);
         }
     );
-    c.add(parent);
+    c.queue(parent);
 
     vec![3, 2, 1]
 }

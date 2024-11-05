@@ -238,7 +238,7 @@ fn all_test_entity_mutations(
                         c.react().insert(entity, TestComponent(0));
                     }
                 );
-            commands.add(insert);
+            commands.queue(insert);
 
             // mutation
             let mutate = commands.spawn_system_command(
@@ -250,7 +250,7 @@ fn all_test_entity_mutations(
                             .get_mut(&mut c) = TestComponent(1);
                     }
                 );
-            commands.add(mutate);
+            commands.queue(mutate);
 
             // removal
             let remove = commands.spawn_system_command(
@@ -259,7 +259,7 @@ fn all_test_entity_mutations(
                         c.get_entity(entity).unwrap().remove::<React<TestComponent>>();
                     }
                 );
-            commands.add(remove);
+            commands.queue(remove);
 
             // despawn
             let despawn = commands.spawn_system_command(
@@ -268,10 +268,10 @@ fn all_test_entity_mutations(
                         world.despawn(entity);
                     }
                 );
-            commands.add(despawn);
+            commands.queue(despawn);
         }
     );
-    commands.add(inner);
+    commands.queue(inner);
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -775,10 +775,10 @@ fn despawn_reactor_cleanup()
 
     // despawn the test entity, which should cause the reactor to run and then be dropped, which will despawn the proxy
     world.despawn(test_entity);
-    assert!(world.get_entity(proxy_entity).is_some());
+    assert!(world.get_entity(proxy_entity).is_ok());
     garbage_collect_entities(world);
     schedule_removal_and_despawn_reactors(world);
-    assert!(world.get_entity(proxy_entity).is_none());
+    assert!(world.get_entity(proxy_entity).is_err());
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -801,10 +801,10 @@ fn despawn_reactor_no_cleanup()
 
     // despawn the test entity, which should cause the reactor to run and then be dropped, which will despawn the proxy
     world.despawn(test_entity);
-    assert!(world.get_entity(proxy_entity).is_some());
+    assert!(world.get_entity(proxy_entity).is_ok());
     garbage_collect_entities(world);
     schedule_removal_and_despawn_reactors(world);
-    assert!(world.get_entity(proxy_entity).is_some());
+    assert!(world.get_entity(proxy_entity).is_ok());
 }
 
 //-------------------------------------------------------------------------------------------------------------------
