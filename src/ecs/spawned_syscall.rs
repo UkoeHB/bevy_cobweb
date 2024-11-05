@@ -206,7 +206,7 @@ pub trait SpawnedSyscallCommandsExt
     /// Logs a warning if the system entity doesn't exist.
     ///
     /// Syntax sugar for [`spawned_syscall()`].
-    fn spawned_syscall<I>(&mut self, sys_id: SysId, input: <I as bevy::prelude::SystemInput>::Inner<'_>)
+    fn spawned_syscall<I>(&mut self, sys_id: SysId, input: <I as bevy::prelude::SystemInput>::Inner<'static>)
     where
         I: Send + Sync + SystemInput + 'static, <I as SystemInput>::Inner<'static>: Send;
 }
@@ -242,7 +242,7 @@ impl<'w, 's> SpawnedSyscallCommandsExt for Commands<'w, 's>
         Ok(())
     }
 
-    fn spawned_syscall<I>(&mut self, sys_id: SysId, input: <I as SystemInput>::Inner<'_>)
+    fn spawned_syscall<I>(&mut self, sys_id: SysId, input: <I as SystemInput>::Inner<'static>)
     where
         I: Send + Sync + SystemInput + 'static, <I as SystemInput>::Inner<'static>: Send
     {

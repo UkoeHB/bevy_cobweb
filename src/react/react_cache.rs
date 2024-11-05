@@ -340,7 +340,7 @@ impl ReactCache
         }
 
         for command in cache.reaction_commands_buffer.drain(..) {
-            commands.add(command);
+            commands.queue(command);
         }
 
         // entity-agnostic component reactors
@@ -348,7 +348,7 @@ impl ReactCache
         {
             for handle in handlers.insertion_callbacks.iter()
             {
-                commands.add(
+                commands.queue(
                         ReactionCommand::EntityReaction{
                             reaction_source : entity,
                             reaction_type   : rtype,
@@ -375,7 +375,7 @@ impl ReactCache
         }
 
         for command in cache.reaction_commands_buffer.drain(..) {
-            commands.add(command);
+            commands.queue(command);
         }
 
         // entity-agnostic component reactors
@@ -383,7 +383,7 @@ impl ReactCache
         {
             for handle in handlers.mutation_callbacks.iter()
             {
-                commands.add(
+                commands.queue(
                         ReactionCommand::EntityReaction{
                             reaction_source : entity,
                             reaction_type   : rtype,
@@ -473,7 +473,7 @@ impl ReactCache
         {
             for reactor in entity_reactors.iter_rtype(reaction_type)
             {
-                commands.add(
+                commands.queue(
                         ReactionCommand::EntityEvent{
                             target,
                             data_entity,
@@ -489,7 +489,7 @@ impl ReactCache
             // queue reactors
             for handle in handlers.iter()
             {
-                commands.add(
+                commands.queue(
                     ReactionCommand::EntityEvent{
                         target,
                         data_entity,
@@ -531,7 +531,7 @@ impl ReactCache
         // queue reactors
         for handle in handlers.iter()
         {
-            commands.add(
+            commands.queue(
                 ReactionCommand::Resource{ reactor: handle.sys_command() }
             );
         }
@@ -555,7 +555,7 @@ impl ReactCache
         // queue reactors
         for handle in handlers.iter()
         {
-            commands.add(
+            commands.queue(
                 ReactionCommand::BroadcastEvent{ data_entity, reactor: handle.sys_command() }
             );
         }
