@@ -17,7 +17,7 @@ use std::hash::Hash;
 #[derive(Component)]
 struct SpawnedSystem<I, O>
 where
-    I: Send + Sync + 'static,
+    I: Send + Sync + SystemInput + 'static,
     O: Send + Sync + 'static,
 {
     system: Option<CallbackSystem<I, O>>,
@@ -25,7 +25,7 @@ where
 
 impl<I, O> SpawnedSystem<I, O>
 where
-    I: Send + Sync + 'static,
+    I: Send + Sync + SystemInput + 'static,
     O: Send + Sync + 'static,
 {
     fn new(system: CallbackSystem<I,O>) -> Self
@@ -60,7 +60,7 @@ impl SysId
 /// The system can be invoked by calling [`spawned_syscall()`].
 pub fn spawn_system<I, O, S, Marker>(world: &mut World, system: S) -> SysId
 where
-    I: Send + Sync + 'static,
+    I: Send + Sync + SystemInput + 'static,
     O: Send + Sync + 'static,
     S: IntoSystem<I, O, Marker> + Send + Sync + 'static,
 {
@@ -72,7 +72,7 @@ where
 /// The system can be invoked by calling [`spawned_syscall()`].
 pub fn spawn_system_from<I, O>(world: &mut World, system: CallbackSystem<I, O>) -> SysId
 where
-    I: Send + Sync + 'static,
+    I: Send + Sync + SystemInput + 'static,
     O: Send + Sync + 'static,
 {
     SysId::new(world.spawn(SpawnedSystem::new(system)).id())
@@ -89,7 +89,7 @@ where
 /// Panics if [`setup_auto_despawn()`](AutoDespawnAppExt::setup_auto_despawn) was not added to your app.
 pub fn spawn_rc_system<I, O, S, Marker>(world: &mut World, system: S) -> AutoDespawnSignal
 where
-    I: Send + Sync + 'static,
+    I: Send + Sync + SystemInput + 'static,
     O: Send + Sync + 'static,
     S: IntoSystem<I, O, Marker> + Send + Sync + 'static,
 {
@@ -103,7 +103,7 @@ where
 /// Panics if [`setup_auto_despawn()`](AutoDespawnAppExt::setup_auto_despawn) was not added to your app.
 pub fn spawn_rc_system_from<I, O>(world: &mut World, system: CallbackSystem<I, O>) -> AutoDespawnSignal
 where
-    I: Send + Sync + 'static,
+    I: Send + Sync + SystemInput + 'static,
     O: Send + Sync + 'static,
 {
     let sys_id = spawn_system_from(world, system);
@@ -121,30 +121,30 @@ where
 /// ```
 /// use bevy_cobweb::prelude::*;
 /// use bevy::prelude::*;
-/// 
+///
 /// fn test_system(In(input): In<u16>, mut local: Local<u16>) -> u16
 /// {
 ///     *local += input;
 ///     *local
 /// }
-/// 
+///
 /// let mut world = World::new();
 /// let sys_id1 = spawn_system(test_system);
 /// let sys_id2 = spawn_system(test_system);
-/// 
+///
 /// assert_eq!(spawned_syscall(&mut world, sys_id1, 1u16), 1);
 /// assert_eq!(spawned_syscall(&mut world, sys_id1, 1u16), 2);    //Local is preserved
 /// assert_eq!(spawned_syscall(&mut world, sys_id2, 10u16), 10);  //new Local
 /// assert_eq!(spawned_syscall(&mut world, sys_id2, 10u16), 20);
 /// ```
 ///
-pub fn spawned_syscall<I, O>(world: &mut World, sys_id: SysId, input: I) -> Result<O, ()>
+pub fn spawned_syscall<I, O>(world: &mut World, sys_id: SysId, input: <I as SystemInput>::Inner<'_>) -> Result<O, ()>
 where
-    I: Send + Sync + 'static,
+    I: Send + Sync + SystemInput + 'static, <I as SystemInput>::Inner<'static>: Send,
     O: Send + Sync + 'static,
 {
     // extract the callback
-    let Some(mut entity_mut) = world.get_entity_mut(sys_id.0) else { return Err(()); };
+    let Ok(mut entity_mut) = world.get_entity_mut(sys_id.0) else { return Err(()); };
     let Some(mut spawned_system) = entity_mut.get_mut::<SpawnedSystem<I, O>>()
     else { tracing::error!(?sys_id, "spawned system component is missing"); return Err(()); };
     let Some(mut callback) = spawned_system.system.take()
@@ -154,7 +154,7 @@ where
     let result = callback.run(world, input).ok_or(())?;
 
     // reinsert the callback if its target hasn't been despawned
-    let Some(mut entity_mut) = world.get_entity_mut(sys_id.0) else { return Ok(result); };
+    let Ok(mut entity_mut) = world.get_entity_mut(sys_id.0) else { return Ok(result); };
     let Some(mut spawned_system) = entity_mut.get_mut::<SpawnedSystem<I, O>>()
     else { tracing::error!(?sys_id, "spawned system component is missing"); return Ok(result); };
     spawned_system.system = Some(callback);
@@ -174,7 +174,7 @@ pub trait SpawnedSyscallCommandsExt
     /// [`spawned_syscall()`] or [`SpawnedSyscallCommandsExt::spawned_syscall()`].
     fn spawn_system<I, O, S, Marker>(&mut self, system: S) -> SysId
     where
-        I: Send + Sync + 'static,
+        I: Send + Sync + SystemInput + 'static,
         O: Send + Sync + 'static,
         S: IntoSystem<I, O, Marker> + Send + Sync + 'static;
 
@@ -184,7 +184,7 @@ pub trait SpawnedSyscallCommandsExt
     /// [`spawned_syscall()`] or [`SpawnedSyscallCommandsExt::spawned_syscall()`].
     fn spawn_system_from<I, O>(&mut self, system: CallbackSystem<I, O>) -> SysId
     where
-        I: Send + Sync + 'static,
+        I: Send + Sync + SystemInput + 'static,
         O: Send + Sync + 'static;
 
     /// Schedule a system to be inserted into the specified entity.
@@ -195,7 +195,7 @@ pub trait SpawnedSyscallCommandsExt
     /// Returns an error if the entity does not exist.
     fn insert_system<I, O, S, Marker>(&mut self, entity: Entity, system: S) -> Result<(), ()>
     where
-        I: Send + Sync + 'static,
+        I: Send + Sync + SystemInput + 'static,
         O: Send + Sync + 'static,
         S: IntoSystem<I, O, Marker> + Send + Sync + 'static;
 
@@ -206,16 +206,16 @@ pub trait SpawnedSyscallCommandsExt
     /// Logs a warning if the system entity doesn't exist.
     ///
     /// Syntax sugar for [`spawned_syscall()`].
-    fn spawned_syscall<I>(&mut self, sys_id: SysId, input: I)
+    fn spawned_syscall<I>(&mut self, sys_id: SysId, input: <I as bevy::prelude::SystemInput>::Inner<'_>)
     where
-        I: Send + Sync + 'static;
+        I: Send + Sync + SystemInput + 'static, <I as SystemInput>::Inner<'static>: Send;
 }
 
 impl<'w, 's> SpawnedSyscallCommandsExt for Commands<'w, 's>
 {
     fn spawn_system<I, O, S, Marker>(&mut self, system: S) -> SysId
     where
-        I: Send + Sync + 'static,
+        I: Send + Sync + SystemInput + 'static,
         O: Send + Sync + 'static,
         S: IntoSystem<I, O, Marker> + Send + Sync + 'static
     {
@@ -224,7 +224,7 @@ impl<'w, 's> SpawnedSyscallCommandsExt for Commands<'w, 's>
 
     fn spawn_system_from<I, O>(&mut self, system: CallbackSystem<I, O>) -> SysId
     where
-        I: Send + Sync + 'static,
+        I: Send + Sync + SystemInput + 'static,
         O: Send + Sync + 'static
     {
         SysId::new(self.spawn(SpawnedSystem::new(system)).id())
@@ -232,7 +232,7 @@ impl<'w, 's> SpawnedSyscallCommandsExt for Commands<'w, 's>
 
     fn insert_system<I, O, S, Marker>(&mut self, entity: Entity, system: S) -> Result<(), ()>
     where
-        I: Send + Sync + 'static,
+        I: Send + Sync + SystemInput + 'static,
         O: Send + Sync + 'static,
         S: IntoSystem<I, O, Marker> + Send + Sync + 'static
     {
@@ -242,18 +242,19 @@ impl<'w, 's> SpawnedSyscallCommandsExt for Commands<'w, 's>
         Ok(())
     }
 
-    fn spawned_syscall<I>(&mut self, sys_id: SysId, input: I)
+    fn spawned_syscall<I>(&mut self, sys_id: SysId, input: <I as SystemInput>::Inner<'_>)
     where
-        I: Send + Sync + 'static,
+        I: Send + Sync + SystemInput + 'static, <I as SystemInput>::Inner<'static>: Send
     {
-        self.add(
+        self.queue(
                 move |world: &mut World|
                 {
-                    if let Err(_) = spawned_syscall::<I, ()>(world, sys_id, input)
+                    if let Err(_) = spawned_syscall::<I, ()>(world, sys_id, input.into())
                     {
                         tracing::warn!(?sys_id, "spawned syscall failed");
                     }
                 }
+
             );
     }
 }

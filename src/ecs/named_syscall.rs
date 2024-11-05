@@ -26,15 +26,15 @@ use std::hash::{Hash, Hasher};
 /// ```
 /// use bevy_cobweb::prelude::*;
 /// use bevy::prelude::*;
-/// 
+///
 /// fn test_system(In(input): In<u16>, mut local: Local<u16>) -> u16
 /// {
 ///     *local += input;
 ///     *local
 /// }
-/// 
+///
 /// let mut world = World::new();
-/// 
+///
 /// assert_eq!(named_syscall(&mut world, "a", 1u16, test_system), 1);
 /// assert_eq!(named_syscall(&mut world, "a", 1u16, test_system), 2);    //Local is preserved
 /// assert_eq!(named_syscall(&mut world, "b", 10u16, test_system), 10);  //new Local
@@ -44,12 +44,12 @@ use std::hash::{Hash, Hasher};
 pub fn named_syscall<H, I, O, S, Marker>(
     world  : &mut World,
     id     : H,
-    input  : I,
+    input  : <I as SystemInput>::Inner<'_>,
     system : S
 ) -> O
 where
     H: Hash,
-    I: Send + Sync + 'static,
+    I: Send + Sync + SystemInput + 'static,
     O: Send + Sync + 'static,
     S: IntoSystem<I, O, Marker> + Send + Sync + 'static,
 {
@@ -99,9 +99,9 @@ where
 /// Directly invoke a named system.
 ///
 /// Returns `Err` if the system cannot be found.
-pub fn named_syscall_direct<I, O>(world: &mut World, sys_name: SysName, input: I) -> Result<O, ()>
+pub fn named_syscall_direct<I, O>(world: &mut World, sys_name: SysName, input: <I as SystemInput>::Inner<'_>) -> Result<O, ()>
 where
-    I: Send + Sync + 'static,
+    I: Send + Sync + SystemInput + 'static,
     O: Send + Sync + 'static,
 {
     // get resource storing the id-mapped systems
@@ -152,7 +152,7 @@ where
 /// the system ids (e.g. via type wrappers: `SysName::new_raw::<Wrapper<S>>(counter)`)
 pub fn register_named_system<I, O, S, Marker>(world: &mut World, sys_name: SysName, system: S)
 where
-    I: Send + Sync + 'static,
+    I: Send + Sync + SystemInput + 'static,
     O: Send + Sync + 'static,
     S: IntoSystem<I, O, Marker> + Send + Sync + 'static,
 {
@@ -161,7 +161,7 @@ where
 
 pub fn register_named_system_from<I, O>(world: &mut World, sys_name: SysName, callback: CallbackSystem<I, O>)
 where
-    I: Send + Sync + 'static,
+    I: Send + Sync + SystemInput + 'static,
     O: Send + Sync + 'static,
 {
     // initialize the callback
@@ -213,7 +213,7 @@ impl SysName
 #[derive(Resource)]
 pub struct IdMappedSystems<I, O>
 where
-    I: Send + Sync + 'static,
+    I: Send + Sync + SystemInput + 'static,
     O: Send + Sync + 'static,
 {
     systems: HashMap<SysName, Option<BoxedSystem<I, O>>>,
@@ -221,7 +221,7 @@ where
 
 impl<I, O> IdMappedSystems<I, O>
 where
-    I: Send + Sync + 'static,
+    I: Send + Sync + SystemInput + 'static,
     O: Send + Sync + 'static,
 {
     pub fn revoke<S: 'static>(&mut self, id: impl Hash)
@@ -238,7 +238,7 @@ where
 
 impl<I, O> Default for IdMappedSystems<I, O>
 where
-    I: Send + Sync + 'static,
+    I: Send + Sync + SystemInput + 'static,
     O: Send + Sync + 'static,
 {
     fn default() -> Self { Self{ systems: HashMap::default() } }
