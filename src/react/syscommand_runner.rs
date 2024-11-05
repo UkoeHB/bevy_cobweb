@@ -85,7 +85,7 @@ pub(crate) fn syscommand_runner(
 
     // extract the callback
     // - On abort we perform garbage collection in case the cleanup auto-despawns entities.
-    let Some(mut entity_mut) = world.get_entity_mut(*command)
+    let Ok(mut entity_mut) = world.get_entity_mut(*command)
     else
     {
         cleanup_on_abort(world, setup, cleanup);
@@ -125,7 +125,7 @@ pub(crate) fn syscommand_runner(
     garbage_collect_entities(world);
 
     // reinsert the callback if its target hasn't been despawned
-    if let Some(mut entity_mut) = world.get_entity_mut(*command)
+    if let Ok(mut entity_mut) = world.get_entity_mut(*command)
     {
         if let Some(mut system_command) = entity_mut.get_mut::<SystemCommandStorage>()
         {
