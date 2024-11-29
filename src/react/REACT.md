@@ -349,7 +349,7 @@ struct TimeRecorder(Duration);
 struct TimeReactor;
 impl EntityWorldReactor for TimeReactor
 {
-    type Triggers = EntityMutation<TimeRecorder>;
+    type Triggers = EntityMutationTrigger<TimeRecorder>;
     type Local = String;
 
     fn reactor() -> SystemCommandCallback

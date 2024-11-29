@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.0]
+
+### Changed
+
+- Update to `bevy` v0.15.0.
+
+
 ## [0.12.0]
 
 ### Changed

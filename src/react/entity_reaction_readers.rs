@@ -346,7 +346,7 @@ struct MyReactor;
 
 impl EntityWorldReactor for MyReactor
 {
-    type Triggers = EntityMutation::<MyComponent>;
+    type Triggers = EntityMutationTrigger::<MyComponent>;
     type Local = String;
 
     fn reactor() -> SystemCommandCallback
