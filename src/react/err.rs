@@ -106,12 +106,12 @@ pub const DONE: DropErr = Ok(());
 /// Extension trait for converting `Option<T>` to `DropErr<T>`.
 pub trait OptionToDropErr<T>
 {
-    fn result(self) -> DropErr<T>;
+    fn drop_err(self) -> DropErr<T>;
 }
 
 impl<T> OptionToDropErr<T> for Option<T>
 {
-    fn result(self) -> DropErr<T>
+    fn drop_err(self) -> DropErr<T>
     {
         self.ok_or(IgnoredError)
     }
@@ -191,12 +191,12 @@ pub const OK: WarnErr = Ok(());
 /// Extension trait for converting `Option<T>` to `WarnErr<T>`.
 pub trait OptionToWarnErr<T>
 {
-    fn result(self) -> WarnErr<T>;
+    fn warn_err(self) -> WarnErr<T>;
 }
 
 impl<T> OptionToWarnErr<T> for Option<T>
 {
-    fn result(self) -> WarnErr<T>
+    fn warn_err(self) -> WarnErr<T>
     {
         self.ok_or(WarnError::None)
     }

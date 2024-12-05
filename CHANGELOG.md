@@ -1,6 +1,13 @@
 # Changelog
 
-## [0.14.1]
+## [0.14.2]
+
+### Changed
+
+- Rename `OptionToDropErr::result` to `drop_err` and `OptionToWarnErr::result` to `warn_err`.
+
+
+## [0.14.1] (YANKED)
 
 ### Changed
 
