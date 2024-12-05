@@ -57,15 +57,15 @@ impl<C: ReactComponent> React<C>
     /// Sets the component value and triggers mutations only if the value will change.
     ///
     /// Returns the previous value if it changed.
-    pub fn set_if_neq(&mut self, c: &mut Commands, new: C) -> Option<C>
+    pub fn set_if_neq(&mut self, c: &mut Commands, new: C) -> Result<C, ()>
     where
         C: PartialEq
     {
-        if new == self.component { return None; }
+        if new == self.component { return Err(()); }
 
         c.syscall(self.entity, ReactCache::schedule_mutation_reaction::<C>);
         let old = std::mem::replace(&mut self.component, new);
-        Some(old)
+        Ok(old)
     }
 
     /// Unwrap the `React`.
@@ -101,9 +101,9 @@ impl<'w, 's, T: ReactComponent> Reactive<'w, 's, T>
     /// Reads `T` on `entity`.
     ///
     /// Does not trigger reactions.
-    pub fn get(&self, entity: Entity) -> Option<&T>
+    pub fn get(&self, entity: Entity) -> Result<&T, ()>
     {
-        self.components.get(entity).ok().map(|(_, c)| c.get())
+        self.components.get(entity).map(|(_, c)| c.get()).map_err(|_| ())
     }
 
     /// Reads `T` on a single entity.
@@ -134,9 +134,9 @@ impl<'w, 's, T: ReactComponent> ReactiveMut<'w, 's, T>
     /// Reads `T` on `entity`.
     ///
     /// Does not trigger reactions.
-    pub fn get(&self, entity: Entity) -> Option<&T>
+    pub fn get(&self, entity: Entity) -> Result<&T, ()>
     {
-        self.components.get(entity).ok().map(|(_, c)| c.get())
+        self.components.get(entity).map(|(_, c)| c.get()).map_err(|_| ())
     }
 
     /// Reads `T` on a single entity.
@@ -153,10 +153,10 @@ impl<'w, 's, T: ReactComponent> ReactiveMut<'w, 's, T>
     /// Gets a mutable reference to `T` on `entity`.
     ///
     /// Triggers mutation reactions.
-    pub fn get_mut(&mut self, c: &mut Commands, entity: Entity) -> Option<&mut T>
+    pub fn get_mut(&mut self, c: &mut Commands, entity: Entity) -> Result<&mut T, ()>
     {
-        let (_, x) = self.components.get_mut(entity).ok()?;
-        Some(x.into_inner().get_mut(c))
+        let (_, x) = self.components.get_mut(entity).map_err(|_| ())?;
+        Ok(x.into_inner().get_mut(c))
     }
 
     /// Gets a mutable reference to `T` on a single entity.
@@ -173,10 +173,10 @@ impl<'w, 's, T: ReactComponent> ReactiveMut<'w, 's, T>
     /// Gets a mutable reference to `T` on `entity`.
     ///
     /// Does not trigger reactions.
-    pub fn get_noreact(&mut self, entity: Entity) -> Option<&mut T>
+    pub fn get_noreact(&mut self, entity: Entity) -> Result<&mut T, ()>
     {
-        let (_, x) = self.components.get_mut(entity).ok()?;
-        Some(x.into_inner().get_noreact())
+        let (_, x) = self.components.get_mut(entity).map_err(|_| ())?;
+        Ok(x.into_inner().get_noreact())
     }
 
     /// Gets a mutable reference to `T` on a single entity
@@ -193,11 +193,11 @@ impl<'w, 's, T: ReactComponent> ReactiveMut<'w, 's, T>
     /// Sets a new value on the specified entity if it would change.
     ///
     /// Returns the previous value if changed.
-    pub fn set_if_neq(&mut self, c: &mut Commands, entity: Entity, new: T) -> Option<T>
+    pub fn set_if_neq(&mut self, c: &mut Commands, entity: Entity, new: T) -> Result<T, ()>
     where
         T: PartialEq
     {
-        let (_, mut x) = self.components.get_mut(entity).ok()?;
+        let (_, mut x) = self.components.get_mut(entity).map_err(|_| ())?;
         (*x).set_if_neq(c, new)
     }
 
@@ -206,7 +206,7 @@ impl<'w, 's, T: ReactComponent> ReactiveMut<'w, 's, T>
     /// Returns the previous value if changed.
     ///
     /// Panics if the inner query doesn't have exactly one entity.
-    pub fn set_single_if_not_eq(&mut self, c: &mut Commands, new: T) -> (Entity, Option<T>)
+    pub fn set_single_if_not_eq(&mut self, c: &mut Commands, new: T) -> (Entity, Result<T, ()>)
     where
         T: PartialEq
     {

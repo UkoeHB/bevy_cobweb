@@ -41,8 +41,9 @@ fn on_broadcast_add(mut c: Commands) -> RevokeToken
     c.react().on_revokable(broadcast::<IntEvent>(),
         move |event: BroadcastEvent<IntEvent>, mut recorder: ResMut<TestReactRecorder>|
         {
-            let Some(event) = event.try_read() else { return; };
+            let event = event.try_read()?;
             recorder.0 += event.0;
+            DONE
         }
     )
 }
@@ -66,9 +67,10 @@ fn on_entity_event(In(entity): In<Entity>, mut c: Commands) -> RevokeToken
     c.react().on_revokable(entity_event::<IntEvent>(entity),
         move |event: EntityEvent<IntEvent>, mut recorder: ResMut<TestReactRecorder>|
         {
-            let Some((received_entity, event)) = event.try_read() else { return; };
+            let (received_entity, event) = event.try_read()?;
             assert_eq!(received_entity, entity);
             recorder.0 = event.0;
+            DONE
         }
     )
 }
@@ -78,9 +80,10 @@ fn on_entity_event_add(In(entity): In<Entity>, mut c: Commands) -> RevokeToken
     c.react().on_revokable(entity_event::<IntEvent>(entity),
         move |event: EntityEvent<IntEvent>, mut recorder: ResMut<TestReactRecorder>|
         {
-            let Some((received_entity, event)) = event.try_read() else { return; };
+            let (received_entity, event) = event.try_read()?;
             assert_eq!(received_entity, entity);
             recorder.0 += event.0;
+            DONE
         }
     )
 }
@@ -107,13 +110,14 @@ fn on_entity_event_recursive(In(entity): In<Entity>, mut c: Commands) -> RevokeT
             mut recorder  : ResMut<TestReactRecorder>
         |
         {
-            let Some((received_entity, event)) = event.try_read() else { return; };
+            let (received_entity, event) = event.try_read()?;
             assert_eq!(received_entity, entity);
             recorder.0 += 1;
 
             // recurse until the event is 0
-            if event.0 == 0 { return; }
+            if event.0 == 0 { return DONE; }
             c.react().entity_event(entity, IntEvent(event.0.saturating_sub(1)));
+            DONE
         }
     )
 }
@@ -126,9 +130,10 @@ fn on_any_entity_event(In(target_entity): In<Entity>, mut c: Commands) -> Revoke
     c.react().on_revokable(any_entity_event::<IntEvent>(),
         move |event: EntityEvent<IntEvent>, mut recorder: ResMut<TestReactRecorder>|
         {
-            let Some((received_entity, event)) = event.try_read() else { return; };
+            let (received_entity, event) = event.try_read()?;
             assert_eq!(received_entity, target_entity);
             recorder.0 = event.0;
+            DONE
         }
     )
 }

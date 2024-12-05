@@ -115,10 +115,9 @@ impl<T: Send + Sync + 'static> SystemEventData<T>
 let cmd = commands.spawn_system_command(
     |mut event: SystemEvent<()>|
     {
-        if let Some(()) = event.take()
-        {
-            println!("event received");
-        }
+        event.take()?;
+        println!("event received");
+        DONE
     }
 );
 
@@ -137,12 +136,12 @@ impl<'w, 's, T: Send + Sync + 'static> SystemEvent<'w, 's, T>
     /// Takes system event data if it exists.
     ///
     /// This will return at most one unique `T` each time a system runs.
-    pub fn take(&mut self) -> Option<T>
+    pub fn take(&mut self) -> Result<T, ()>
     {
-        if !self.tracker.is_reacting() { return None; }
-        let Ok(mut data) = self.data.get_mut(self.tracker.data_entity()) else { return None; };
+        if !self.tracker.is_reacting() { return Err(()); }
+        let Ok(mut data) = self.data.get_mut(self.tracker.data_entity()) else { return Err(()); };
 
-        data.take()
+        data.take().ok_or(())
     }
 }
 

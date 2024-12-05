@@ -22,6 +22,31 @@ let syscommand = commands.spawn_system_command(
 );
 ```
 
+System commands return anything that implements [`ReactorResult`](bevy_cobweb::prelude::ReactorResult). This includes `()`, [`DropErr`](bevy_cobweb::prelude::DropErr), and [`WarnErr`](bevy_cobweb::prelude::WarnErr). `DropErr` lets you early-out from systems using `?`. It just requires [`DONE`](bevy_cobweb::prelude::DONE) at the end of the system. Similarly, `WarnErr` requires [`OK`](bevy_cobweb::prelude::OK) at the end of the system.
+
+If this example errors, the error will be silently dropped.
+```rust
+let syscommand = commands.spawn_system_command(
+    |weebles: Query<&Weebles>|
+    {
+        let weeble = weebles.get_single()?;
+        println!("my weeble: {:?}", weeble);
+        DONE
+    }
+);
+```
+
+If this example errors, the error will be logged as a warning.
+```rust
+let syscommand = commands.spawn_system_command(
+    |weebles: Query<&Weebles>|
+    {
+        let weeble = weebles.get_single()?;
+        println!("my weeble: {:?}", weeble);
+        OK
+    }
+);
+```
 
 ### Running System Commands
 
@@ -42,11 +67,12 @@ For example, using the [`SystemEvent`](bevy_cobweb::prelude::SystemEvent) system
 let syscommand = commands.spawn_system_command(
     |mut data: SystemEvent<Vec<u32>>|
     {
-        let Some(data) = data.take() else { return; };
+        let data = data.take()?;
         for val in data
         {
             println!("recieved {}", val);
         }
+        DONE
     }
 );
 
@@ -164,9 +190,10 @@ fn setup(mut c: Commands)
     c.react().on(insertion::<Health>(),
         |event: InsertionEvent<Health>, q: Query<&React<Health>>|
         {
-            let Some(entity) = event.try_read() else { return; };
-            let health = q.get(entity).unwrap();
+            let entity = event.try_read()?;
+            let health = q.get(entity)?;
             println!("new health: {}", health.0);
+            DONE
         }
     );
 
@@ -175,9 +202,10 @@ fn setup(mut c: Commands)
     c.react().on(entity_mutation::<Health>(entity),
         |event: InsertionEvent<Health>, q: Query<&React<Health>>|
         {
-            let Some(entity) = event.try_read() else { return; };
-            let health = q.get(entity).unwrap();
+            let entity = event.try_read()?;
+            let health = q.get(entity)?;
             println!("updated health: {}", health.0);
+            DONE
         }
     );
 
@@ -220,10 +248,10 @@ React to the event, using the [`BroadcastEvent`](bevy_cobweb::prelude::Broadcast
 c.react().on(broadcast::<u32>(),
     |event: BroadcastEvent<u32>|
     {
-        if let Some(event) = event.try_read()
-        {
-            println!("broadcast: {}", event);
-        }
+        let event = event.try_read()?:
+        println!("broadcast: {}", event);
+
+        DONE
     }
 );
 ```
@@ -243,10 +271,10 @@ React to the event, using the [`EntityEvent`](bevy_cobweb::prelude::EntityEvent)
 c.react().on(entity_event::<u32>(entity),
     |event: EntityEvent<u32>|
     {
-        if let Some((entity, event)) = event.try_read()
-        {
-            println!("entity: {:?}, event: {}", entity, event);
-        }
+        let (entity, event) = event.try_read()?;
+        println!("entity: {:?}, event: {}", entity, event);
+
+        DONE
     }
 );
 ```
@@ -358,7 +386,7 @@ impl EntityWorldReactor for TimeReactor
             |data: EntityLocal<TimeReactor>, components: Reactive<TimeRecorder>|
             {
                 let (entity, data) = data.get();
-                let Some(component) = components.get(entity) else { return };
+                let component = components.get(entity)?;
                 println!("Entity {:?} now has {:?}", data, component);
             }
         )

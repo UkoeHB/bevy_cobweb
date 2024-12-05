@@ -149,10 +149,9 @@ fn example(mut c: Commands)
         insertion::<A>(),  // entity-specific: entity_insertion::<A>(target_entity)
         |event: InsertionEvent<A>|
         {
-            if let Some(entity) = event.get()
-            {
-                println!("'A' was inserted to {:?}", entity);
-            }
+            let entity = event.get()?;
+            println!("'A' was inserted to {:?}", entity);
+            DONE
         }
     );
 
@@ -177,25 +176,25 @@ impl<'w, 's, T: ReactComponent> InsertionEvent<'w, 's, T>
     pub fn entity(&self) -> Entity
     {
         self.get()
-            .unwrap_or_else(|| panic!("failed reading insertion event for {}, there is no event", type_name::<T>()))
+            .unwrap_or_else(|_| panic!("failed reading insertion event for {}, there is no event", type_name::<T>()))
     }
 
     /// See [`Self::entity`].
-    pub fn get(&self) -> Option<Entity>
+    pub fn get(&self) -> Result<Entity, ()>
     {
-        if !self.tracker.is_reacting() { return None; }
-        let EntityReactionType::Insertion(component_id) = self.tracker.reaction_type() else { return None; };
-        if component_id != self.component_id.id() { return None; }
+        if !self.tracker.is_reacting() { return Err(()); }
+        let EntityReactionType::Insertion(component_id) = self.tracker.reaction_type() else { return Err(()); };
+        if component_id != self.component_id.id() { return Err(()); }
 
-        Some(self.tracker.source())
+        Ok(self.tracker.source())
     }
 
     /// Returns `true` if there is nothing to read.
     ///
-    /// Equivalent to `event.get().is_none()`.
+    /// Equivalent to `event.get().is_ok()`.
     pub fn is_empty(&self) -> bool
     {
-        self.get().is_none()
+        self.get().is_err()
     }
 }
 
@@ -215,10 +214,9 @@ fn example(mut c: Commands, query: Query<&mut React<A>>)
         mutation::<A>(),  // entity-specific: entity_mutation::<A>(target_entity)
         |event: MutationEvent<A>|
         {
-            if let Some(entity) = event.get()
-            {
-                println!("'A' was mutated on {:?}", entity);
-            }
+            let entity = event.get()?;
+            println!("'A' was mutated on {:?}", entity);
+            DONE
         }
     );
 
@@ -243,25 +241,25 @@ impl<'w, 's, T: ReactComponent> MutationEvent<'w, 's, T>
     pub fn entity(&self) -> Entity
     {
         self.get()
-            .unwrap_or_else(|| panic!("failed reading mutation event for {}, there is no event", type_name::<T>()))
+            .unwrap_or_else(|_| panic!("failed reading mutation event for {}, there is no event", type_name::<T>()))
     }
 
     /// See [`Self::entity`].
-    pub fn get(&self) -> Option<Entity>
+    pub fn get(&self) -> Result<Entity, ()>
     {
-        if !self.tracker.is_reacting() { return None; }
-        let EntityReactionType::Mutation(component_id) = self.tracker.reaction_type() else { return None; };
-        if component_id != self.component_id.id() { return None; }
+        if !self.tracker.is_reacting() { return Err(()); }
+        let EntityReactionType::Mutation(component_id) = self.tracker.reaction_type() else { return Err(()); };
+        if component_id != self.component_id.id() { return Err(()); }
 
-        Some(self.tracker.source())
+        Ok(self.tracker.source())
     }
 
     /// Returns `true` if there is nothing to read.
     ///
-    /// Equivalent to `event.get().is_none()`.
+    /// Equivalent to `event.get().is_ok()`.
     pub fn is_empty(&self) -> bool
     {
-        self.get().is_none()
+        self.get().is_err()
     }
 }
 
@@ -283,10 +281,9 @@ fn example(mut c: Commands, query: Query<Entity, With<React<A>>>)
         removal::<A>(),  // entity-specific: entity_removal::<A>(target_entity)
         |event: RemovalEvent<A>|
         {
-            if let Some(entity) = event.get()
-            {
-                println!("'A' was removed from {:?}", entity);
-            }
+            let entity = event.get()?;
+            println!("'A' was removed from {:?}", entity);
+            DONE
         }
     );
 
@@ -311,25 +308,25 @@ impl<'w, 's, T: ReactComponent> RemovalEvent<'w, 's, T>
     pub fn entity(&self) -> Entity
     {
         self.get()
-            .unwrap_or_else(|| panic!("failed reading removal event for {}, there is no event", type_name::<T>()))
+            .unwrap_or_else(|_| panic!("failed reading removal event for {}, there is no event", type_name::<T>()))
     }
 
     /// See [`Self::entity`].
-    pub fn get(&self) -> Option<Entity>
+    pub fn get(&self) -> Result<Entity, ()>
     {
-        if !self.tracker.is_reacting() { return None; }
-        let EntityReactionType::Removal(component_id) = self.tracker.reaction_type() else { return None; };
-        if component_id != self.component_id.id() { return None; }
+        if !self.tracker.is_reacting() { return Err(()); }
+        let EntityReactionType::Removal(component_id) = self.tracker.reaction_type() else { return Err(()); };
+        if component_id != self.component_id.id() { return Err(()); }
 
-        Some(self.tracker.source())
+        Ok(self.tracker.source())
     }
 
     /// Returns `true` if there is nothing to read.
     ///
-    /// Equivalent to `event.get().is_none()`.
+    /// Equivalent to `event.get().is_ok()`.
     pub fn is_empty(&self) -> bool
     {
-        self.get().is_none()
+        self.get().is_err()
     }
 }
 

@@ -22,10 +22,10 @@ pub trait ReactAppExt
     app.react(|rc| rc.on_persistent(triggers, reactor));
     ```
     */
-    fn add_reactor<M>(
+    fn add_reactor<M, R: ReactorResult>(
         &mut self,
         triggers: impl ReactionTriggerBundle,
-        reactor: impl IntoSystem<(), (), M> + Send + Sync + 'static
+        reactor: impl IntoSystem<(), R, M> + Send + Sync + 'static
     ) -> &mut Self;
     /// Adds a [`WorldReactor`] to the app.
     ///
@@ -47,10 +47,10 @@ pub trait ReactAppExt
 
 impl ReactAppExt for App
 {
-    fn add_reactor<M>(
+    fn add_reactor<M, R: ReactorResult>(
         &mut self,
         triggers: impl ReactionTriggerBundle,
-        reactor: impl IntoSystem<(), (), M> + Send + Sync + 'static
+        reactor: impl IntoSystem<(), R, M> + Send + Sync + 'static
     ) -> &mut Self
     {
         // Make sure app is ready to use ReactCommands.
@@ -133,9 +133,9 @@ pub trait ReactWorldExt
     ///
     /// Returns the system command id that will eventually reference the spawned system.
     /// To run the system, schedule it with `commands.queue(system_command)`.
-    fn spawn_system_command<S, M>(&mut self, system: S) -> SystemCommand
+    fn spawn_system_command<S, R: ReactorResult, M>(&mut self, system: S) -> SystemCommand
     where
-        S: IntoSystem<(), (), M> + Send + Sync + 'static;
+        S: IntoSystem<(), R, M> + Send + Sync + 'static;
 
     /// Schedules a [`SystemCommand`] to be spawned from a pre-defined callback.
     ///
@@ -167,9 +167,9 @@ pub trait ReactWorldExt
 
 impl ReactWorldExt for World
 {
-    fn spawn_system_command<S, M>(&mut self, system: S) -> SystemCommand
+    fn spawn_system_command<S, R: ReactorResult, M>(&mut self, system: S) -> SystemCommand
     where
-        S: IntoSystem<(), (), M> + Send + Sync + 'static
+        S: IntoSystem<(), R, M> + Send + Sync + 'static
     {
         self.spawn_system_command_from(SystemCommandCallback::new(system))
     }
@@ -219,9 +219,9 @@ pub trait ReactCommandsExt
     ///
     /// Returns the system command id that will eventually reference the spawned system.
     /// To run the system, schedule it with `commands.queue(system_command)`.
-    fn spawn_system_command<S, M>(&mut self, system: S) -> SystemCommand
+    fn spawn_system_command<S, R: ReactorResult, M>(&mut self, system: S) -> SystemCommand
     where
-        S: IntoSystem<(), (), M> + Send + Sync + 'static;
+        S: IntoSystem<(), R, M> + Send + Sync + 'static;
 
     /// Schedules a [`SystemCommand`] to be spawned from a pre-defined callback.
     ///
@@ -245,9 +245,9 @@ impl<'w, 's> ReactCommandsExt for Commands<'w, 's>
         ReactCommands{ commands: self.reborrow() }
     }
 
-    fn spawn_system_command<S, M>(&mut self, system: S) -> SystemCommand
+    fn spawn_system_command<S, R: ReactorResult, M>(&mut self, system: S) -> SystemCommand
     where
-        S: IntoSystem<(), (), M> + Send + Sync + 'static
+        S: IntoSystem<(), R, M> + Send + Sync + 'static
     {
         self.spawn_system_command_from(SystemCommandCallback::new(system))
     }

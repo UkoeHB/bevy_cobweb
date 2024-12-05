@@ -232,10 +232,10 @@ impl<'w, 's> ReactCommands<'w, 's>
     /// ```no_run
     /// rcommands.on((resource_mutation::<MyRes>(), mutation::<MyComponent>()), my_reactor_system);
     /// ```
-    pub fn on<M>(
+    pub fn on<M, R: ReactorResult>(
         &mut self,
         triggers : impl ReactionTriggerBundle,
-        reactor  : impl IntoSystem<(), (), M> + Send + Sync + 'static
+        reactor  : impl IntoSystem<(), R, M> + Send + Sync + 'static
     ){
         let sys_command = self.commands.spawn_system_command(reactor);
         let _ = self.with(triggers, sys_command, ReactorMode::Cleanup);
@@ -244,10 +244,10 @@ impl<'w, 's> ReactCommands<'w, 's>
     /// Registers a reactor triggered by ECS changes using [`ReactorMode::Persistent`].
     ///
     /// See [`Self::on`].
-    pub fn on_persistent<M>(
+    pub fn on_persistent<M, R: ReactorResult>(
         &mut self,
         triggers : impl ReactionTriggerBundle,
-        reactor  : impl IntoSystem<(), (), M> + Send + Sync + 'static
+        reactor  : impl IntoSystem<(), R, M> + Send + Sync + 'static
     ) -> SystemCommand
     {
         let sys_command = self.commands.spawn_system_command(reactor);
@@ -258,10 +258,10 @@ impl<'w, 's> ReactCommands<'w, 's>
     /// Registers a reactor triggered by ECS changes using [`ReactorMode::Revokable`].
     ///
     /// See [`Self::on`].
-    pub fn on_revokable<M>(
+    pub fn on_revokable<M, R: ReactorResult>(
         &mut self,
         triggers : impl ReactionTriggerBundle,
-        reactor  : impl IntoSystem<(), (), M> + Send + Sync + 'static
+        reactor  : impl IntoSystem<(), R, M> + Send + Sync + 'static
     ) -> RevokeToken
     {
         let sys_command = self.commands.spawn_system_command(reactor);
@@ -316,7 +316,7 @@ impl<'w, 's> ReactCommands<'w, 's>
     /// // The reactor will run on the first mutation of either MyRes or MyComponent.
     /// rcommands.once((resource_mutation::<MyRes>(), mutation::<MyComponent>()), my_reactor_system);
     /// ```
-    pub fn once<M, S: IntoSystem<(), (), M> + Send + Sync + 'static>(
+    pub fn once<M, R: ReactorResult, S: IntoSystem<(), R, M> + Send + Sync + 'static>(
         &mut self,
         triggers : impl ReactionTriggerBundle,
         reactor  : S
@@ -334,7 +334,8 @@ impl<'w, 's> ReactCommands<'w, 's>
         let mut once_reactor = Some(move |world: &mut World, cleanup: SystemCommandCleanup|
         {
             let mut callback = RawCallbackSystem::new(reactor);
-            callback.run_with_cleanup(world, (), move |w| cleanup.run(w));
+            let result = callback.run_with_cleanup(world, (), move |w| cleanup.run(w));
+            result.handle(world);
             world.get_entity_mut(entity).ok().map(|e| e.despawn());
             world.react(|rc| rc.revoke(revoke_token_clone));
         });

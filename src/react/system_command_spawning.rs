@@ -51,14 +51,15 @@ pub struct SystemCommandCallback
 impl SystemCommandCallback
 {
     /// Makes a new system command callback from a system.
-    pub fn new<S, M>(system: S) -> Self
+    pub fn new<S, R: ReactorResult, M>(system: S) -> Self
     where
-        S: IntoSystem<(), (), M> + Send + Sync + 'static
+        S: IntoSystem<(), R, M> + Send + Sync + 'static
     {
         let mut callback = RawCallbackSystem::new(system);
         let command = move |world: &mut World, cleanup: SystemCommandCleanup|
         {
-            callback.run_with_cleanup(world, (), move |world: &mut World| cleanup.run(world));
+            let result = callback.run_with_cleanup(world, (), move |world: &mut World| cleanup.run(world));
+            result.handle(world);
         };
         Self::with(command)
     }
@@ -114,9 +115,9 @@ impl SystemCommandStorage
 /// Spawns a system as a [`SystemCommand`].
 ///
 /// Systems are not initialized until they are first run.
-pub fn spawn_system_command<S, M>(world: &mut World, system: S) -> SystemCommand
+pub fn spawn_system_command<S, R: ReactorResult, M>(world: &mut World, system: S) -> SystemCommand
 where
-    S: IntoSystem<(), (), M> + Send + Sync + 'static,
+    S: IntoSystem<(), R, M> + Send + Sync + 'static,
 {
     spawn_system_command_from(world, SystemCommandCallback::new(system))
 }
@@ -142,9 +143,9 @@ pub fn spawn_system_command_from(world: &mut World, callback: SystemCommandCallb
 /// Returns a cleanup handle. The system will be dropped when the last copy of the handle is dropped.
 ///
 /// Panics if [`setup_auto_despawn()`](AutoDespawnAppExt::setup_auto_despawn) was not added to your app.
-pub fn spawn_rc_system_command<S, M>(world: &mut World, system: S) -> AutoDespawnSignal
+pub fn spawn_rc_system_command<S, R: ReactorResult, M>(world: &mut World, system: S) -> AutoDespawnSignal
 where
-    S: IntoSystem<(), (), M> + Send + Sync + 'static,
+    S: IntoSystem<(), R, M> + Send + Sync + 'static,
 {
     let system_command = spawn_system_command(world, system);
     world.resource::<AutoDespawner>().prepare(*system_command)

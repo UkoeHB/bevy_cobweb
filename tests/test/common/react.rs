@@ -101,17 +101,23 @@ pub fn update_test_recorder_with_resource(
 
 //-------------------------------------------------------------------------------------------------------------------
 
-pub fn update_test_recorder_with_broadcast(event: BroadcastEvent<IntEvent>, mut recorder: ResMut<TestReactRecorder>)
+pub fn update_test_recorder_with_broadcast(
+    event: BroadcastEvent<IntEvent>, mut recorder: ResMut<TestReactRecorder>
+) -> WarnErr
 {
-    let Some(event) = event.try_read() else { return; };
+    let event = event.try_read()?;
     recorder.0 = event.0;
+    OK
 }
 //-------------------------------------------------------------------------------------------------------------------
 
-pub fn update_test_recorder_with_entity_event(event: EntityEvent<IntEvent>, mut recorder: ResMut<TestReactRecorder>)
+pub fn update_test_recorder_with_entity_event(
+    event: EntityEvent<IntEvent>, mut recorder: ResMut<TestReactRecorder>
+) -> WarnErr
 {
-    let Some((_, event)) = event.try_read() else { return; };
+    let (_, event) = event.try_read()?;
     recorder.0 = event.0;
+    OK
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -120,13 +126,15 @@ pub fn update_test_recorder_with_broadcast_and_recurse(
     mut c : Commands,
     event         : BroadcastEvent<IntEvent>,
     mut recorder  : ResMut<TestReactRecorder>
-){
-    let Some(event) = event.try_read() else { return; };
+) -> DropErr
+{
+    let event = event.try_read()?;
     recorder.0 += 1;
 
     // recurse until the event is 0
-    if event.0 == 0 { return; }
+    if event.0 == 0 { return DONE; }
     c.react().broadcast(IntEvent(event.0.saturating_sub(1)));
+    DONE
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -136,7 +144,7 @@ pub fn update_test_recorder_with_broadcast_and_resource(
     mut recorder : ResMut<TestReactRecorder>,
     resource     : ReactRes<TestReactRes>,
 ){
-    if let Some(event) = event.try_read()
+    if let Ok(event) = event.try_read()
     {
         recorder.0 += event.0;
     }

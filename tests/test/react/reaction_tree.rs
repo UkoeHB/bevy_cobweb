@@ -93,9 +93,9 @@ fn multitest_system2(mut c: Commands, mut history: ResMut<TelescopeHistory>)
 
 fn invoke_echo_system(event: BroadcastEvent<usize>, mut c: Commands)
 {
-    assert!(event.try_read().is_some());
+    assert!(event.try_read().is_ok());
     c.syscall((), move |event: BroadcastEvent<usize>| {
-        assert!(event.try_read().is_none());
+        assert!(event.try_read().is_err());
     });
 }
 

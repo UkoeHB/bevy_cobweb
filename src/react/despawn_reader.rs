@@ -100,10 +100,9 @@ fn example(mut c: Commands)
         despawn(entity),
         |event: DespawnEvent|
         {
-            if let Some(entity) = event.get()
-            {
-                println!("{:?} was despawned", entity);
-            }
+            let entity = event.get()?;
+            println!("{:?} was despawned", entity);
+            DONE
         }
     );
 
@@ -130,10 +129,10 @@ impl<'w> DespawnEvent<'w>
     }
 
     /// See [`Self::entity`].
-    pub fn get(&self) -> Option<Entity>
+    pub fn get(&self) -> Result<Entity, ()>
     {
-        if !self.tracker.is_reacting() { return None; }
-        Some(self.tracker.source())
+        if !self.tracker.is_reacting() { return Err(()); }
+        Ok(self.tracker.source())
     }
 
     /// Returns `true` if there is nothing to read.
@@ -141,7 +140,7 @@ impl<'w> DespawnEvent<'w>
     /// Equivalent to `event.read().is_none()`.
     pub fn is_empty(&self) -> bool
     {
-        self.get().is_none()
+        self.get().is_err()
     }
 }
 

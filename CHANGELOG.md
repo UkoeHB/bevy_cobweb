@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.14.0]
+
+### Added
+
+- Add `ReactorResult` and return it from all reactor systems.
+    - Return `DONE` if you want errors to be dropped. Return `OK` if you want errors to print a warning.
+- Return `Result` from reaction readers and the `Reactive`/`ReactiveMut` system params instead of `Option` to better support `ReactorResult`.
+
+
 ## [0.13.0]
 
 ### Changed

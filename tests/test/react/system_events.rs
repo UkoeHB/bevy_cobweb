@@ -71,7 +71,7 @@ fn system_event_telescoping_impl(mut commands: Commands) -> Vec<usize>
     let command1 = commands.spawn_system_command(
         |mut event: SystemEvent<()>, mut history: ResMut<TelescopeHistory>|
         {
-            assert!(event.take().is_none());
+            assert!(event.take().is_err());
             history.push(1);
         }
     );
@@ -94,7 +94,7 @@ fn system_event_telescoping_impl(mut commands: Commands) -> Vec<usize>
                 }
                 None =>
                 {
-                    assert!(event.take().is_none());
+                    assert!(event.take().is_err());
                     history.push(3);
                 }
             }
@@ -157,7 +157,7 @@ fn system_event_recursion_impl(mut commands: Commands) -> Vec<usize>
 fn send_proxy_entity_system_event_and_take(In(signal): In<AutoDespawnSignal>, mut commands: Commands)
 {
     let command1 = commands.spawn_system_command(
-        |mut event: SystemEvent<AutoDespawnSignal>| { assert!(event.take().is_some()); }
+        |mut event: SystemEvent<AutoDespawnSignal>| { assert!(event.take().is_ok()); }
     );
     commands.send_system_event(command1, signal);
 }

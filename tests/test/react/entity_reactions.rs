@@ -72,28 +72,28 @@ fn on_any_entity_mutation(In(entity): In<Entity>, mut c: Commands) -> RevokeToke
             mut recorder: ResMut<TestReactRecorder>
         |
         {
-            if let Some(_) = insertion.get()
+            if let Ok(_) = insertion.get()
             {
                 recorder.0 += 1;
                 assert!(mutation.is_empty());
                 assert!(removal.is_empty());
                 assert!(despawn.is_empty());
             }
-            if let Some(_) = mutation.get()
+            if let Ok(_) = mutation.get()
             {
                 recorder.0 += 10;
                 assert!(insertion.is_empty());
                 assert!(removal.is_empty());
                 assert!(despawn.is_empty());
             }
-            if let Some(_) = removal.get()
+            if let Ok(_) = removal.get()
             {
                 recorder.0 += 100;
                 assert!(insertion.is_empty());
                 assert!(mutation.is_empty());
                 assert!(despawn.is_empty());
             }
-            if let Some(_) = despawn.get()
+            if let Ok(_) = despawn.get()
             {
                 recorder.0 += 1000;
                 assert!(insertion.is_empty());
@@ -118,8 +118,8 @@ fn on_mutation_recursive(mut c: Commands) -> RevokeToken
         {
             let entity = match (insertion.get(), mutation.get())
             {
-                (Some(entity), None) => entity,
-                (None, Some(entity)) => entity,
+                (Ok(entity), Err(_)) => entity,
+                (Err(_), Ok(entity)) => entity,
                 _                    => unreachable!(),
             };
             recorder.0 += 1;

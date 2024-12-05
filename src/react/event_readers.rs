@@ -145,10 +145,9 @@ fn example(mut c: Commands)
         broadcast::<()>(),
         |event: BroadcastEvent<()>|
         {
-            if let Some(()) = event.try_read()
-            {
-                println!("event received");
-            }
+            event.try_read()?;
+            println!("event received");
+            DONE
         }
     );
 
@@ -173,24 +172,24 @@ impl<'w, 's, T: Send + Sync + 'static> BroadcastEvent<'w, 's, T>
     pub fn read(&self) -> &T
     {
         self.try_read()
-            .unwrap_or_else(|| panic!("failed reading broadcast event for {}, there is no event", type_name::<T>()))
+            .unwrap_or_else(|_| panic!("failed reading broadcast event for {}, there is no event", type_name::<T>()))
     }
 
     /// See [`Self::read`].
-    pub fn try_read(&self) -> Option<&T>
+    pub fn try_read(&self) -> Result<&T, ()>
     {
-        if !self.tracker.is_reacting() { return None; }
-        let Ok(data) = self.data.get(self.tracker.data_entity()) else { return None; };
+        if !self.tracker.is_reacting() { return Err(()); }
+        let Ok(data) = self.data.get(self.tracker.data_entity()) else { return Err(()); };
 
-        Some(data.read())
+        Ok(data.read())
     }
 
     /// Returns `true` if there is nothing to read.
     ///
-    /// Equivalent to `event.try_read().is_none()`.
+    /// Equivalent to `event.try_read().is_ok()`.
     pub fn is_empty(&self) -> bool
     {
-        self.try_read().is_none()
+        self.try_read().is_err()
     }
 }
 
@@ -212,10 +211,9 @@ fn example(mut c: Commands)
         entity_event::<()>(entity),
         |event: EntityEvent<()>|
         {
-            if let Some(entity, data) = event.try_read()
-            {
-                println!("event {:?} received for {:?}", data, entity);
-            }
+            let (entity, data) = event.try_read()?;
+            println!("event {:?} received for {:?}", data, entity);
+            DONE
         }
     );
 
@@ -240,16 +238,16 @@ impl<'w, 's, T: Send + Sync + 'static> EntityEvent<'w, 's, T>
     pub fn read(&self) -> (Entity, &T)
     {
         self.try_read()
-            .unwrap_or_else(|| panic!("failed reading entity event for {}, there is no event", type_name::<T>()))
+            .unwrap_or_else(|_| panic!("failed reading entity event for {}, there is no event", type_name::<T>()))
     }
 
     /// See [`Self::read`].
-    pub fn try_read(&self) -> Option<(Entity, &T)>
+    pub fn try_read(&self) -> Result<(Entity, &T), ()>
     {
-        if !self.tracker.is_reacting() { return None; }
-        let Ok(data) = self.data.get(self.tracker.data_entity()) else { return None; };
+        if !self.tracker.is_reacting() { return Err(()); }
+        let Ok(data) = self.data.get(self.tracker.data_entity()) else { return Err(()); };
 
-        Some(data.read())
+        Ok(data.read())
     }
 
     /// Gets the target entity of the event.
@@ -261,17 +259,17 @@ impl<'w, 's, T: Send + Sync + 'static> EntityEvent<'w, 's, T>
     }
 
     /// See [`Self::entity`].
-    pub fn get_entity(&self) -> Option<Entity>
+    pub fn get_entity(&self) -> Result<Entity, ()>
     {
         self.try_read().map(|(e, _)| e)
     }
 
     /// Returns `true` if there is nothing to read.
     ///
-    /// Equivalent to `event.try_read().is_none()`.
+    /// Equivalent to `event.try_read().is_ok()`.
     pub fn is_empty(&self) -> bool
     {
-        self.try_read().is_none()
+        self.try_read().is_err()
     }
 }
 
