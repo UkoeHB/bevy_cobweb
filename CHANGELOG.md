@@ -1,6 +1,13 @@
 # Changelog
 
-## [0.14.2]
+## [0.14.3]
+
+### Changed
+
+- Go back to `OptionToNoneErr::result` for options.
+
+
+## [0.14.2] (YANKED)
 
 ### Changed
 
