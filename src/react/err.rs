@@ -79,6 +79,7 @@ impl_from_for_ignored_error!(QuerySingleError);
 impl_from_for_ignored_error!(core::fmt::Error);
 impl_from_for_ignored_error!(std::io::Error);
 impl_from_for_ignored_error!(Box<dyn std::error::Error>);
+impl_from_for_ignored_error!(NoneError);
 
 //-------------------------------------------------------------------------------------------------------------------
 
@@ -100,22 +101,6 @@ impl ReactorResult for DropErr
 /// 
 /// Use this at the end of your reactor system that uses `?` early-out semantics.
 pub const DONE: DropErr = Ok(());
-
-//-------------------------------------------------------------------------------------------------------------------
-
-/// Extension trait for converting `Option<T>` to `DropErr<T>`.
-pub trait OptionToDropErr<T>
-{
-    fn drop_err(self) -> DropErr<T>;
-}
-
-impl<T> OptionToDropErr<T> for Option<T>
-{
-    fn drop_err(self) -> DropErr<T>
-    {
-        self.ok_or(IgnoredError)
-    }
-}
 
 //-------------------------------------------------------------------------------------------------------------------
 
@@ -159,6 +144,7 @@ impl_from_for_warn_error!(QuerySingleError);
 impl_from_for_warn_error!(core::fmt::Error);
 impl_from_for_warn_error!(std::io::Error);
 impl_from_for_warn_error!(Box<dyn std::error::Error>);
+impl_from_for_warn_error!(NoneError);
 
 //-------------------------------------------------------------------------------------------------------------------
 
@@ -188,17 +174,20 @@ pub const OK: WarnErr = Ok(());
 
 //-------------------------------------------------------------------------------------------------------------------
 
-/// Extension trait for converting `Option<T>` to `WarnErr<T>`.
-pub trait OptionToWarnErr<T>
+#[derive(Debug)]
+pub struct NoneError;
+
+/// Extension trait for converting `Option<T>` to `Result<T, NoneError>`.
+pub trait OptionToNoneErr<T>
 {
-    fn warn_err(self) -> WarnErr<T>;
+    fn result(self) -> Result<T, NoneError>;
 }
 
-impl<T> OptionToWarnErr<T> for Option<T>
+impl<T> OptionToNoneErr<T> for Option<T>
 {
-    fn warn_err(self) -> WarnErr<T>
+    fn result(self) -> Result<T, NoneError>
     {
-        self.ok_or(WarnError::None)
+        self.ok_or(NoneError)
     }
 }
 
