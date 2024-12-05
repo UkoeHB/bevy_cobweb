@@ -1,6 +1,13 @@
 # Changelog
 
-## [0.14.0]
+## [0.14.1]
+
+### Changed
+
+- Revert switch to `Result` return values for `ReactiveMut::set_if_neq` and friends.
+
+
+## [0.14.0] (YANKED)
 
 ### Added
 
