@@ -245,7 +245,10 @@ pub trait CommandsSyscallExt
         S: IntoSystem<I, R, Marker> + Send + Sync + 'static;
 
     /// See [`syscall_with_validation`].
-    fn syscall_with_validation<I, R, S, Marker>(&mut self, input: <I as SystemInput>::Inner<'static>, system: S, validation: fn(&mut World))
+    fn syscall_with_validation<I, R, S, Marker>(
+        &mut self,
+        input: <I as SystemInput>::Inner<'static>, system: S, validation: fn(&mut World)
+    )
     where
         I: Send + Sync + SystemInput + 'static,
         <I as SystemInput>::Inner<'static>: Send + Sync,
@@ -261,7 +264,10 @@ pub trait CommandsSyscallExt
         S: IntoSystem<I, R, Marker> + Send + Sync + 'static;
 
     /// Similar to [`syscall_with_validation`] except the system is not cached for reuse.
-    fn syscall_once_with_validation<I, R, S, Marker>(&mut self, input: <I as SystemInput>::Inner<'static>, system: S, validation: fn(&mut World))
+    fn syscall_once_with_validation<I, R, S, Marker>(
+        &mut self,
+        input: <I as SystemInput>::Inner<'static>, system: S, validation: fn(&mut World)
+    )
     where
         I: Send + Sync + SystemInput + 'static,
         <I as SystemInput>::Inner<'static>: Send + Sync,
@@ -284,7 +290,10 @@ impl CommandsSyscallExt for Commands<'_, '_>
         });
     }
 
-    fn syscall_with_validation<I, R, S, Marker>(&mut self, input: <I as SystemInput>::Inner<'static>, system: S, validation: fn(&mut World))
+    fn syscall_with_validation<I, R, S, Marker>(
+        &mut self,
+        input: <I as SystemInput>::Inner<'static>, system: S, validation: fn(&mut World)
+    )
     where
         I: Send + Sync + SystemInput + 'static,
         <I as SystemInput>::Inner<'static>: Send + Sync,
@@ -310,7 +319,10 @@ impl CommandsSyscallExt for Commands<'_, '_>
         });
     }
 
-    fn syscall_once_with_validation<I, R, S, Marker>(&mut self, input: <I as SystemInput>::Inner<'static>, system: S, validation: fn(&mut World))
+    fn syscall_once_with_validation<I, R, S, Marker>(
+        &mut self,
+        input: <I as SystemInput>::Inner<'static>, system: S, validation: fn(&mut World)
+    )
     where
         I: Send + Sync + SystemInput + 'static,
         <I as SystemInput>::Inner<'static>: Send + Sync,
@@ -336,7 +348,10 @@ impl CommandsSyscallExt for EntityCommands<'_>
         self.commands().syscall(input, system);
     }
 
-    fn syscall_with_validation<I, R, S, Marker>(&mut self, input: <I as SystemInput>::Inner<'static>, system: S, validation: fn(&mut World))
+    fn syscall_with_validation<I, R, S, Marker>(
+        &mut self,
+        input: <I as SystemInput>::Inner<'static>, system: S, validation: fn(&mut World)
+    )
     where
         I: Send + Sync + SystemInput + 'static,
         <I as SystemInput>::Inner<'static>: Send + Sync,
@@ -356,7 +371,10 @@ impl CommandsSyscallExt for EntityCommands<'_>
         self.commands().syscall_once(input, system);
     }
 
-    fn syscall_once_with_validation<I, R, S, Marker>(&mut self, input: <I as SystemInput>::Inner<'static>, system: S, validation: fn(&mut World))
+    fn syscall_once_with_validation<I, R, S, Marker>(
+        &mut self,
+        input: <I as SystemInput>::Inner<'static>, system: S, validation: fn(&mut World)
+    )
     where
         I: Send + Sync + SystemInput + 'static,
         <I as SystemInput>::Inner<'static>: Send + Sync,
