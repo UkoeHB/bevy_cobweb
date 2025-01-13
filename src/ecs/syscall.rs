@@ -1,4 +1,5 @@
 //local shortcuts
+use crate::prelude::CobwebResult;
 
 //third-party shortcuts
 use bevy::ecs::system::{BoxedSystem, EntityCommands};
@@ -6,8 +7,6 @@ use bevy::prelude::*;
 
 //standard shortcuts
 use std::marker::PhantomData;
-
-use crate::react::ReactorResult;
 
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
@@ -241,7 +240,7 @@ pub trait CommandsSyscallExt
     where
         I: Send + Sync + SystemInput + 'static,
         <I as SystemInput>::Inner<'static>: Send + Sync,
-        R: ReactorResult,
+        R: CobwebResult,
         S: IntoSystem<I, R, Marker> + Send + Sync + 'static;
 
     /// See [`syscall_with_validation`].
@@ -252,7 +251,7 @@ pub trait CommandsSyscallExt
     where
         I: Send + Sync + SystemInput + 'static,
         <I as SystemInput>::Inner<'static>: Send + Sync,
-        R: ReactorResult,
+        R: CobwebResult,
         S: IntoSystem<I, R, Marker> + Send + Sync + 'static;
 
     /// Similar to [`syscall`] except the system is not cached for reuse.
@@ -260,7 +259,7 @@ pub trait CommandsSyscallExt
     where
         I: Send + Sync + SystemInput + 'static,
         <I as SystemInput>::Inner<'static>: Send + Sync,
-        R: ReactorResult,
+        R: CobwebResult,
         S: IntoSystem<I, R, Marker> + Send + Sync + 'static;
 
     /// Similar to [`syscall_with_validation`] except the system is not cached for reuse.
@@ -271,7 +270,7 @@ pub trait CommandsSyscallExt
     where
         I: Send + Sync + SystemInput + 'static,
         <I as SystemInput>::Inner<'static>: Send + Sync,
-        R: ReactorResult,
+        R: CobwebResult,
         S: IntoSystem<I, R, Marker> + Send + Sync + 'static;
 }
 
@@ -281,7 +280,7 @@ impl CommandsSyscallExt for Commands<'_, '_>
     where
         I: Send + Sync + SystemInput + 'static,
         <I as SystemInput>::Inner<'static>: Send + Sync,
-        R: ReactorResult,
+        R: CobwebResult,
         S: IntoSystem<I, R, Marker> + Send + Sync + 'static
     {
         self.queue(move |world: &mut World| {
@@ -297,7 +296,7 @@ impl CommandsSyscallExt for Commands<'_, '_>
     where
         I: Send + Sync + SystemInput + 'static,
         <I as SystemInput>::Inner<'static>: Send + Sync,
-        R: ReactorResult,
+        R: CobwebResult,
         S: IntoSystem<I, R, Marker> + Send + Sync + 'static
     {
         self.queue(move |world: &mut World| {
@@ -310,7 +309,7 @@ impl CommandsSyscallExt for Commands<'_, '_>
     where
         I: Send + Sync + SystemInput + 'static,
         <I as SystemInput>::Inner<'static>: Send + Sync,
-        R: ReactorResult,
+        R: CobwebResult,
         S: IntoSystem<I, R, Marker> + Send + Sync + 'static
     {
         self.queue(move |world: &mut World| {
@@ -326,7 +325,7 @@ impl CommandsSyscallExt for Commands<'_, '_>
     where
         I: Send + Sync + SystemInput + 'static,
         <I as SystemInput>::Inner<'static>: Send + Sync,
-        R: ReactorResult,
+        R: CobwebResult,
         S: IntoSystem<I, R, Marker> + Send + Sync + 'static
     {
         self.queue(move |world: &mut World| {
@@ -342,7 +341,7 @@ impl CommandsSyscallExt for EntityCommands<'_>
     where
         I: Send + Sync + SystemInput + 'static,
         <I as SystemInput>::Inner<'static>: Send + Sync,
-        R: ReactorResult,
+        R: CobwebResult,
         S: IntoSystem<I, R, Marker> + Send + Sync + 'static
     {
         self.commands().syscall(input, system);
@@ -355,7 +354,7 @@ impl CommandsSyscallExt for EntityCommands<'_>
     where
         I: Send + Sync + SystemInput + 'static,
         <I as SystemInput>::Inner<'static>: Send + Sync,
-        R: ReactorResult,
+        R: CobwebResult,
         S: IntoSystem<I, R, Marker> + Send + Sync + 'static
     {
         self.commands().syscall_with_validation(input, system, validation);
@@ -365,7 +364,7 @@ impl CommandsSyscallExt for EntityCommands<'_>
     where
         I: Send + Sync + SystemInput + 'static,
         <I as SystemInput>::Inner<'static>: Send + Sync,
-        R: ReactorResult,
+        R: CobwebResult,
         S: IntoSystem<I, R, Marker> + Send + Sync + 'static
     {
         self.commands().syscall_once(input, system);
@@ -378,7 +377,7 @@ impl CommandsSyscallExt for EntityCommands<'_>
     where
         I: Send + Sync + SystemInput + 'static,
         <I as SystemInput>::Inner<'static>: Send + Sync,
-        R: ReactorResult,
+        R: CobwebResult,
         S: IntoSystem<I, R, Marker> + Send + Sync + 'static
     {
         self.commands().syscall_once_with_validation(input, system, validation);

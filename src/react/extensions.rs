@@ -22,7 +22,7 @@ pub trait ReactAppExt
     app.react(|rc| rc.on_persistent(triggers, reactor));
     ```
     */
-    fn add_reactor<M, R: ReactorResult>(
+    fn add_reactor<M, R: CobwebResult>(
         &mut self,
         triggers: impl ReactionTriggerBundle,
         reactor: impl IntoSystem<(), R, M> + Send + Sync + 'static
@@ -47,7 +47,7 @@ pub trait ReactAppExt
 
 impl ReactAppExt for App
 {
-    fn add_reactor<M, R: ReactorResult>(
+    fn add_reactor<M, R: CobwebResult>(
         &mut self,
         triggers: impl ReactionTriggerBundle,
         reactor: impl IntoSystem<(), R, M> + Send + Sync + 'static
@@ -133,7 +133,7 @@ pub trait ReactWorldExt
     ///
     /// Returns the system command id that will eventually reference the spawned system.
     /// To run the system, schedule it with `commands.queue(system_command)`.
-    fn spawn_system_command<S, R: ReactorResult, M>(&mut self, system: S) -> SystemCommand
+    fn spawn_system_command<S, R: CobwebResult, M>(&mut self, system: S) -> SystemCommand
     where
         S: IntoSystem<(), R, M> + Send + Sync + 'static;
 
@@ -167,7 +167,7 @@ pub trait ReactWorldExt
 
 impl ReactWorldExt for World
 {
-    fn spawn_system_command<S, R: ReactorResult, M>(&mut self, system: S) -> SystemCommand
+    fn spawn_system_command<S, R: CobwebResult, M>(&mut self, system: S) -> SystemCommand
     where
         S: IntoSystem<(), R, M> + Send + Sync + 'static
     {
@@ -219,7 +219,7 @@ pub trait ReactCommandsExt
     ///
     /// Returns the system command id that will eventually reference the spawned system.
     /// To run the system, schedule it with `commands.queue(system_command)`.
-    fn spawn_system_command<S, R: ReactorResult, M>(&mut self, system: S) -> SystemCommand
+    fn spawn_system_command<S, R: CobwebResult, M>(&mut self, system: S) -> SystemCommand
     where
         S: IntoSystem<(), R, M> + Send + Sync + 'static;
 
@@ -245,7 +245,7 @@ impl<'w, 's> ReactCommandsExt for Commands<'w, 's>
         ReactCommands{ commands: self.reborrow() }
     }
 
-    fn spawn_system_command<S, R: ReactorResult, M>(&mut self, system: S) -> SystemCommand
+    fn spawn_system_command<S, R: CobwebResult, M>(&mut self, system: S) -> SystemCommand
     where
         S: IntoSystem<(), R, M> + Send + Sync + 'static
     {

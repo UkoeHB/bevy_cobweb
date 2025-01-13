@@ -7,6 +7,7 @@ use bevy::ecs::system::SystemParam;
 
 //standard shortcuts
 use core::ops::Deref;
+use std::any::type_name;
 
 //-------------------------------------------------------------------------------------------------------------------
 
@@ -101,9 +102,10 @@ impl<'w, 's, T: ReactComponent> Reactive<'w, 's, T>
     /// Reads `T` on `entity`.
     ///
     /// Does not trigger reactions.
-    pub fn get(&self, entity: Entity) -> Result<&T, ()>
+    pub fn get(&self, entity: Entity) -> Result<&T, CobwebReactError>
     {
-        self.components.get(entity).map(|(_, c)| c.get()).map_err(|_| ())
+        let t = type_name::<T>();
+        self.components.get(entity).map(|(_, c)| c.get()).map_err(|_| CobwebReactError::Reactive(entity, t))
     }
 
     /// Reads `T` on a single entity.
@@ -134,9 +136,10 @@ impl<'w, 's, T: ReactComponent> ReactiveMut<'w, 's, T>
     /// Reads `T` on `entity`.
     ///
     /// Does not trigger reactions.
-    pub fn get(&self, entity: Entity) -> Result<&T, ()>
+    pub fn get(&self, entity: Entity) -> Result<&T, CobwebReactError>
     {
-        self.components.get(entity).map(|(_, c)| c.get()).map_err(|_| ())
+        let t = type_name::<T>();
+        self.components.get(entity).map(|(_, c)| c.get()).map_err(|_| CobwebReactError::ReactiveMut(entity, t))
     }
 
     /// Reads `T` on a single entity.
@@ -153,9 +156,10 @@ impl<'w, 's, T: ReactComponent> ReactiveMut<'w, 's, T>
     /// Gets a mutable reference to `T` on `entity`.
     ///
     /// Triggers mutation reactions.
-    pub fn get_mut(&mut self, c: &mut Commands, entity: Entity) -> Result<&mut T, ()>
+    pub fn get_mut(&mut self, c: &mut Commands, entity: Entity) -> Result<&mut T, CobwebReactError>
     {
-        let (_, x) = self.components.get_mut(entity).map_err(|_| ())?;
+        let t = type_name::<T>();
+        let (_, x) = self.components.get_mut(entity).map_err(|_| CobwebReactError::ReactiveMut(entity, t))?;
         Ok(x.into_inner().get_mut(c))
     }
 
@@ -173,9 +177,10 @@ impl<'w, 's, T: ReactComponent> ReactiveMut<'w, 's, T>
     /// Gets a mutable reference to `T` on `entity`.
     ///
     /// Does not trigger reactions.
-    pub fn get_noreact(&mut self, entity: Entity) -> Result<&mut T, ()>
+    pub fn get_noreact(&mut self, entity: Entity) -> Result<&mut T, CobwebReactError>
     {
-        let (_, x) = self.components.get_mut(entity).map_err(|_| ())?;
+        let t = type_name::<T>();
+        let (_, x) = self.components.get_mut(entity).map_err(|_| CobwebReactError::ReactiveMut(entity, t))?;
         Ok(x.into_inner().get_noreact())
     }
 

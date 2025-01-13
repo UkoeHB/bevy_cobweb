@@ -232,7 +232,7 @@ impl<'w, 's> ReactCommands<'w, 's>
     /// ```no_run
     /// rcommands.on((resource_mutation::<MyRes>(), mutation::<MyComponent>()), my_reactor_system);
     /// ```
-    pub fn on<M, R: ReactorResult>(
+    pub fn on<M, R: CobwebResult>(
         &mut self,
         triggers : impl ReactionTriggerBundle,
         reactor  : impl IntoSystem<(), R, M> + Send + Sync + 'static
@@ -244,7 +244,7 @@ impl<'w, 's> ReactCommands<'w, 's>
     /// Registers a reactor triggered by ECS changes using [`ReactorMode::Persistent`].
     ///
     /// See [`Self::on`].
-    pub fn on_persistent<M, R: ReactorResult>(
+    pub fn on_persistent<M, R: CobwebResult>(
         &mut self,
         triggers : impl ReactionTriggerBundle,
         reactor  : impl IntoSystem<(), R, M> + Send + Sync + 'static
@@ -258,7 +258,7 @@ impl<'w, 's> ReactCommands<'w, 's>
     /// Registers a reactor triggered by ECS changes using [`ReactorMode::Revokable`].
     ///
     /// See [`Self::on`].
-    pub fn on_revokable<M, R: ReactorResult>(
+    pub fn on_revokable<M, R: CobwebResult>(
         &mut self,
         triggers : impl ReactionTriggerBundle,
         reactor  : impl IntoSystem<(), R, M> + Send + Sync + 'static
@@ -316,7 +316,7 @@ impl<'w, 's> ReactCommands<'w, 's>
     /// // The reactor will run on the first mutation of either MyRes or MyComponent.
     /// rcommands.once((resource_mutation::<MyRes>(), mutation::<MyComponent>()), my_reactor_system);
     /// ```
-    pub fn once<M, R: ReactorResult, S: IntoSystem<(), R, M> + Send + Sync + 'static>(
+    pub fn once<M, R: CobwebResult, S: IntoSystem<(), R, M> + Send + Sync + 'static>(
         &mut self,
         triggers : impl ReactionTriggerBundle,
         reactor  : S

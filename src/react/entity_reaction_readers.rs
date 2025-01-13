@@ -180,11 +180,14 @@ impl<'w, 's, T: ReactComponent> InsertionEvent<'w, 's, T>
     }
 
     /// See [`Self::entity`].
-    pub fn get(&self) -> Result<Entity, ()>
+    pub fn get(&self) -> Result<Entity, CobwebReactError>
     {
-        if !self.tracker.is_reacting() { return Err(()); }
-        let EntityReactionType::Insertion(component_id) = self.tracker.reaction_type() else { return Err(()); };
-        if component_id != self.component_id.id() { return Err(()); }
+        let t = type_name::<T>();
+        if !self.tracker.is_reacting() { return Err(CobwebReactError::InsertionEvent(t)); }
+        let EntityReactionType::Insertion(component_id) = self.tracker.reaction_type() else {
+            return Err(CobwebReactError::InsertionEvent(t));
+        };
+        if component_id != self.component_id.id() { return Err(CobwebReactError::InsertionEvent(t)); }
 
         Ok(self.tracker.source())
     }
@@ -245,11 +248,14 @@ impl<'w, 's, T: ReactComponent> MutationEvent<'w, 's, T>
     }
 
     /// See [`Self::entity`].
-    pub fn get(&self) -> Result<Entity, ()>
+    pub fn get(&self) -> Result<Entity, CobwebReactError>
     {
-        if !self.tracker.is_reacting() { return Err(()); }
-        let EntityReactionType::Mutation(component_id) = self.tracker.reaction_type() else { return Err(()); };
-        if component_id != self.component_id.id() { return Err(()); }
+        let t = type_name::<T>();
+        if !self.tracker.is_reacting() { return Err(CobwebReactError::MutationEvent(t)); }
+        let EntityReactionType::Mutation(component_id) = self.tracker.reaction_type() else {
+            return Err(CobwebReactError::MutationEvent(t));
+        };
+        if component_id != self.component_id.id() { return Err(CobwebReactError::MutationEvent(t)); }
 
         Ok(self.tracker.source())
     }
@@ -312,11 +318,14 @@ impl<'w, 's, T: ReactComponent> RemovalEvent<'w, 's, T>
     }
 
     /// See [`Self::entity`].
-    pub fn get(&self) -> Result<Entity, ()>
+    pub fn get(&self) -> Result<Entity, CobwebReactError>
     {
-        if !self.tracker.is_reacting() { return Err(()); }
-        let EntityReactionType::Removal(component_id) = self.tracker.reaction_type() else { return Err(()); };
-        if component_id != self.component_id.id() { return Err(()); }
+        let t = type_name::<T>();
+        if !self.tracker.is_reacting() { return Err(CobwebReactError::RemovalEvent(t)); }
+        let EntityReactionType::Removal(component_id) = self.tracker.reaction_type() else {
+            return Err(CobwebReactError::RemovalEvent(t));
+        };
+        if component_id != self.component_id.id() { return Err(CobwebReactError::RemovalEvent(t)); }
 
         Ok(self.tracker.source())
     }

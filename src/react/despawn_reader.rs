@@ -129,9 +129,9 @@ impl<'w> DespawnEvent<'w>
     }
 
     /// See [`Self::entity`].
-    pub fn get(&self) -> Result<Entity, ()>
+    pub fn get(&self) -> Result<Entity, CobwebReactError>
     {
-        if !self.tracker.is_reacting() { return Err(()); }
+        if !self.tracker.is_reacting() { return Err(CobwebReactError::DespawnEvent); }
         Ok(self.tracker.source())
     }
 

@@ -22,7 +22,7 @@ let syscommand = commands.spawn_system_command(
 );
 ```
 
-System commands return anything that implements [`ReactorResult`](bevy_cobweb::prelude::ReactorResult). This includes `()`, [`DropErr`](bevy_cobweb::prelude::DropErr), and [`WarnErr`](bevy_cobweb::prelude::WarnErr). `DropErr` lets you early-out from systems using `?`. It just requires [`DONE`](bevy_cobweb::prelude::DONE) at the end of the system. Similarly, `WarnErr` requires [`OK`](bevy_cobweb::prelude::OK) at the end of the system.
+System commands return anything that implements [`CobwebResult`](bevy_cobweb::prelude::CobwebResult). This includes `()`, [`DropErr`](bevy_cobweb::prelude::DropErr), and [`WarnErr`](bevy_cobweb::prelude::WarnErr). `DropErr` lets you early-out from systems using `?`. It just requires [`DONE`](bevy_cobweb::prelude::DONE) at the end of the system. Similarly, `WarnErr` requires [`OK`](bevy_cobweb::prelude::OK) at the end of the system.
 
 If this example errors, the error will be silently dropped.
 ```rust

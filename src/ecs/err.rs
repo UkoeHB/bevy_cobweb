@@ -1,22 +1,14 @@
-use bevy::prelude::*;
+use crate::prelude::*;
 
 //-------------------------------------------------------------------------------------------------------------------
 
 #[derive(Debug)]
-pub enum CobwebReactError
+pub enum CobwebEcsError
 {
-    DespawnEvent,
-    InsertionEvent(&'static str),
-    MutationEvent(&'static str),
-    RemovalEvent(&'static str),
-    BroadcastEvent(&'static str),
-    EntityEvent(&'static str),
-    Reactive(Entity, &'static str),
-    ReactiveMut(Entity, &'static str),
-    SystemEvent(&'static str),
+    NamedSyscall(SysName)
 }
 
-impl std::error::Error for CobwebReactError
+impl std::error::Error for CobwebEcsError
 {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)>
     {
@@ -24,7 +16,7 @@ impl std::error::Error for CobwebReactError
     }
 }
 
-impl std::fmt::Display for CobwebReactError
+impl std::fmt::Display for CobwebEcsError
 {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result
     {

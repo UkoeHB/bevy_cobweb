@@ -96,10 +96,16 @@ where
     result
 }
 
+//-------------------------------------------------------------------------------------------------------------------
+
 /// Directly invoke a named system.
 ///
 /// Returns `Err` if the system cannot be found.
-pub fn named_syscall_direct<I, O>(world: &mut World, sys_name: SysName, input: <I as SystemInput>::Inner<'_>) -> Result<O, ()>
+pub fn named_syscall_direct<I, O>(
+    world: &mut World,
+    sys_name: SysName,
+    input: <I as SystemInput>::Inner<'_>
+) -> Result<O, CobwebEcsError>
 where
     I: Send + Sync + SystemInput + 'static,
     O: Send + Sync + 'static,
@@ -114,7 +120,7 @@ where
         match id_mapped_systems.systems.get_mut(&sys_name).map_or(None, |node| node.take())
         {
             Some(system) => system,
-            None => return Err(()),
+            None => return Err(CobwebEcsError::NamedSyscall(sys_name)),
         };
 
     // run the system
@@ -139,6 +145,8 @@ where
     Ok(result)
 }
 
+//-------------------------------------------------------------------------------------------------------------------
+
 /// Register a named system for future use.
 ///
 /// Over-writes the existing system with the same id and type, if one exists.
@@ -158,6 +166,8 @@ where
 {
     register_named_system_from(world, sys_name, CallbackSystem::new(system));
 }
+
+//-------------------------------------------------------------------------------------------------------------------
 
 pub fn register_named_system_from<I, O>(world: &mut World, sys_name: SysName, callback: CallbackSystem<I, O>)
 where
@@ -179,6 +189,8 @@ where
         None       => { let _ = id_mapped_systems.systems.insert(sys_name, Some(boxed_system)); },
     }
 }
+
+//-------------------------------------------------------------------------------------------------------------------
 
 /// System identifier for use in named systems.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -208,6 +220,8 @@ impl SysName
         self.1
     }
 }
+
+//-------------------------------------------------------------------------------------------------------------------
 
 /// Tracks named systems.
 #[derive(Resource)]

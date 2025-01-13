@@ -1,5 +1,5 @@
 //local shortcuts
-use crate::prelude::SystemCommand;
+use crate::prelude::*;
 
 //third-party shortcuts
 use bevy::ecs::system::SystemParam;
@@ -176,10 +176,13 @@ impl<'w, 's, T: Send + Sync + 'static> BroadcastEvent<'w, 's, T>
     }
 
     /// See [`Self::read`].
-    pub fn try_read(&self) -> Result<&T, ()>
+    pub fn try_read(&self) -> Result<&T, CobwebReactError>
     {
-        if !self.tracker.is_reacting() { return Err(()); }
-        let Ok(data) = self.data.get(self.tracker.data_entity()) else { return Err(()); };
+        let t = type_name::<T>();
+        if !self.tracker.is_reacting() { return Err(CobwebReactError::BroadcastEvent(t)); }
+        let Ok(data) = self.data.get(self.tracker.data_entity()) else {
+            return Err(CobwebReactError::BroadcastEvent(t));
+        };
 
         Ok(data.read())
     }
@@ -242,10 +245,13 @@ impl<'w, 's, T: Send + Sync + 'static> EntityEvent<'w, 's, T>
     }
 
     /// See [`Self::read`].
-    pub fn try_read(&self) -> Result<(Entity, &T), ()>
+    pub fn try_read(&self) -> Result<(Entity, &T), CobwebReactError>
     {
-        if !self.tracker.is_reacting() { return Err(()); }
-        let Ok(data) = self.data.get(self.tracker.data_entity()) else { return Err(()); };
+        let t = type_name::<T>();
+        if !self.tracker.is_reacting() { return Err(CobwebReactError::EntityEvent(t)); }
+        let Ok(data) = self.data.get(self.tracker.data_entity()) else {
+            return Err(CobwebReactError::EntityEvent(t));
+        };
 
         Ok(data.read())
     }
@@ -259,7 +265,7 @@ impl<'w, 's, T: Send + Sync + 'static> EntityEvent<'w, 's, T>
     }
 
     /// See [`Self::entity`].
-    pub fn get_entity(&self) -> Result<Entity, ()>
+    pub fn get_entity(&self) -> Result<Entity, CobwebReactError>
     {
         self.try_read().map(|(e, _)| e)
     }

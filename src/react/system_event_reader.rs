@@ -1,9 +1,10 @@
 //local shortcuts
-use crate::prelude::SystemCommand;
+use crate::prelude::*;
 
 //third-party shortcuts
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
+use std::any::type_name;
 
 //standard shortcuts
 
@@ -136,12 +137,15 @@ impl<'w, 's, T: Send + Sync + 'static> SystemEvent<'w, 's, T>
     /// Takes system event data if it exists.
     ///
     /// This will return at most one unique `T` each time a system runs.
-    pub fn take(&mut self) -> Result<T, ()>
+    pub fn take(&mut self) -> Result<T, CobwebReactError>
     {
-        if !self.tracker.is_reacting() { return Err(()); }
-        let Ok(mut data) = self.data.get_mut(self.tracker.data_entity()) else { return Err(()); };
+        let t = type_name::<T>();
+        if !self.tracker.is_reacting() { return Err(CobwebReactError::SystemEvent(t)); }
+        let Ok(mut data) = self.data.get_mut(self.tracker.data_entity()) else {
+            return Err(CobwebReactError::SystemEvent(t));
+        };
 
-        data.take().ok_or(())
+        data.take().ok_or(CobwebReactError::SystemEvent(t))
     }
 }
 

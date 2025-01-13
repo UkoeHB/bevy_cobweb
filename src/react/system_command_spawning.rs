@@ -51,7 +51,7 @@ pub struct SystemCommandCallback
 impl SystemCommandCallback
 {
     /// Makes a new system command callback from a system.
-    pub fn new<S, R: ReactorResult, M>(system: S) -> Self
+    pub fn new<S, R: CobwebResult, M>(system: S) -> Self
     where
         S: IntoSystem<(), R, M> + Send + Sync + 'static
     {
@@ -115,7 +115,7 @@ impl SystemCommandStorage
 /// Spawns a system as a [`SystemCommand`].
 ///
 /// Systems are not initialized until they are first run.
-pub fn spawn_system_command<S, R: ReactorResult, M>(world: &mut World, system: S) -> SystemCommand
+pub fn spawn_system_command<S, R: CobwebResult, M>(world: &mut World, system: S) -> SystemCommand
 where
     S: IntoSystem<(), R, M> + Send + Sync + 'static,
 {
@@ -143,7 +143,7 @@ pub fn spawn_system_command_from(world: &mut World, callback: SystemCommandCallb
 /// Returns a cleanup handle. The system will be dropped when the last copy of the handle is dropped.
 ///
 /// Panics if [`setup_auto_despawn()`](AutoDespawnAppExt::setup_auto_despawn) was not added to your app.
-pub fn spawn_rc_system_command<S, R: ReactorResult, M>(world: &mut World, system: S) -> AutoDespawnSignal
+pub fn spawn_rc_system_command<S, R: CobwebResult, M>(world: &mut World, system: S) -> AutoDespawnSignal
 where
     S: IntoSystem<(), R, M> + Send + Sync + 'static,
 {
