@@ -44,12 +44,18 @@ macro_rules! impl_from_for_warn_error {
 /// Implemented for `()` so plain callbacks work automatically.
 pub trait CobwebResult: Send + Sync + 'static
 {
+    /// Indicates if the result needs to be handled.
+    ///
+    /// Allows short-circuiting potentially expensive handling code.
+    fn need_to_handle(&self) -> bool;
+
     /// Handles the result.
     fn handle(self, world: &mut World);
 }
 
 impl CobwebResult for ()
 {
+    fn need_to_handle(&self) -> bool { false }
     fn handle(self, _: &mut World) {}
 }
 
@@ -103,6 +109,8 @@ pub type DropErr<R = ()> = Result<R, IgnoredError>;
 
 impl CobwebResult for DropErr
 {
+    fn need_to_handle(&self) -> bool { false }
+
     fn handle(self, _: &mut World) {}
 }
 
@@ -170,6 +178,8 @@ pub type WarnErr<R = ()> = Result<R, WarnError>;
 
 impl CobwebResult for WarnErr
 {
+    fn need_to_handle(&self) -> bool { self.is_err() }
+
     fn handle(self, _: &mut World)
     {
         if let Err(err) = self {

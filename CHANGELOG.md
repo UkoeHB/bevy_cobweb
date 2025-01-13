@@ -1,11 +1,17 @@
 # Changelog
 
+## [0.16.0]
+
+- Add `CobwebResult::need_to_handle` method.
+
+
 ## [0.15.0]
 
 ### Changed
 
 - Rename: `ReactorResult` -> `CobwebResult`.
 - Add `CobwebEcsError` and `CobwebReactError` and use them in crate APIs.
+
 
 ## [0.14.3]
 
