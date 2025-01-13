@@ -20,7 +20,25 @@ impl std::fmt::Display for CobwebEcsError
 {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result
     {
-        f.write_fmt(format_args!("{:?}", self))
+        match self {
+            Self::NamedSyscall(n) => f.write_fmt(format_args!("NamedSyscall({n:?})")),
+        }
+    }
+}
+
+impl From<CobwebEcsError> for IgnoredError
+{
+    fn from(_: CobwebEcsError) -> Self
+    {
+        IgnoredError
+    }
+}
+
+impl From<CobwebEcsError> for WarnError
+{
+    fn from(err: CobwebEcsError) -> Self
+    {
+        WarnError::Msg(format!("CobwebEcsError::{}", err))
     }
 }
 

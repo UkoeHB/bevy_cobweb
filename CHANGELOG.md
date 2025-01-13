@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.16.1]
+
+- Improve error message quality.
+
+
 ## [0.16.0]
 
 - Add `CobwebResult::need_to_handle` method.

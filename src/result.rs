@@ -7,8 +7,6 @@ use bevy::{
     prelude::*
 };
 
-use crate::prelude::*;
-
 //-------------------------------------------------------------------------------------------------------------------
 
 macro_rules! impl_from_for_ignored_error {
@@ -95,16 +93,16 @@ impl_from_for_ignored_error!(core::fmt::Error);
 impl_from_for_ignored_error!(std::io::Error);
 impl_from_for_ignored_error!(Box<dyn std::error::Error>);
 impl_from_for_ignored_error!(NoneError);
-impl_from_for_ignored_error!(CobwebEcsError);
-impl_from_for_ignored_error!(CobwebReactError);
 
 //-------------------------------------------------------------------------------------------------------------------
 
 /// Implementor of [`CobwebResult`] that drops and ignores all errors reaceived.
 /// 
-/// Useful for `?` early-out semantics in reactor systems.
+/// Useful for `?` early-out semantics in callbacks.
 /// 
 /// Use [`OptionToDropErr::result`] to convert Options into this result type.
+///
+/// See [`DONE`].
 pub type DropErr<R = ()> = Result<R, IgnoredError>;
 
 impl CobwebResult for DropErr
@@ -118,7 +116,8 @@ impl CobwebResult for DropErr
 
 /// The `Ok` result for [`DropErr<()>`].
 /// 
-/// Use this at the end of your reactor system that uses `?` early-out semantics.
+/// Use this at the end of your callback that uses `?` early-out semantics. It allows rust to infer
+/// the return type so you don't need to type it out.
 pub const DONE: DropErr = Ok(());
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -164,16 +163,16 @@ impl_from_for_warn_error!(core::fmt::Error);
 impl_from_for_warn_error!(std::io::Error);
 impl_from_for_warn_error!(Box<dyn std::error::Error>);
 impl_from_for_warn_error!(NoneError);
-impl_from_for_warn_error!(CobwebEcsError);
-impl_from_for_warn_error!(CobwebReactError);
 
 //-------------------------------------------------------------------------------------------------------------------
 
 /// Implementor of [`CobwebResult`] that prints a warning when an error is received.
 /// 
-/// Useful for `?` early-out semantics in reactor systems.
+/// Useful for `?` early-out semantics in callbacks.
 /// 
 /// Use [`OptionToWarnErr::result`] to convert Options into this result type.
+///
+/// See [`OK`].
 pub type WarnErr<R = ()> = Result<R, WarnError>;
 
 impl CobwebResult for WarnErr
@@ -192,7 +191,8 @@ impl CobwebResult for WarnErr
 
 /// The `Ok` result for [`WarnErr<()>`].
 /// 
-/// Use this at the end of your reactor system that uses `?` early-out semantics.
+/// Use this at the end of your callback that uses `?` early-out semantics. It allows rust to infer
+/// the return type so you don't need to type it out.
 pub const OK: WarnErr = Ok(());
 
 //-------------------------------------------------------------------------------------------------------------------
