@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.16.2]
+
+- Add `track_change_detection` feature.
+
+
 ## [0.16.1]
 
 - Improve error message quality.
