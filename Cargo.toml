@@ -9,6 +9,9 @@ license = "MIT OR Apache-2.0"
 readme = "README.md"
 repository = "https://github.com/UkoeHB/bevy_cobweb"
 
+[features]
+track_change_detection = ["bevy/track_change_detection"]
+
 [workspace]
 members = ["bevy_cobweb_derive"]
 

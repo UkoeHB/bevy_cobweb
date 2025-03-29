@@ -1,3 +1,6 @@
+#[cfg(feature = "track_change_detection")]
+use std::panic::Location;
+
 //local shortcuts
 use crate::prelude::*;
 
@@ -101,6 +104,8 @@ impl<'w, R: ReactResource> DetectChanges for ReactRes<'w, R>
     #[inline] fn is_added(&self) -> bool { self.inner.is_added() }
     #[inline] fn is_changed(&self) -> bool { self.inner.is_changed() }
     #[inline] fn last_changed(&self) -> Tick { self.inner.last_changed() }
+    #[cfg(feature = "track_change_detection")]
+    #[inline] fn changed_by(&self) -> &'static Location<'static> { self.inner.changed_by() }
 }
 
 impl<'w, R: ReactResource> Deref for ReactRes<'w, R>
@@ -152,6 +157,8 @@ impl<'w, R: ReactResource> DetectChanges for ReactResMut<'w, R>
     #[inline] fn is_added(&self) -> bool { self.inner.is_added() }
     #[inline] fn is_changed(&self) -> bool { self.inner.is_changed() }
     #[inline] fn last_changed(&self) -> Tick { self.inner.last_changed() }
+    #[cfg(feature = "track_change_detection")]
+    #[inline] fn changed_by(&self) -> &'static Location<'static> { self.inner.changed_by() }
 }
 
 impl<'w, R: ReactResource> Deref for ReactResMut<'w, R>
