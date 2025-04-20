@@ -4,8 +4,8 @@ use crate::prelude::*;
 //third-party shortcuts
 use bevy::ecs::system::Commands;
 use bevy::prelude::*;
-use bevy::utils::all_tuples;
 use smallvec::SmallVec;
+use variadics_please::all_tuples;
 
 //standard shortcuts
 

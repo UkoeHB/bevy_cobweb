@@ -32,7 +32,7 @@ pub fn garbage_collect_entities(world: &mut World)
 {
     while let Some(entity) = world.resource::<AutoDespawner>().try_recv()
     {
-        world.get_entity_mut(entity).ok().map(|e| e.despawn_recursive());
+        world.get_entity_mut(entity).ok().map(|e| e.despawn());
     }
 }
 

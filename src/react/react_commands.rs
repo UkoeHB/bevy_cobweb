@@ -178,8 +178,8 @@ impl<'w, 's> ReactCommands<'w, 's>
     /// - Does nothing if the entity does not exist.
     pub fn insert<C: ReactComponent>(&mut self, entity: Entity, component: C)
     {
-        let Some(mut entity_commands) = self.commands.get_entity(entity) else { return; };
-        entity_commands.try_insert( React{ entity, component } );
+        let Ok(mut ec) = self.commands.get_entity(entity) else { return; };
+        ec.try_insert( React{ entity, component } );
         self.commands.syscall_with_validation(entity, ReactCache::schedule_insertion_reaction::<C>, validate_rc);
     }
 

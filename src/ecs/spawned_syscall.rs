@@ -236,7 +236,7 @@ impl<'w, 's> SpawnedSyscallCommandsExt for Commands<'w, 's>
         O: Send + Sync + 'static,
         S: IntoSystem<I, O, Marker> + Send + Sync + 'static
     {
-        let Some(mut entity) = self.get_entity(entity) else { return Err(()); };
+        let Ok(mut entity) = self.get_entity(entity) else { return Err(()); };
         entity.insert(SpawnedSystem::new(CallbackSystem::new(system)));
 
         Ok(())

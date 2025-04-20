@@ -3,7 +3,7 @@ use crate::prelude::*;
 
 //third-party shortcuts
 use bevy::prelude::*;
-use bevy::utils::{HashMap, HashSet};
+use ahash::{HashMap, HashSet};
 use crossbeam::channel::{Receiver, Sender};
 
 //standard shortcuts
@@ -573,14 +573,14 @@ impl Default for ReactCache
             reaction_commands_buffer : Vec::default(),
             component_reactors    : HashMap::default(),
             tracked_removals      : HashSet::default(),
-            removal_checkers      : Vec::new(),
+            removal_checkers      : Vec::default(),
             removal_buffer        : None,
-            despawn_reactors      : HashMap::new(),
+            despawn_reactors      : HashMap::default(),
             despawn_sender,
             despawn_receiver,
-            any_entity_event_reactors : HashMap::new(),
-            resource_reactors         : HashMap::new(),
-            broadcast_reactors        : HashMap::new(),
+            any_entity_event_reactors : HashMap::default(),
+            resource_reactors         : HashMap::default(),
+            broadcast_reactors        : HashMap::default(),
         }
     }
 }

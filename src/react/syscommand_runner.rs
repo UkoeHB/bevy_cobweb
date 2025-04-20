@@ -134,7 +134,7 @@ pub(crate) fn syscommand_runner(
         else
         {
             std::mem::drop(callback);
-            entity_mut.despawn_recursive();
+            entity_mut.despawn();
             tracing::error!(?command, "system command component is missing on insert");
 
             // In case dropping the callback caused entities to be garbage collected.

@@ -115,7 +115,7 @@ impl<'w, 's, T: ReactComponent> Reactive<'w, 's, T>
     /// Panics if the inner query doesn't have exactly one entity.
     pub fn single(&self) -> (Entity, &T)
     {
-        let (e, x) = self.components.single();
+        let (e, x) = self.components.single().unwrap();
         (e, x.get())
     }
 }
@@ -149,7 +149,7 @@ impl<'w, 's, T: ReactComponent> ReactiveMut<'w, 's, T>
     /// Panics if the inner query doesn't have exactly one entity.
     pub fn single(&self) -> (Entity, &T)
     {
-        let (e, x) = self.components.single();
+        let (e, x) = self.components.single().unwrap();
         (e, x.get())
     }
 
@@ -170,7 +170,7 @@ impl<'w, 's, T: ReactComponent> ReactiveMut<'w, 's, T>
     /// Panics if the inner query doesn't have exactly one entity.
     pub fn single_mut(&mut self, c: &mut Commands) -> (Entity, &mut T)
     {
-        let (e, x) = self.components.single_mut();
+        let (e, x) = self.components.single_mut().unwrap();
         (e, x.into_inner().get_mut(c))
     }
 
@@ -191,7 +191,7 @@ impl<'w, 's, T: ReactComponent> ReactiveMut<'w, 's, T>
     /// Panics if the inner query doesn't have exactly one entity.
     pub fn single_noreact(&mut self) -> (Entity, &mut T)
     {
-        let (e, x) = self.components.single_mut();
+        let (e, x) = self.components.single_mut().unwrap();
         (e, x.into_inner().get_noreact())
     }
 
@@ -215,7 +215,7 @@ impl<'w, 's, T: ReactComponent> ReactiveMut<'w, 's, T>
     where
         T: PartialEq
     {
-        let (e, mut x) = self.components.single_mut();
+        let (e, mut x) = self.components.single_mut().unwrap();
         (e, (*x).set_if_neq(c, new))
     }
 }

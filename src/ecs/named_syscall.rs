@@ -4,7 +4,8 @@ use crate::prelude::*;
 //third-party shortcuts
 use bevy::ecs::system::BoxedSystem;
 use bevy::prelude::*;
-use bevy::utils::{AHasher, HashMap};
+use ahash::AHasher;
+use ahash::HashMap;
 
 //standard shortcuts
 use std::any::TypeId;

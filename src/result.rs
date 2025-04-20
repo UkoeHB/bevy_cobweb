@@ -1,11 +1,8 @@
-use bevy::{
-    ecs::{
-        component::RequiredComponentsError,
-        query::{QueryEntityError, QuerySingleError},
-        world::{error::EntityFetchError, reflect::GetComponentReflectError}
-    },
-    prelude::*
-};
+use bevy::ecs::component::RequiredComponentsError;
+use bevy::ecs::entity::EntityDoesNotExistError;
+use bevy::ecs::query::{QueryEntityError, QuerySingleError};
+use bevy::ecs::world::{error::EntityMutableFetchError, reflect::GetComponentReflectError};
+use bevy::prelude::*;
 
 //-------------------------------------------------------------------------------------------------------------------
 
@@ -84,11 +81,12 @@ impl_from_for_ignored_error!(String);
 impl_from_for_ignored_error!(usize);
 impl_from_for_ignored_error!(Entity);
 impl_from_for_ignored_error!(Vec<Entity>);
-impl_from_for_ignored_error!(EntityFetchError);
+impl_from_for_ignored_error!(EntityMutableFetchError);
 impl_from_for_ignored_error!(GetComponentReflectError);
 impl_from_for_ignored_error!(RequiredComponentsError);
-impl_from_for_ignored_error!(QueryEntityError<'_>);
+impl_from_for_ignored_error!(QueryEntityError);
 impl_from_for_ignored_error!(QuerySingleError);
+impl_from_for_ignored_error!(EntityDoesNotExistError);
 impl_from_for_ignored_error!(core::fmt::Error);
 impl_from_for_ignored_error!(std::io::Error);
 impl_from_for_ignored_error!(Box<dyn std::error::Error>);
@@ -154,11 +152,12 @@ impl_from_for_warn_error!(String);
 impl_from_for_warn_error!(usize);
 impl_from_for_warn_error!(Entity);
 impl_from_for_warn_error!(Vec<Entity>);
-impl_from_for_warn_error!(EntityFetchError);
+impl_from_for_warn_error!(EntityMutableFetchError);
 impl_from_for_warn_error!(GetComponentReflectError);
 impl_from_for_warn_error!(RequiredComponentsError);
-impl_from_for_warn_error!(QueryEntityError<'_>);
+impl_from_for_warn_error!(QueryEntityError);
 impl_from_for_warn_error!(QuerySingleError);
+impl_from_for_warn_error!(EntityDoesNotExistError);
 impl_from_for_warn_error!(core::fmt::Error);
 impl_from_for_warn_error!(std::io::Error);
 impl_from_for_warn_error!(Box<dyn std::error::Error>);

@@ -132,7 +132,7 @@ fn register_entity_reactor(
         Ok(mut entity_reactors) => entity_reactors.insert(rtype, handle),
         _ =>
         {
-            let Some(mut entity_commands) = commands.get_entity(entity) else { return; };
+            let Ok(mut entity_commands) = commands.get_entity(entity) else { return; };
 
             // make new reactor tracker for the entity
             let mut entity_reactors = EntityReactors::default();
@@ -481,7 +481,7 @@ impl ReactionTrigger for DespawnTrigger
     fn register(&self, commands: &mut Commands, handle: &ReactorHandle)
     {
         // check if the entity exists
-        let Some(_) = commands.get_entity(self.0) else { return; };
+        let Ok(_) = commands.get_entity(self.0) else { return; };
 
         // add despawn tracker
         commands.syscall((self.0, handle.clone()), register_despawn_reactor);

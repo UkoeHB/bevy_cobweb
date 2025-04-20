@@ -154,7 +154,7 @@ impl<'w, T: EntityWorldReactor> EntityReactor<'w, T>
             return false;
         };
 
-        let Some(mut ec) = c.get_entity(trigger_entity) else { return false };
+        let Ok(mut ec) = c.get_entity(trigger_entity) else { return false };
         ec.try_insert(EntityWorldLocal::<T>::new(data));
 
         let triggers = <T as EntityWorldReactor>::Triggers::new_bundle(trigger_entity);
