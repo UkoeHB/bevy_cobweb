@@ -3,7 +3,7 @@ use crate::prelude::*;
 
 //third-party shortcuts
 use bevy::prelude::*;
-use ahash::{HashMap, HashSet};
+use bevy::platform::collections::{HashMap, HashSet};
 use crossbeam::channel::{Receiver, Sender};
 
 //standard shortcuts

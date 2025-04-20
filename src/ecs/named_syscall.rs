@@ -2,10 +2,10 @@
 use crate::prelude::*;
 
 //third-party shortcuts
-use bevy::ecs::system::BoxedSystem;
-use bevy::prelude::*;
 use ahash::AHasher;
-use ahash::HashMap;
+use bevy::ecs::system::BoxedSystem;
+use bevy::platform::collections::HashMap;
+use bevy::prelude::*;
 
 //standard shortcuts
 use std::any::TypeId;
