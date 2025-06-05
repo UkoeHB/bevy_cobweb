@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.17.1]
+
+- Add `ReactComponent::new_unsafe`.
+
+
 ## [0.17.0]
 
 - Update to bevy v0.16.
