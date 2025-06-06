@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.17.2]
+
+- Fix `ReactComponent::new_unsafe` function signature.
+
+
 ## [0.17.1]
 
 - Add `ReactComponent::new_unsafe`.

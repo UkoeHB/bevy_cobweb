@@ -31,7 +31,7 @@ pub struct React<C: ReactComponent>
 impl<C: ReactComponent> React<C>
 {
     /// Constructs the component without setting a valid entity or triggering on-insert reactions.
-    pub fn new_unsafe(&self, component: C) -> Self
+    pub fn new_unsafe(component: C) -> Self
     {
         Self{ entity: Entity::PLACEHOLDER, component }
     }
