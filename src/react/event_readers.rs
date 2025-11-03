@@ -74,7 +74,7 @@ impl Default for EventAccessTracker
     {
         Self{
             currently_reacting: false,
-            data_entity: Entity::from_raw(0u32),
+            data_entity: Entity::from_raw_u32(0u32).unwrap(),
             prepared: Vec::default(),
         }
     }

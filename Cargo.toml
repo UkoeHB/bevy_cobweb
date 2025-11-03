@@ -27,7 +27,7 @@ all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
-bevy = { version = "0.16", default-features = false, features = ["bevy_log"] }
+bevy = { version = "0.17", default-features = false, features = ["bevy_log"] }
 ahash = { version = "0.8" }
 crossbeam = { version = "0.8" }
 fxhash = { version = "0.2" }

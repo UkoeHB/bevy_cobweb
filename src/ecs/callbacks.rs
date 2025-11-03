@@ -216,15 +216,14 @@ where
     if system.is_exclusive() {
         // Add the cleanup to run before any commands added by the system.
         world.commands().queue(move |world: &mut World| (cleanup)(world));
-        system.run(input, world)
+        system.run(input, world).expect("system should be no-fail")
     } else {
         // For non-exclusive systems we need to run them unsafe because the safe version automatically
         // calls `apply_deferred`.
         let world_cell = world.as_unsafe_world_cell();
-        system.update_archetype_component_access(world_cell);
+
         // SAFETY:
         // - We have exclusive access to the entire world.
-        // - `update_archetype_component_access` has been called.
         let result = unsafe { system.run_unsafe(input, world_cell) };
 
         // Run our custom cleanup method.
@@ -233,7 +232,7 @@ where
         // apply any pending changes
         system.apply_deferred(world);
 
-        result
+        result.expect("system should be no-fail")
     }
 }
 

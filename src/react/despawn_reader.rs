@@ -76,7 +76,7 @@ impl Default for DespawnAccessTracker
     {
         Self{
             currently_reacting: false,
-            reaction_source: Entity::from_raw(0u32),
+            reaction_source: Entity::from_raw_u32(0u32).unwrap(),
             reactor_handle: None,
             prepared: Vec::default(),
         }

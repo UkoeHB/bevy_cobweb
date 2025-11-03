@@ -106,7 +106,7 @@ where
 
     // run the system
     // - This automatically calls `apply_deferred`.
-    let result = system.sys.run(input, world);
+    let result = system.sys.run(input, world).expect("system should be no-fail");
 
     // put the system back
     world.insert_resource(system);
@@ -135,6 +135,8 @@ where
 //-------------------------------------------------------------------------------------------------------------------
 
 /// Extends `World` with the [`syscall`] method.
+/// 
+/// Methods panic if the system fails.
 pub trait WorldSyscallExt
 {
     /// See [`syscall`].
@@ -209,7 +211,7 @@ impl WorldSyscallExt for World
     {
         let mut sys = IntoSystem::into_system(system);
         sys.initialize(self);
-        sys.run(input, self)
+        sys.run(input, self).expect("system should be no-fail")
     }
 
     fn syscall_once_with_validation<I, O, S, Marker>(
@@ -226,13 +228,15 @@ impl WorldSyscallExt for World
         (validation)(self);
         let mut sys = IntoSystem::into_system(system);
         sys.initialize(self);
-        sys.run(input, self)
+        sys.run(input, self).expect("system should be no-fail")
     }
 }
 
 //-------------------------------------------------------------------------------------------------------------------
 
 /// Extends `Commands` with the [`syscall`] method.
+/// 
+/// Commands panic if the system fails.
 pub trait CommandsSyscallExt
 {
     /// See [`syscall`].

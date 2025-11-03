@@ -112,7 +112,7 @@ pub fn update_test_recorder_with_broadcast(
 //-------------------------------------------------------------------------------------------------------------------
 
 pub fn update_test_recorder_with_entity_event(
-    event: EntityEvent<IntEvent>, mut recorder: ResMut<TestReactRecorder>
+    event: bevy_cobweb::prelude::EntityEvent<IntEvent>, mut recorder: ResMut<TestReactRecorder>
 ) -> WarnErr
 {
     let (_, event) = event.try_read()?;

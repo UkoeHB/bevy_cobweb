@@ -42,6 +42,7 @@ use std::hash::{Hash, Hasher};
 /// assert_eq!(named_syscall(&mut world, "b", 10u16, test_system), 20);
 /// ```
 ///
+/// Panics if the system fails.
 pub fn named_syscall<H, I, O, S, Marker>(
     world  : &mut World,
     id     : H,
@@ -76,7 +77,7 @@ where
         };
 
     // run the system
-    let result = system.run(input, world);
+    let result = system.run(input, world).unwrap();
 
     // apply any pending changes
     system.apply_deferred(world);
@@ -125,7 +126,7 @@ where
         };
 
     // run the system
-    let result = system.run(input, world);
+    let result = system.run(input, world).expect("system should be no-fail");
 
     // apply any pending changes
     system.apply_deferred(world);

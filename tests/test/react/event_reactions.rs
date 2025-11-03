@@ -65,7 +65,7 @@ fn on_broadcast_proxy(In(proxy): In<Entity>, mut c: Commands) -> RevokeToken
 fn on_entity_event(In(entity): In<Entity>, mut c: Commands) -> RevokeToken
 {
     c.react().on_revokable(entity_event::<IntEvent>(entity),
-        move |event: EntityEvent<IntEvent>, mut recorder: ResMut<TestReactRecorder>|
+        move |event: bevy_cobweb::prelude::EntityEvent<IntEvent>, mut recorder: ResMut<TestReactRecorder>|
         {
             let (received_entity, event) = event.try_read()?;
             assert_eq!(received_entity, entity);
@@ -78,7 +78,7 @@ fn on_entity_event(In(entity): In<Entity>, mut c: Commands) -> RevokeToken
 fn on_entity_event_add(In(entity): In<Entity>, mut c: Commands) -> RevokeToken
 {
     c.react().on_revokable(entity_event::<IntEvent>(entity),
-        move |event: EntityEvent<IntEvent>, mut recorder: ResMut<TestReactRecorder>|
+        move |event: bevy_cobweb::prelude::EntityEvent<IntEvent>, mut recorder: ResMut<TestReactRecorder>|
         {
             let (received_entity, event) = event.try_read()?;
             assert_eq!(received_entity, entity);
@@ -91,7 +91,7 @@ fn on_entity_event_add(In(entity): In<Entity>, mut c: Commands) -> RevokeToken
 fn on_entity_event_proxy(In((entity, proxy)): In<(Entity, Entity)>, mut c: Commands) -> RevokeToken
 {
     c.react().on_revokable(entity_event::<AutoDespawnSignal>(entity),
-        move |event: EntityEvent<AutoDespawnSignal>|
+        move |event: bevy_cobweb::prelude::EntityEvent<AutoDespawnSignal>|
         {
             let (event_entity, proxy_signal) = event.read();
             assert_eq!(entity, event_entity);
@@ -106,7 +106,7 @@ fn on_entity_event_recursive(In(entity): In<Entity>, mut c: Commands) -> RevokeT
         move
         |
             mut c         : Commands,
-            event         : EntityEvent<IntEvent>,
+            event         : bevy_cobweb::prelude::EntityEvent<IntEvent>,
             mut recorder  : ResMut<TestReactRecorder>
         |
         {
@@ -128,7 +128,7 @@ fn on_entity_event_recursive(In(entity): In<Entity>, mut c: Commands) -> RevokeT
 fn on_any_entity_event(In(target_entity): In<Entity>, mut c: Commands) -> RevokeToken
 {
     c.react().on_revokable(any_entity_event::<IntEvent>(),
-        move |event: EntityEvent<IntEvent>, mut recorder: ResMut<TestReactRecorder>|
+        move |event: bevy_cobweb::prelude::EntityEvent<IntEvent>, mut recorder: ResMut<TestReactRecorder>|
         {
             let (received_entity, event) = event.try_read()?;
             assert_eq!(received_entity, target_entity);
