@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.18.0]
+
+- Update to `bevy` 0.17.
+
+
 ## [0.17.2]
 
 - Fix `ReactComponent::new_unsafe` function signature.

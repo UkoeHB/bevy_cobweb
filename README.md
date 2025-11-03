@@ -26,7 +26,9 @@ Documentation for the reactivity primitives can be found in the [`react`](bevy_c
 
 | `bevy` | `bevy_cobweb` |
 |--------|---------------|
-| 0.15.0-rc.3 | 0.13.0-rc.3 |
-| 0.14  | 0.8.0 - 0.12.0 |
+| 0.17 | 0.18 |
+| 0.16 | 0.17 |
+| 0.15 | 0.13 - 0.16 |
+| 0.14  | 0.8 - 0.12 |
 | 0.13  | 0.0.3 - 0.7.2  |
 | 0.12  | 0.0.1 - 0.0.2  |
