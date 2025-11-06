@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.18.1]
+
+- Add entity to warning printed when the entity is given more than 50 reactors.
+
+
 ## [0.18.0]
 
 - Update to `bevy` 0.17.

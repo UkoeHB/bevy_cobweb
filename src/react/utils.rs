@@ -59,12 +59,12 @@ pub(crate) struct EntityReactors
 
 impl EntityReactors
 {
-    pub(crate) fn insert(&mut self, rtype: EntityReactionType, handle: ReactorHandle)
+    pub(crate) fn insert(&mut self, entity: Entity, rtype: EntityReactionType, handle: ReactorHandle)
     {
         self.reactors.push((rtype, handle));
 
         if self.reactors.len() > ENTITY_REACTORS_WARNING_SIZE {
-            warn_once!("more than {ENTITY_REACTORS_WARNING_SIZE} reactors were registered targeting an entity, \
+            warn_once!("more than {ENTITY_REACTORS_WARNING_SIZE} reactors were registered targeting entity {entity:?}, \
                 which may impact performance; consider using a resource for 'reaction hubs' instead; this warning \
                 only prints once");
         }

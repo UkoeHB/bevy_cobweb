@@ -129,7 +129,7 @@ fn register_entity_reactor(
     // add callback to entity
     match entity_reactors.get_mut(entity)
     {
-        Ok(mut entity_reactors) => entity_reactors.insert(rtype, handle),
+        Ok(mut entity_reactors) => entity_reactors.insert(entity, rtype, handle),
         _ =>
         {
             let Ok(mut entity_commands) = commands.get_entity(entity) else { return; };
@@ -138,7 +138,7 @@ fn register_entity_reactor(
             let mut entity_reactors = EntityReactors::default();
 
             // add callback and insert to entity
-            entity_reactors.insert(rtype, handle);
+            entity_reactors.insert(entity, rtype, handle);
             entity_commands.insert(entity_reactors);
         }
     }
